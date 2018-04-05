@@ -23,7 +23,7 @@ release = select(release, -first_release_date)
 
 # recoveries
 recover = read.csv("data/recoveries_1973.csv", stringsAsFactors = FALSE)
-for(y in 1974:2014) {
+for(y in 1974:2016) {
   recover = rbind(recover, read.csv(paste0("data/recoveries_",y,".csv"), 
     stringsAsFactors = FALSE))
 }
