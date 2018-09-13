@@ -23,17 +23,23 @@ release = dplyr::select(release, -first_release_date)
 
 # recoveries
 recover = read.csv("data/chinook/recoveries_1973.csv", stringsAsFactors = FALSE)
-for(y in 1974:2016) {
-  recover = rbind(recover, read.csv(paste0("data/chinook/recoveries_",y,".csv"), 
-    stringsAsFactors = FALSE))
-}
 recover = dplyr::select(recover, tag_code, recovery_id, recovery_date, fishery, gear, 
   recovery_location_code, recovery_location_name, estimated_number)
+for(y in 1974:2016) {
+  #  names change slightly in 2015,
+  temp = read.csv(paste0("data/chinook/recoveries_",y,".csv"), 
+    stringsAsFactors = FALSE)
+  temp = dplyr::select(temp, tag_code, recovery_id, recovery_date, fishery, gear, 
+    recovery_location_code, recovery_location_name, estimated_number)
+  recover = rbind(recover, temp)
+}
+
 recover = dplyr::filter(recover, !is.na(estimated_number)) %>% 
   filter(tag_code != "")
 
 # Join by tag code
-dat = left_join(recover, release)
+release = dplyr::rename(release, tag_code=tag_code_or_release_id)
+dat = left_join(recover, release) # join by tag code
 
 # pull in location data from RMIS
 locations = read.csv("data/locations.txt", stringsAsFactors = FALSE)
@@ -42,6 +48,9 @@ locations = rename(locations, recovery_location_code = location_code,
   recovery_description = description, latitude=rmis_latitude, longitude = rmis_longitude)
 dat = left_join(dat, locations)
 
+# At this point, 'dat' is the complete release-recovery dataset for all years, coastwide
+
+# Example of filtering
 # location codes: 2(BC), 3 (WA), 5 (OR), 6 (CA), etc.
 dat = mutate(dat, recovery_state = substr(recovery_location_code, 1,2)) %>%
   mutate(recovery_year = substr(recovery_date, 1,4),
