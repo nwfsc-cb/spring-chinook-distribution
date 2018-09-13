@@ -2,34 +2,34 @@ library(dplyr)
 library(ggplot2)
 
 # Load release data
-release = read.csv("data/all_releases.txt", header=T, stringsAsFactors = FALSE) 
-release = select(release, tag_code_or_release_id, run, brood_year, first_release_date,
+release = read.csv("data/chinook/all_releases.txt", header=T, stringsAsFactors = FALSE) 
+release = dplyr::select(release, tag_code_or_release_id, run, brood_year, first_release_date,
   release_location_code, stock_location_code, cwt_1st_mark_count, cwt_2nd_mark_count,
   non_cwt_1st_mark_count, non_cwt_2nd_mark_count, release_location_name,
   stock_location_name, release_location_state, release_location_rmis_region, 
   release_location_rmis_basin) %>% 
-  rename(tag_code = tag_code_or_release_id)
+  dplyr::rename(tag_code = tag_code_or_release_id)
 
 # Sum up the total releases, drop unneccessary columns
-release = mutate(release, 
+release = dplyr::mutate(release, 
   total_release = sum(as.numeric(c(cwt_1st_mark_count, cwt_2nd_mark_count,
     non_cwt_1st_mark_count, non_cwt_2nd_mark_count)),na.rm=T)) %>% 
-  select(release, -cwt_1st_mark_count, -cwt_2nd_mark_count,
+  dplyr::select(-cwt_1st_mark_count, -cwt_2nd_mark_count,
   -non_cwt_1st_mark_count, -non_cwt_2nd_mark_count)
 
 # pull out relase year
 release$release_year = substr(release$first_release_date, 1, 4)
-release = select(release, -first_release_date)
+release = dplyr::select(release, -first_release_date)
 
 # recoveries
-recover = read.csv("data/recoveries_1973.csv", stringsAsFactors = FALSE)
+recover = read.csv("data/chinook/recoveries_1973.csv", stringsAsFactors = FALSE)
 for(y in 1974:2016) {
-  recover = rbind(recover, read.csv(paste0("data/recoveries_",y,".csv"), 
+  recover = rbind(recover, read.csv(paste0("data/chinook/recoveries_",y,".csv"), 
     stringsAsFactors = FALSE))
 }
-recover = select(recover, tag_code, recovery_id, recovery_date, fishery, gear, 
+recover = dplyr::select(recover, tag_code, recovery_id, recovery_date, fishery, gear, 
   recovery_location_code, recovery_location_name, estimated_number)
-recover = filter(recover, !is.na(estimated_number)) %>% 
+recover = dplyr::filter(recover, !is.na(estimated_number)) %>% 
   filter(tag_code != "")
 
 # Join by tag code
