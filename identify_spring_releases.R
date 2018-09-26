@@ -418,7 +418,8 @@ release = read.csv("data/chinook/all_releases.txt", header=T, stringsAsFactors =
                           as.data.frame()
     
     rel.focal.summary2 <- rel.focal %>% 
-                            group_by(release_location_state,
+                            mutate(region=release_location_state,region=ifelse(release_location_rmis_region %in% COL,"COL",region)) %>%
+                            group_by(region,
                                 release_location_rmis_region,
                                 # stock_location_name,
                                 # stock_location_code,
@@ -431,7 +432,7 @@ release = read.csv("data/chinook/all_releases.txt", header=T, stringsAsFactors =
     releases.by.state.time <- ggplot(rel.focal.summary2) +
       geom_point(aes(y=total.release,x=brood_year,color=release_location_rmis_region)) +
       geom_line(aes(y=total.release,x=brood_year,color=release_location_rmis_region)) +
-      facet_wrap(~release_location_state,scales = "free_y")
+      facet_wrap(~region,scales = "free_y")
     
     pdf(file="data/Spr_Chinook_releases_by_state_time.pdf",width=13,height=8.5); print(releases.by.state.time); dev.off()
     save(Focal.releases,file="data/focal_spring_chinook_releases.RData")
