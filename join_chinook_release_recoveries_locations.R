@@ -11,10 +11,9 @@ release = dplyr::select(release, tag_code_or_release_id, run, brood_year, first_
   dplyr::rename(tag_code = tag_code_or_release_id)
 
 # Sum up the total releases, drop unneccessary columns
-release = dplyr::mutate(release, 
-  total_release = sum(as.numeric(c(cwt_1st_mark_count, cwt_2nd_mark_count,
-    non_cwt_1st_mark_count, non_cwt_2nd_mark_count)),na.rm=T)) %>% 
-  dplyr::select(-cwt_1st_mark_count, -cwt_2nd_mark_count,
+release$total_release = sum(c(as.numeric(release$cwt_1st_mark_count), as.numeric(release$cwt_2nd_mark_count), 
+                              as.numeric(release$non_cwt_1st_mark_count), as.numeric(release$non_cwt_2nd_mark_count)))
+release = dplyr::select(release, -cwt_1st_mark_count, -cwt_2nd_mark_count,
   -non_cwt_1st_mark_count, -non_cwt_2nd_mark_count)
 
 # pull out relase year
