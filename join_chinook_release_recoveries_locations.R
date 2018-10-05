@@ -37,16 +37,45 @@ recover = dplyr::filter(recover, !is.na(estimated_number)) %>%
   filter(tag_code != "")
 
 # Join by tag code
-release = dplyr::rename(release, tag_code=tag_code_or_release_id)
+release = dplyr::rename(release, tag_code=tag_code)
 dat = left_join(recover, release) # join by tag code
 
 # pull in location data from RMIS
 locations = read.csv("data/locations.txt", stringsAsFactors = FALSE)
-locations = locations[,c("location_code","rmis_latitude","rmis_longitude", "description")]
+locations = locations[,c("location_code","rmis_latitude","rmis_longitude", "description","rmis_region","rmis_basin")]
 locations = rename(locations, recovery_location_code = location_code,
   recovery_description = description, latitude=rmis_latitude, longitude = rmis_longitude)
 dat = left_join(dat, locations)
 
+dat = rename(dat, recovery_rmis_region=rmis_region, recovery_rmis_basin=rmis_basin)
+
+# Code to group recoveries by region
+run_names = c("Spr","Sum","Fa","Win","Hyb","Land","LateFa","URB-LateFa")
+dat$stock_coarse = paste0(dat$release_location_rmis_region, "-",run_names[dat$run])
+dat$recovery_year = as.numeric(substr(dat$recovery_date,1,4))
+dat$recovery_month = as.numeric(substr(dat$recovery_date,5,6))
+recovery_period=data.frame("recovery_month"=1:12, 
+  "recovery_period"=c(1,1,2,2,3,3,4,4,5,5,6,6))
+dat = left_join(dat, recovery_period)
+
+# identify salish sea regions
+dat$recovery_coarse = NA
+dat$recovery_coarse[which(dat$recovery_rmis_region %in% c("HOOD","JUAN","SPS","MPS","NPS","SKAG","NOWA","FRTH","GST","JNST"))] = "Salish Sea"
+salish = dplyr::filter(dat, recovery_coarse=="Salish Sea") %>% 
+  dplyr::filter(recovery_year > 2005) %>% 
+  group_by(recovery_year, recovery_period, stock_coarse) %>% 
+  summarize(n = sum(estimated_number, na.rm=T)) %>% 
+  group_by(recovery_year, recovery_period) %>% 
+  mutate(p = n/sum(n))
+
+mean_salish = group_by(salish, recovery_period, stock_coarse) %>% 
+  summarize(mean_p = mean(p, na.rm=T), mean_n = mean(n, na.rm=T)) %>% 
+  arrange(recovery_period, -mean_p) %>%
+  dplyr::rename(p = mean_p)
+
+aql <- reshape2::melt(mean_salish[,c("recovery_period","stock_coarse","p")], id.vars = c("recovery_period","stock_coarse"))
+aqw <- reshape2::dcast(aql, recovery_period ~ variable + stock_coarse)
+write.csv(aqw,"output/mean_proportions_SalishSea.csv",row.names = FALSE)
 # At this point, 'dat' is the complete release-recovery dataset for all years, coastwide
 
 # Example of filtering
