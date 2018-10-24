@@ -4,8 +4,7 @@ library(tidyr)
 library(maps)
 library(mapdata)
 library(scales)
-#do this for release domains too 
-
+library(raster)
 ##Load focal species data
 dat_recovery = read.csv("dat_recovery.csv", stringsAsFactors = FALSE)
 
@@ -17,14 +16,12 @@ locations = read.csv("data/locations.txt", stringsAsFactors = FALSE)
 locations = locations[,c("location_code","rmis_latitude","rmis_longitude", "description")]
 locations = rename(locations, recovery_location_code = location_code,
                    recovery_description = description, latitude=rmis_latitude, longitude = rmis_longitude)
-dat_recovery_loc <- dat_recovery %>% 
+dat_recovery_ <- dat_recovery %>% 
   unite(recovery_location_code, state_code, marine_fw, rest_of_rec_code, sep = "")
-dat_recovery_loc = left_join(dat_recovery_loc, locations)
-#works but duplicates for some reason, need to delete duplicates (they have NA's)
+dat_recovery_loc = right_join(locations, dat_recovery_)
+#Delete duplicates (they have NA's)
 dat_recovery_loc <- dat_recovery_loc %>%
   filter(!is.na(latitude))
-
-#dat_recovery_loc has the recovery location in it now but rows increased a bit so there may still be some duplicates? not sure if this is an issue
 
 #had to take the world map and parce it down by filtering out lats and longs I didnt want since subregions were not in data set
     world <- map_data("world")
@@ -69,11 +66,15 @@ dat_recovery_loc <- dat_recovery_loc %>%
     #dplyr stuff group and count create new column and new df
     #region_list_5
     #put region list 5 into a list using same code that created region_liust
+   dat_recovery_loc$run_year <-as.numeric(dat_recovery_loc$run_year)
     
+  dat_recovery_loc <- dat_recovery_loc %>% 
+       separate(recovery_year, into = c("run_year", "rest_rec_date"), sep = 4)
+     
     dat_recovery_loc$run_year_five <- as.vector(cut(dat_recovery_loc$run_year, breaks=c(-Inf,1977,1982,1987,1992,1997,2002,2007,2012,Inf), labels=c("1973-1977","1978-1982","1983-1987","1988-1992","1993-1997","1998-2002","2003-2007","2008-2012","2013-2016")))
     dat_recovery_loc <-  dat_recovery_loc %>% unite(lat_long, latitude, longitude, remove=FALSE) 
     dat_recovery_five <- dat_recovery_loc %>%
-      group_by(release_location_rmis_region, run_year_five, latitude, longitude, lat_long, gear_group) %>%
+      group_by(release_loc_domain, release_location_rmis_region, run_year_five, latitude, longitude, lat_long, gear_group) %>%
       summarise(est_sum_five_yr=sum(estimated_number))
     
     #if interested in Male vs Female locations
@@ -96,7 +97,11 @@ dat_recovery_loc <- dat_recovery_loc %>%
     
     #remove first row because regions werent named so it shows up blank
     region_list_5<- list.remove(region_list_5, c(1))
+  
     
+      ###########################################
+    ###########################################
+    ###########################################
     #plot by region list 5    
     plotdf=list()
     
@@ -110,7 +115,8 @@ dat_recovery_loc <- dat_recovery_loc %>%
         scale_alpha(guide = 'none')+
         colScale+
         facet_wrap(~run_year_five)+
-        ggtitle(paste(as.character(NAME))) + 
+        ggtitle(paste(as.character(NAME))) +
+        labs(caption = "Recovery locations X gear type (title indicates associated release area)")
         theme_bw() 
       
     }
@@ -118,14 +124,62 @@ dat_recovery_loc <- dat_recovery_loc %>%
     print(plotdf[[1]])    
     
     #print all above graphs to one PDF
-    pdf("Recoveries_region_5years.pdf", width=13, height=8.5)
+    pdf("Recoveries_region_5.pdf", width=13, height=8.5)
     for (i in 1:33) {
       print(plotdf[[i]])
     }
     dev.off()
     
     
+    ###########################################
+    ###########################################
+    ######### RMIS DOMAINS ######## Grouped in 5 years  
     
+    col.filters <- unique(dat_recovery_five$release_loc_domain) 
+    
+    lapply(seq_along(col.filters), function(x) {
+      filter(dat_recovery_five, release_loc_domain == col.filters[x])
+    }
+    ) -> domain_list_5
+    
+    #remove last row because regions werent named so it shows up blank
+    domain_list_5<- list.remove(domain_list_5, c(9))
+    
+    # names(domain_list_5) <- col.filters
+    col.filters_dat <- as.data.frame(col.filters)
+    # list2env(region_list_5, .GlobalEnv)    
+    
+
+    #plot by domain list 5    
+    plotdf=list()
+    
+    for(i in 1: length(domain_list_5)) 
+    {
+      df = as.data.frame(domain_list_5[[i]])
+      NAME <- unique(df$release_loc_domain)
+      
+      plotdf[[i]] <-  p_north_am +
+        geom_point(data = df, mapping = aes(x = longitude, y = latitude, color = gear_group, alpha=0.05)) +
+        scale_alpha(guide = 'none')+
+        colScale+
+        facet_wrap(~run_year_five)+
+        ggtitle(paste(as.character(NAME))) + 
+        labs(caption = "Recovery locations X gear type (title indicates associated release area)")
+        theme_bw() 
+      
+    }
+    
+    print(plotdf[[3]])    
+    
+    #print all above graphs to one PDF
+    pdf("Recoveries_domain_5.pdf", width=13, height=8.5)
+    for (i in 1:33) {
+      print(plotdf[[i]])
+    }
+    dev.off()
+    
+    ###########################################
+    ###########################################
     ######### RMIS REGIONS ######## single years
 #seperate out different RMIS regions's so you can plot by basin
     #creates a list of data frames by basin
@@ -167,38 +221,6 @@ dat_recovery_loc <- dat_recovery_loc %>%
     
     print(plotdf[[2]])
   
-    ######### RMIS BASINS   ####### 
-#seperate out different RMIS basin's so you can plot by basin
-    #creates a list of data frames by basin
-    #list can be used to plot in a loop later
-    col.filters <- unique(dat_recovery_loc$release_location_rmis_basin) 
-    
-    lapply(seq_along(col.filters), function(x) {
-      filter(dat_recovery_loc, release_location_rmis_basin == col.filters[x])
-    }
-    ) -> basin_list
-    
-    names(basin_list) <- col.filters
-    
-    list2env(basin_list, .GlobalEnv)
-    
-    
-  #create plots from a list of basins (based on a loop by year?) or facet wrap by run_year  
-#name objects in lists dimnames
-    
-    plotdf=list()
-    for(i in 1:length(list))
-        {
-          df = as.data.frame(list[[i]])
-          plotdf[[i]] <-  p_north_am +
-            geom_point(data = df, mapping = aes(x = longitude, y = latitude, size= estimated_number, color = gear_type, alpha=0.05)) +
-            facet_wrap(~run_year)
-          
-             }
-    
-    print(plotdf[[6]])
-    
-    
 ##################################################
 #EXTRA MAPS TRYING TO FIND THE BEST MAP
 

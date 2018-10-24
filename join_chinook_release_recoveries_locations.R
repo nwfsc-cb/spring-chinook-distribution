@@ -16,7 +16,12 @@ release$total_release = sum(c(as.numeric(release$cwt_1st_mark_count), as.numeric
 release = dplyr::select(release, -cwt_1st_mark_count, -cwt_2nd_mark_count,
   -non_cwt_1st_mark_count, -non_cwt_2nd_mark_count)
 
-# pull out relase year
+#fix zeros that are added
+temp.tag <- release$tag_code
+temp.tag[nchar(temp.tag)==5] <- paste("0",temp.tag[nchar(temp.tag)==5],sep="")
+release$tag_code <- temp.tag
+
+# pull out release year
 release$release_year = substr(release$first_release_date, 1, 4)
 release = dplyr::select(release, -first_release_date)
 
@@ -32,6 +37,11 @@ for(y in 1974:2016) {
     recovery_location_code, recovery_location_name, estimated_number)
   recover = rbind(recover, temp)
 }
+
+#fix zeros that are added
+temp.tag <- recover$tag_code
+temp.tag[nchar(temp.tag)==5] <- paste("0",temp.tag[nchar(temp.tag)==5],sep="")
+recover$tag_code <- temp.tag
 
 recover = dplyr::filter(recover, !is.na(estimated_number)) %>% 
   filter(tag_code != "")

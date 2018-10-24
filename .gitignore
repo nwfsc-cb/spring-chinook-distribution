@@ -6,5 +6,9 @@ dat_focal.csv
 dat_recovery.csv
 data/dat_focal.csv
 .DS_Store
+<<<<<<< HEAD
 data/.DS_Store
 *.rds
+=======
+.DS_Store
+>>>>>>> 496be8dc6a9db528320832f79cfdbb57e3df7a3b
