@@ -167,9 +167,8 @@ p7
 
 
 #######  
-#work on better spatial graphs. get Ole's code??
+#work on better spatial graphs. 
 #do recoveries by release areas (p7) but smaller spatial scales...
-#fix whatever was happening in Git and upload new work
 #try filtering out by estimation level- definitely 2, maybe not the others?? 
 #to figure this out maybe make p7 or p3 (probably p3) over again but one for each estimation level
 

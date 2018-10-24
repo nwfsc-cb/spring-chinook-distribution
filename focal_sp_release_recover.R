@@ -11,6 +11,18 @@ for(y in 1974:2016) {
     recover = rbind(recover, temp)
 }
 
+df <- filter(recover, run_year == '1992')
+
+
+df <- substr(recover,regexpr("[^0]",tag_code),char(tag_code),stopifnot(apply(ncT,length(unique(.)) == 6)))
+
+
+df$tag_code1 <- str_remove(df$tag_code, "^0+", for y in length(unique(tag_code == '5')))
+
+fun1 <- function(x) substr(x, 1 + (1 * as.numeric(substr(x,1,1)=='0')), nchar(x) - (1 * as.numeric(substr(x, nchar(x), nchar(x)) == '.')))
+
+
+
 recover = dplyr::filter(recover, !is.na(estimated_number)) %>% 
   filter(tag_code != "")
 
@@ -18,7 +30,7 @@ recover = dplyr::filter(recover, !is.na(estimated_number)) %>%
 recover= select(recover, -c("X"))
 #now load 2015 2016 data sets so you can combine recover with 2015 and 2016 data sets
 year_2015 = temp
-year_2016 = read.csv("data/chinook/recoveries_2016.csv", stringsAsFactors = FALSE)
+year_2016 = read.csv("data/chinook/recoveries_2016.csv", stringsAsFactors = FALSE, colClasses=c("tag_code"="character"))
 #combine all 3 then you will have 1974 to 2016 in one set
 all_recovery= rbind(recover, year_2015, year_2016)
 #now all_recovery = recoveries from 1974 to 2016
