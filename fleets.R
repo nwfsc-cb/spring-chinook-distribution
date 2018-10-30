@@ -4,8 +4,22 @@ library(RColorBrewer)
 library(tidyr)
 library(maps)
 library(mapdata)
-library(scales)
-library(raster)
+
+#General Notes
+    #HIGH SEAS
+#no high seas recovery in BC
+#Groundfish observer (orange) pollock pretty consistent through time until 2008, very few recoveries until 2012, sill low recoveries
+#hake fairly consistent, At Sea contracts a fair bit 1992- 1999
+#hake shoreside is pretty minimal through time, only shows up in 2015
+    #SPORT
+#most of the sport is Ocean Sport, mostly in BC, CAN. 
+#sparse in BC until 1982
+#sparse to non-existent everywhere before 1973
+#none in OR south in 1993, some in 1994, 2008, 2009 sparse
+    #NET
+#Nothing south of the Columbia
+#big decrease in BC in 1999 (a few sparse recoveries[2000-2008], virtually none 2008-2016)
+
 
 dat_recovery_loc = read.csv("dat_recovery_loc.csv", stringsAsFactors = FALSE)
 
