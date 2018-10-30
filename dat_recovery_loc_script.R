@@ -1,9 +1,7 @@
 library(dplyr)
-library(ggplot2)
-library(RColorBrewer)
 library(tidyr)
-#this script creates dat_recovery which is used in the 'plotting recoveries' script
 
+#this script creates dat_recovery which is used in the 'plotting recoveries' script
 ##Load focal species data
 dat_focal = read.csv("dat_focal.csv", stringsAsFactors = FALSE)
 
@@ -59,8 +57,32 @@ dat_recovery$release_loc_domain <- dat_recovery$release_loc_domain %>%
 #  filter(sample_type=="1")
 #only filters out 46,013 data points (which are sample types 2-6, relies on voluntary data where catch may be unknown, likely less reliable estimates)
 
-
 #dat_recovery has state, fishery gear, and FW filtered out, domains like columbia river included
 
-write.csv(dat_recovery, "dat_recovery.csv")
+#create dat_recover_loc used for spatial plotting
+#joins locations.txt with dat_recovery
 
+# pull in location data from RMIS
+locations = read.csv("data/locations.txt", stringsAsFactors = FALSE)
+locations = locations[,c("location_code","rmis_latitude","rmis_longitude", "description")]
+locations = rename(locations, recovery_location_code = location_code,
+                   recovery_description = description, latitude=rmis_latitude, longitude = rmis_longitude)
+dat_recovery_ <- dat_recovery %>% 
+  unite(recovery_location_code, state_code, marine_fw, rest_of_rec_code, sep = "")
+dat_recovery_loc = right_join(locations, dat_recovery_)
+#Delete duplicates (they have NA's)
+dat_recovery_loc <- dat_recovery_loc %>%
+  filter(!is.na(latitude))
+
+#separate dates
+dat_recovery_loc <- dat_recovery_loc %>% 
+separate(recovery_date, into = c("rec_year", "rest_of_rec_code"), sep = 4) 
+  
+dat_recovery_loc <- dat_recovery_loc %>%
+  separate(rest_of_rec_code, into = c("rec_month", "rec_day"), sep= 2)
+dat_recovery_loc$rec_year <- as.numeric(dat_recovery_loc$rec_year)
+
+#add 5 year category
+dat_recovery_loc$run_year_five <- as.vector(cut(dat_recovery_loc$rec_year, breaks=c(-Inf,1977,1982,1987,1992,1997,2002,2007,2012,Inf), labels=c("1973-1977","1978-1982","1983-1987","1988-1992","1993-1997","1998-2002","2003-2007","2008-2012","2013-2016")))
+
+write.csv(dat_recovery_loc, "dat_recovery_loc.csv")
