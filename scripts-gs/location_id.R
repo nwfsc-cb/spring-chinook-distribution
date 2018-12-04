@@ -140,11 +140,11 @@ p_north_am
 #NEED TO FIGURE OUT A BETTER WAY TO PLOT AND SEE IF CODES ARE CLOSE TO EACH OTHER OR NOT....RIGH TNOW TRIES TO PLOT 2000.
 
 
-plot<- p_north_am +  
-  geom_point(data = d, mapping = aes(x = longitude, y = latitude, color = recovery_location_code, alpha=0.05)) +
+#plot<- p_north_am +  
+#  geom_point(data = d, mapping = aes(x = longitude, y = latitude, color = recovery_location_code, alpha=0.05)) +
   #scale_alpha(guide = 'none')+
-       theme_bw() 
-plot
+#       theme_bw() 
+#plot
 
 
 
