@@ -19,7 +19,7 @@ gis<- gis %>%
 df<-  inner_join(bycatch_location_points_with_statistical_area_attributes, gis, by = "ID_NO")
 
 ##__________________________________________________________________________________________________
-#PARCING FOR TILE PLOT
+         #PLOT recovery cts X bound X Year (Facet by fishery) 
 
 df$REC_YEAR<- as.character(df$REC_YEAR)
 
@@ -51,7 +51,8 @@ df_ct$Region <- recode_factor(df_ct$REGISTRA_3,
 'SSEO'="SSEAK") #change IBS to WYAK, for W of Yakatat
 
 #Make levels from NW to SE so they plot better
-df_ct <- df_ct %>% mutate(Region = factor(Region, levels = c("BER",
+df_ct <- df_ct %>% 
+  mutate(Region = factor(Region, levels = c("BER",
                                                                     "ALEUT",
                                                                     "PEN", 
                                                                     "KOD",
@@ -60,26 +61,75 @@ df_ct <- df_ct %>% mutate(Region = factor(Region, levels = c("BER",
                                                                     "NSEAK",
                                                              "SSEAK"
                                                                     )))
+df_ct <- df_ct %>%
+  filter(!FISH_TYPE == "misc") %>%
+  filter(!FISH_TYPE == "aboriginal")
 
 df_ct$Region = with(df_ct, factor(Region, levels = rev(levels(Region)))) #reverse factor levels so it plots NE to SW
 
 df_ct$Region <- as.factor(df_ct$Region)
-p<- ggplot(df_ct) + geom_tile(aes(x=REC_YEAR, y= Region, fill= FISH_TYPE)) +
+ ggplot(df_ct) + geom_tile(aes(x=REC_YEAR, y= Region)) +
   theme_bw() +
-theme(axis.text.x = element_text(angle = 90, hjust = 1))
-p
+theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  facet_wrap(~FISH_TYPE)
 
-#GRAPH BY SEASON
+#___________________________________________________________________________
+      #PLOT recovery cts X bound X Season (Facet by fishery) 
 
 df<- df %>%
   group_by(rec_season, FISH_TYPE, REGISTRATI, REGISTRA_3) 
 
 df_ct <-count(df,FISH_NAME) 
 df_ct <- df_ct %>% filter(!is.na(rec_season))
-p<- ggplot(df_ct) + geom_tile(aes(x=rec_season, y= Region, fill= FISH_TYPE)) +
+df_ct$Region <- recode_factor(df_ct$REGISTRA_3, 
+                              'KOD' = "KOD",
+                              'CIFW'= "KOD",
+                              'NGSW'="KOD",
+                              'CISW'="KOD", #combine cook inlet with kodiak
+                              'PWSE' ="PWS", #combine all prince william sound 
+                              'PWSF'="PWS",
+                              'PWSI'="PWS",
+                              'IBS'="YAK",
+                              'EYKT' = "YAK",
+                              'CSEO'="YAK",
+                              'NSEI'= "YAK",
+                              'NSEO' = "YAK",
+                              'BSEA' ="BER",
+                              'AISD' = "ALEUT",
+                              'MSAPW' = "ALEUT",
+                              'MSAPE'="PEN",
+                              'LCHIG'="PEN",
+                              'SSEI'= "NSEAK",
+                              'SSEO'="SSEAK") #change IBS to WYAK, for W of Yakatat
+
+#Make levels from NW to SE so they plot better
+df_ct <- df_ct %>% mutate(Region = factor(Region, levels = c("BER",
+                                                             "ALEUT",
+                                                             "PEN", 
+                                                             "KOD",
+                                                             "PWS",
+                                                             "YAK",
+                                                             "NSEAK",
+                                                             "SSEAK"
+)))
+
+
+df_ct <- df_ct %>%
+  filter(!FISH_TYPE == "misc") %>%
+  filter(!FISH_TYPE == "aboriginal")
+df_ct$Region = with(df_ct, factor(Region, levels = rev(levels(Region)))) #reverse factor levels so it plots NE to SW
+df_ct$Region <- as.factor(df_ct$Region)
+ggplot(df_ct) + geom_tile(aes(x=rec_season, y= Region), color= "white") +
   theme_bw() +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))
-p
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+  facet_wrap(~FISH_TYPE)
+
+#SUMMARIZE COUNTS IN HIGHSEAS FISHERY
+df_summ <- df_ct %>%
+  filter(FISH_TYPE == "high_seas") %>%
+  group_by(FISH_TYPE, rec_season, Region) %>%
+  summarise(ct=sum(n))
+
 ##__________________________________________________________________________________________________
             #PLOT Bounds and labels on Map 
 #had to take the world map and parce it down by filtering out lats and longs I didnt want since subregions were not in data set

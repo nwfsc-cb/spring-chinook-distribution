@@ -47,6 +47,8 @@ df <- dat_recovery_loc %>%
   #filter(fishery_type == 'high_seas')%>%
   filter(!is.na(rec_season))
 
+na <- dat_recovery_loc %>% filter(is.na(rec_season))
+
 s <-  l +
   geom_point(data = df, mapping = aes(x = longitude, y = latitude, color= fishery_type, alpha= 0.5))  +
   scale_alpha(guide = 'none')+
