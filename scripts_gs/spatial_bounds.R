@@ -8,7 +8,10 @@ library(mapdata)
 
 #THIS SCRIPT WILL CREATE A TILE PLOT SHOWING COUNTS OF HOW MANY FISH APPEAR IN EACH STATISTICAL AREA PER YEAR AND SEASON
       #IDEALLY THIS WILL HELP ESTABLISH SPATIAL BOUNDS
+      #ALSO HAS THE MAP FOR JUST AK AND TILE PLOTS 
 #use blakes file: bycatch_location_points_with_stat_areas
+
+              #MAY END UP DELETING THIS BECAUSE THE ADFG BOUNDS ARE NOT RELEVANT TO OURS ANY MORE SINCE WE ALTERED SOME LAT LONGS- NEW ATTRIBUTE TABLE FROM BLAKE
 
 gis <- dat_recovery_loc
 gis$ID_NO <- 1:nrow(gis) 
@@ -45,8 +48,8 @@ df_ct$Region <- recode_factor(df_ct$REGISTRA_3,
 'BSEA' ="BER",
 'AISD' = "ALEUT",
 'MSAPW' = "ALEUT",
-'MSAPE'="PEN",
-'LCHIG'="PEN",
+'MSAPE'="APEN",
+'LCHIG'="APEN",
 'SSEI'= "NSEAK",
 'SSEO'="SSEAK") #change IBS to WYAK, for W of Yakatat
 
@@ -54,7 +57,7 @@ df_ct$Region <- recode_factor(df_ct$REGISTRA_3,
 df_ct <- df_ct %>% 
   mutate(Region = factor(Region, levels = c("BER",
                                                                     "ALEUT",
-                                                                    "PEN", 
+                                                                    "APEN", 
                                                                     "KOD",
                                                                     "PWS",
                                                                     "YAK",
@@ -97,15 +100,15 @@ df_ct$Region <- recode_factor(df_ct$REGISTRA_3,
                               'BSEA' ="BER",
                               'AISD' = "ALEUT",
                               'MSAPW' = "ALEUT",
-                              'MSAPE'="PEN",
-                              'LCHIG'="PEN",
+                              'MSAPE'="APEN",
+                              'LCHIG'="APEN",
                               'SSEI'= "NSEAK",
                               'SSEO'="SSEAK") #change IBS to WYAK, for W of Yakatat
 
 #Make levels from NW to SE so they plot better
 df_ct <- df_ct %>% mutate(Region = factor(Region, levels = c("BER",
                                                              "ALEUT",
-                                                             "PEN", 
+                                                             "APEN", 
                                                              "KOD",
                                                              "PWS",
                                                              "YAK",
@@ -138,7 +141,7 @@ setwd("~/Documents/GitHub/rmis/scripts_gs")
 source("base_map_script.R") #create base map for this script to continue to run
 
 
-
+setwd("~/Documents/GitHub/Chinook_Bycatch/Maps_and_Charts_of_Regions/ak_areas")
 #load dataset called spatial_bounds_gs.xlsx in chinook_bycatch/maps
 spatial_bounds_gs = read.csv("spatial_bounds_gs.csv", stringsAsFactors = FALSE)
 
@@ -154,6 +157,8 @@ p<- p_north_am +
   geom_text(data=df, colour="darkgreen",aes(x=label_long1, y= label_lat1, label= region), size=2)+ #smaller labels for CA, OR, and WA so they fit
   geom_text(data=df, colour="darkgreen",aes(x=label_long2, y= label_lat2, label= region), size=3)
 p
+
+#pdf("WestCoast_labels.pdf", width=13, height=8.5); print(p); dev.off()
 
 
 ##__________________________________________________________________________________________________
@@ -187,3 +192,57 @@ ak_base<- a +
   #geom_text(data=df, colour="darkgreen",aes(x=label_long1, y= label_lat1, label= region), size=2)+ #smaller labels for CA, OR, and WA so they fit
   geom_text(data=df, colour="darkgreen",aes(x=label_long2, y= label_lat2, label= region), size=3)
 ak_base
+
+
+#pdf("AK_map_labels.pdf", width=13, height=8.5); print(ak_base); dev.off()
+
+#OVERLAY RECOVERIES ONTO MAP
+
+ak_nolab<- a +
+  geom_segment(data = df, colour="orange", aes(x = as.numeric(line.start.lon), 
+                                               y = as.numeric(line.start.lat), 
+                                               xend = as.numeric(line.end.lon), 
+                                               yend = as.numeric(line.end.lat))) 
+ak_nolab
+
+df <- dat_recovery_loc %>%
+  #filter(fishery_type == 'high_seas')%>%
+  #filter(recovery_state =="AK") %>%
+  filter(!is.na(rec_season)) %>%
+  filter(!longitude > -130) %>%
+  filter(!latitude < 51) 
+
+s <-  ak_nolab +
+  geom_point(data = df, mapping = aes(x = longitude, y = latitude, color= fishery_type, alpha= 0.5))  +
+  scale_alpha(guide = 'none')+
+  #colScale+
+  facet_wrap(~rec_season)+
+  #ggtitle("High Seas Recovery X Time") +
+  theme_bw() 
+s
+
+
+#pdf("AK_Areas_all.pdf", width=13, height=8.5); print(s); dev.off()
+
+#_____________________________________________________________________________________________________________
+#TILE PLOT WITH UPDATED SPATIAL BOUNDS AND BLAKES ATTRIBUTE TABLE [HAVENT MADE YET BUT USE THIS CODE]
+df_ct$Region = with(df_ct, factor(Region, levels = rev(levels(Region)))) #reverse factor levels so it plots NE to SW
+
+#maybe filter data sheet to just have highseas, troll, and sport fisheries? (take out aboriginal, test, misc?)
+#SEASON X REGION
+      df_ct$Region <- as.factor(df_ct$Region)
+      ggplot(df_ct) + geom_tile(aes(x=season, y= Region)) +
+        theme_bw() +
+        theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+        facet_wrap(~FISH_TYPE)
+
+#YEAR X REGION
+      ggplot(df_ct) + geom_tile(aes(x=Year, y= Region)) +
+        theme_bw() +
+        theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+        facet_wrap(~FISH_TYPE)
+      
+      
+      
+      
+      
