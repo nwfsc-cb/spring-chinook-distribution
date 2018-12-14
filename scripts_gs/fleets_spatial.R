@@ -59,7 +59,38 @@ s <-  l +
 s
 
 #________________________________________________________________________________________________________________
+        #JUST AK X SEASON
+#so it is easier to see
 
+spatial_bounds_gs = read.csv("spatial_bounds_gs.csv", stringsAsFactors = FALSE)
+
+df<- spatial_bounds_gs %>% filter(state == "ak")
+
+ak_nolab<- a +
+  geom_segment(data = df, colour="orange", aes(x = as.numeric(line.start.lon), 
+                                               y = as.numeric(line.start.lat), 
+                                               xend = as.numeric(line.end.lon), 
+                                               yend = as.numeric(line.end.lat))) 
+ak_nolab
+
+df <- dat_recovery_loc %>%
+  #filter(fishery_type == 'high_seas')%>%
+  #filter(recovery_state =="AK") %>%
+  filter(!is.na(rec_season)) %>%
+ filter(!longitude > -130) %>%
+  filter(!latitude < 51) 
+
+s <-  ak_nolab +
+  geom_point(data = df, mapping = aes(x = longitude, y = latitude, color= fishery_type, alpha= 0.5))  +
+  scale_alpha(guide = 'none')+
+  #colScale+
+  facet_wrap(~rec_season)+
+  #ggtitle("High Seas Recovery X Time") +
+  theme_bw() 
+s
+
+
+pdf("AK_Areas_all", width=13, height=8.5); print(s); dev.off()
 
 #________________________________________________________________________________________________________________
       #HIGHSEAS

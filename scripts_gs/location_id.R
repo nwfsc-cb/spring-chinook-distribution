@@ -1,6 +1,6 @@
-# THIS SCRIPT PRODUCES A DF THAT SHOWS HOW MUCH FROM WHAT TYPES OF FISHERIES. RECOVERY DATA IS LOST BETWEEN DAT RECOVERY AND DAT RECOVERY LOC 
+#how much data/what kinds of data is lost between dat recovery and dat loc
 
-  #loop to get dat recovery dfs then dat recoery loc dfs then subtract both dfs
+# loop to get dat recovery dfs then dat recoery loc dfs then subtract both dfs
 
 library(ggplot2)
 library(dplyr)
@@ -116,12 +116,39 @@ d<- locations_fltr %>%
 #this filters redundant codes to show which recovery codes are the unique ones with out the duplicates and lat longs
 e<- as.data.frame(unique(d$recovery_location_code))
 
+#plot d onto map to see how close the points are to each other and if it matters
 
-setwd("~/Documents/GitHub/rmis/scripts_gs")
-source("base_map_script.R") #create base map for this script to continue to run
+dat_recovery_loc = read.csv("dat_recovery_loc.csv", stringsAsFactors = FALSE)
 
-p_north_am +
-  geom_point(data = d, mapping = aes(x = longitude, y = latitude)) +
-  # labs(caption = "N") +
-  theme_bw() 
+#had to take the world map and parce it down by filtering out lats and longs I didnt want since subregions were not in data set
+world <- map_data("world")
+north_america <- subset(world, region %in% c("USA", "Canada"))
+
+north_am_filter <- north_america %>%
+  filter(!group== 1511, !group== 1518, !group==1515, !group==1508, !group==1502, !group==1509) %>%
+  filter(!long > -115) %>%
+  filter(!lat < 34) %>%
+  filter(!lat > 62) %>%
+  filter(!long < -173) 
+
+#base map
+p_north_am <- ggplot(data = north_am_filter) + 
+  geom_polygon(aes(x = long, y = lat, group = group), fill = "white", color = "black") + 
+  coord_fixed(1.3)
+p_north_am
+
+#NEED TO FIGURE OUT A BETTER WAY TO PLOT AND SEE IF CODES ARE CLOSE TO EACH OTHER OR NOT....RIGH TNOW TRIES TO PLOT 2000.
+
+
+#plot<- p_north_am +  
+#  geom_point(data = d, mapping = aes(x = longitude, y = latitude, color = recovery_location_code, alpha=0.05)) +
+  #scale_alpha(guide = 'none')+
+#       theme_bw() 
+#plot
+
+
+
+
+
+
 

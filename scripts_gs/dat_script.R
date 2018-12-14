@@ -174,8 +174,6 @@ dat_focal=dplyr::select(dat_focal, -cwt_1st_mark_count, -cwt_2nd_mark_count,
       '9'="fall",
       '10'="fall")
     
-  dat_recovery <- unite(dat_recovery, "recovery_location_code", state_code, marine_fw, rest_of_rec_code, sep = "")
-
     #dat_recovery has state, fishery gear, and just Marine fish and domain
     write.csv(dat_recovery, "dat_recovery.csv")
     
