@@ -1,22 +1,22 @@
 #CODE SPATIAL BOUND CATEGORIES
 df = read.csv("recovery codes-wietkamp+shelton 12-2018 two PUSO.csv", stringsAsFactors = FALSE)
-
-df$recovery_location_code <- df$location_code
-
-#df<- recovery_codes_wietkamp_shelton_02_2018_two_PUSO
-#USE FOR RMIS AND ASHOP
 library(dplyr)
 library(ggplot2)
+library(RColorBrewer)
+df$recovery_location_code <- df$location_code
+df <- df%>% 
+  select(recovery_location_code, Rec.area.Sullaway.Shelton)
+
+df$region <- df$Rec.area.Sullaway.Shelton
+df <- df %>% select(-c(Rec.area.Sullaway.Shelton)) 
+#df = version of lookup table with necessary columns
 
 
 #FIGURING OUT WHERE WE ARE MISSING INFO ON LOCATION CODES
-
-df_recovery <- left_join(dat_recovery, df, by = "recovery_location_code")
-
+#  df_recovery <- left_join(dat_recovery, df, by = "recovery_location_code")
 #na is a list of recovery codes that did not match up to Oles look up table
 #331 recovery location codes did not match up
    na<- df_recovery %>% filter(is.na(`Rec area.Shelton3`)) #all the recoveries that do not match up with a recovery location code in look up table // will want to use this later for when add in regions
-  
     recovery_location_code <- unique(na$recovery_location_code)
     recovery_location_code <- as.data.frame(recovery_location_code)
 recovery_location_code$id <- 1
@@ -28,13 +28,24 @@ lat_long <- id %>% filter(!is.na(latitude)) #list of recovery codes that are not
 lat_long <- lat_long %>%
   dplyr::select(-c(id))
 x <- left_join(dat_recovery, z) 
-
 v <- x %>% filter(!is.na(id)) #list of # of recoveries that dont have lat long in recovery codes
 #write_csv(lat_long,"missing_rec_code_lat_long.csv")
 
-                                                      #LOAD CSV THAT BLAKE SENT THAT ASSIGNS RECOVERY CODES FROM DF LAT_LONG
-#setwd("~/Documents/GitHub/Chinook_Bycatch/Maps_and_Charts_of_Regions/ak_areas")
-#bef_rec = read.csv("missing rec code with region assignments by BEF.csv", stringsAsFactors = FALSE)
+
+#___________________________________________________________________________________________________________________________________________________
+#join DF recovery with the weitkamp updated codes 
+dat_region <- left_join(dat_recovery, df)
+dat_region <- dat_region %>%
+  filter(!is.na(rec_season))
+
+#MAKE SURE REGIONS ARE CORRECTLY ASSIGNED!! this needs work. 
+dat_region_loc <- left_join(dat_recovery_loc, df, by = "recovery_location_code") #have to add region to dat loc so that you have lat longs just for checking
+dat_region_loc$region <- dat_region_loc$Rec.area.Sullaway.Shelton
+dat_region_loc <- dat_region_loc %>%
+  select(-c(Rec.area.Sullaway.Shelton)) %>%
+  filter(!is.na(rec_season))
+ak_loc <- dat_region_loc %>% #test to see if ak is assigned correctly
+  filter(latitude > 50)
 
 
 
@@ -44,6 +55,128 @@ v <- x %>% filter(!is.na(id)) #list of # of recoveries that dont have lat long i
 
 
 
+#write_csv("dat_region.csv", df_region) SAVE DAT REGION FOR FURTHER USE
+
+
+#SUMMARY PLOTS OF SPATIAL BOUNDS BY SEASON
+
+#dat_region$Region = with(dat_region, factor(Region, levels = rev(levels(Region)))) #reverse factor levels so it plots NE to SW
+#JUST AK
+
+df_ct <- dat_region %>%
+  filter(region == "BER" | region == "ALEUT" |region == "APEN" | region == "KOD" | region == "PWS" | region == "YAK" | region == "NSEAK" |
+         region == "SSEAK")
+df_ct$region <- as.factor(df_ct$region)
+
+df_ct <- df_ct %>% 
+  mutate(region = factor(region, levels = c("BER",
+                                            "ALEUT",
+                                            "APEN", 
+                                            "KOD",
+                                            "PWS",
+                                            "YAK",
+                                            "NSEAK",
+                                            "SSEAK"
+  )))
+
+df_ct$region = with(df_ct, factor(region, levels = rev(levels(region)))) #reverse factor levels so it plots NE to SW
+
+df_ct_sum <- df_ct %>%
+  dplyr::group_by(fishery_type, rec_season) %>%
+  dplyr::count(region) 
+
+df_ct <- df_ct %>%
+  filter(!fishery_type == "misc" & !fishery_type == "aboriginal" & !fishery_type == "test_fishery")
+
+p<- ggplot(df_ct) + geom_tile(aes(x=rec_season, y= region), color= "white") +
+ theme_bw() +
+  theme(plot.title = element_text(hjust=0, size=16)) +
+ # theme_bw(axis.text.x = element_text(angle = 90, hjust = 1))+
+  facet_wrap(~fishery_type) +
+  labs(title = "Alaska Regions and Recovery Presence Absence", caption = "Removed aboriginal, misc, and test fishery data, season specifications in google drive ak_area notes, a few more regions need to be reclassified but this will only add a recovery for highseas ALEUT in fall, and YAK in summer") +
+  xlab("Season") +
+  ylab("Region")
+p
+
+pdf("AK_region_tile.pdf", width=13, height=8.5); print(p); dev.off()
+
+
+            
+
+p = df %>%
+  ggplot(aes(month_name, tax)) + geom_tile(aes(fill =pres_abs)) +
+  scale_fill_manual(values = col.plot) +
+
+                                            
+#THIS MAY NOT BE USEFUL
+#SUMMARIZE JUST IN HIGH SEAS
+df_ct_hs <- df_ct %>%
+  dplyr::filter(fishery_type=="high_seas") %>%
+  dplyr::group_by(fishery_name, rec_season) %>%
+  dplyr::count(region)
+
+ggplot(df_ct_hs) + geom_tile(aes(x=rec_season, y= region, fill = n), color= "white") +
+  theme_bw() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+  facet_wrap(~fishery_name) +
+  labs(title = "HS Alaska Regions and Recovery Counts", caption = "")
+
+
+                    #PLOT RECOVERIES BY REGION AND SEASON FACETED BY FISHERY - SEPERATE PLOTS FOR EACH RECOVERY STATE MAKE IT EASIER TO READ 
+#THIS NEEDS WORK______________________________________________________________________________________________________________________________________
+
+#summarize to indicate amount of recoveries in each area
+dat_region_sum <- dat_region %>%
+  dplyr::group_by(rec_season, fishery_type) %>%
+  dplyr::count(region)
+
+df <- dat_region
+col.filters <- unique(dat_region$recovery_state) 
+
+lapply(seq_along(col.filters), function(x) {
+  filter(dat_region, recovery_state == col.filters[x])
+}
+) -> df_list
+
+names(df_list) <- col.filters
+
+list2env(df_list, .GlobalEnv)
+
+#plot by fishery list     
+plotdf=list()
+
+for(i in 1: length(df_list)) 
+{
+  df = as.data.frame(df_list[[i]])
+  NAME <- unique(df$recovery_state)
+  
+  plotdf[[i]] <- ggplot(df) + 
+    geom_tile(aes(x=rec_season, y= region), color= "white") +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))+
+    facet_wrap(~fishery_type)
+    ggtitle(paste(as.character(NAME))) 
+}
+
+print(plotdf[[5]])
+
+
+
+
+
+
+
+
+
+
+
+
+
+#SUMMARIZE COUNTS IN HIGHSEAS FISHERY
+df_summ <- df_ct %>%
+  filter(FISH_TYPE == "high_seas") %>%
+  group_by(FISH_TYPE, rec_season, Region) %>%
+  summarise(ct=sum(n))
 
 
 
