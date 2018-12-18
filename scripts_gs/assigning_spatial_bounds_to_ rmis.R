@@ -3,6 +3,7 @@ df = read.csv("recovery codes-wietkamp+shelton 12-2018 two PUSO.csv", stringsAsF
 library(dplyr)
 library(ggplot2)
 library(RColorBrewer)
+library(gridExtra)
 df$recovery_location_code <- df$location_code
 df <- df%>% 
   select(recovery_location_code, Rec.area.Sullaway.Shelton)
@@ -65,7 +66,7 @@ ak_loc <- dat_region_loc %>% #test to see if ak is assigned correctly
 
 df_ct <- dat_region %>%
   filter(region == "BER" | region == "ALEUT" |region == "APEN" | region == "KOD" | region == "PWS" | region == "YAK" | region == "NSEAK" |
-         region == "SSEAK")
+           region == "SSEAK")
 df_ct$region <- as.factor(df_ct$region)
 
 df_ct <- df_ct %>% 
@@ -105,22 +106,100 @@ pdf("AK_region_tile.pdf", width=13, height=8.5); print(p); dev.off()
 
 p = df %>%
   ggplot(aes(month_name, tax)) + geom_tile(aes(fill =pres_abs)) +
-  scale_fill_manual(values = col.plot) +
+  scale_fill_manual(values = col.plot) 
 
-                                            
-#THIS MAY NOT BE USEFUL
-#SUMMARIZE JUST IN HIGH SEAS
-df_ct_hs <- df_ct %>%
-  dplyr::filter(fishery_type=="high_seas") %>%
-  dplyr::group_by(fishery_name, rec_season) %>%
-  dplyr::count(region)
+ #_______________________________________________________________________________________________________________________________________ 
+  #SUMMARY PLOTS OF SPATIAL BOUNDS BY YEAR - JUST AK, FACET BY FISHERY
+df_ct <- dat_region %>%
+  filter(region == "BER" | region == "ALEUT" |region == "APEN" | region == "KOD" | region == "PWS" | region == "YAK" | region == "NSEAK" |
+           region == "SSEAK")
+df_ct$region <- as.factor(df_ct$region)
 
-ggplot(df_ct_hs) + geom_tile(aes(x=rec_season, y= region, fill = n), color= "white") +
-  theme_bw() +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1))+
-  facet_wrap(~fishery_name) +
-  labs(title = "HS Alaska Regions and Recovery Counts", caption = "")
+df_ct <- df_ct %>% 
+  mutate(region = factor(region, levels = c("BER",
+                                            "ALEUT",
+                                            "APEN", 
+                                            "KOD",
+                                            "PWS",
+                                            "YAK",
+                                            "NSEAK",
+                                            "SSEAK"
+  )))
 
+
+df_cta <- df_ct %>%
+  dplyr::filter(!fishery_type == "misc" & !fishery_type == "aboriginal" & !fishery_type == "test_fishery") %>%
+ dplyr::group_by(rec_year, region, fishery_type) %>%
+   dplyr::count(fishery_type)
+
+df <- df_cta
+col.filters <- unique(df_cta$fishery_type) 
+
+lapply(seq_along(col.filters), function(x) {
+  filter(df, fishery_type == col.filters[x])
+}
+) -> df_list
+
+names(df_list) <- col.filters
+
+list2env(df_list, .GlobalEnv)
+
+#plot by fishery list     
+plotdf=list()
+
+for(i in 1: length(df_list)) 
+{
+  df = as.data.frame(df_list[[i]])
+  NAME <- unique(df$fishery_type)
+  
+  plotdf[[i]] <- ggplot(df, aes(x=rec_year, y=n)) +
+    geom_bar(position="dodge", stat="identity") +
+   facet_grid(region ~ ., labeller=label_wrap_gen(width=.1)) +
+    ggtitle('AK Region Recoveries') +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+    labs(x='Recovery Year', y= 'Instance of Fish recovery')+
+    theme_bw()+
+    ggtitle(paste(as.character(NAME))) 
+  
+}
+
+plotdf[[2]]
+
+
+p <- list()
+for(i in 1:4){
+  p[[i]] <- qplot(1:10,10:1,main=i)
+}
+do.call(grid.arrange, p)
+
+g <-grid.arrange(plotdf[[1]], plotdf[[2]], plotdf[[3]], plotdf[[4]], nrow(2), ncol(2))
+g
+pdf(file="ak_recovery_freq_region", width=13, height=8.5); print(g); dev.off()
+
+
+
+pall <- list(plotdf[[1]], plotdf[[2]], plotdf[[3]], plotdf[[4]]) 
+pdf(file="ak_recovery_freq_region.pdf", width=13, height=8.5); print(pall); dev.off()
+
+
+#SAME AS ABOVE JUST WITH ALL FISHERIES
+df_ctb <- df_ct %>%
+  dplyr::filter(!fishery_type == "misc" & !fishery_type == "aboriginal" & !fishery_type == "test_fishery") %>%
+  dplyr::group_by(rec_year, region) %>%
+  dplyr::count(fishery_type)
+
+df <- df_ctb
+
+p <- ggplot(df, aes(x=rec_year, y=n)) +
+    geom_bar(position="dodge", stat="identity") +
+    facet_grid(region ~ ., scales = "free_y", labeller=label_wrap_gen(width=.1)) +
+    ggtitle('AK Region Recoveries') +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+    labs(x='Recovery Year', y= 'Instance of Fish recovery')+
+    theme_bw()+
+    ggtitle("Recoveries AK")
+
+p
 
                     #PLOT RECOVERIES BY REGION AND SEASON FACETED BY FISHERY - SEPERATE PLOTS FOR EACH RECOVERY STATE MAKE IT EASIER TO READ 
 #THIS NEEDS WORK______________________________________________________________________________________________________________________________________
