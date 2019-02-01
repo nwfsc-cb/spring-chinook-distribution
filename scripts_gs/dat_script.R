@@ -190,10 +190,10 @@ dat_focal=dplyr::select(dat_focal, -cwt_1st_mark_count, -cwt_2nd_mark_count,
                        recovery_description = description, latitude=rmis_latitude, longitude = rmis_longitude)
     dat_recovery_ <- dat_recovery %>% 
       unite(recovery_location_code, state_code, marine_fw, rest_of_rec_code, sep = "")
-    dat_recovery_loc = left_join(dat_recovery_, locations, by="recovery_location_code")
+    dat_na = left_join(dat_recovery_, locations, by="recovery_location_code")
 
     #Delete duplicates (they have NA's)
-      dat_recovery_loc <- dat_recovery_loc %>%
+      dat_recovery_loc <- dat_na %>%
      filter(!is.na(latitude))
     
        #add 5 year category
