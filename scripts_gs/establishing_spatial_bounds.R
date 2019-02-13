@@ -137,8 +137,6 @@ df_summ <- df_ct %>%
 setwd("~/Documents/GitHub/rmis/scripts_gs")
 source("base_map_script.R") #create base map for this script to continue to run
 
-
-
 #load dataset called spatial_bounds_gs.xlsx in chinook_bycatch/maps
 spatial_bounds_gs = read.csv("spatial_bounds_gs.csv", stringsAsFactors = FALSE)
 

@@ -175,7 +175,7 @@ dat_focal=dplyr::select(dat_focal, -cwt_1st_mark_count, -cwt_2nd_mark_count,
       '10'="fall")
     
     #dat_recovery has state, fishery gear, and just Marine fish and domain
-    write.csv(dat_recovery, "dat_recovery.csv")
+   # write.csv(dat_recovery, "dat_recovery.csv")
     
 #####################
 #####################
@@ -188,18 +188,18 @@ dat_focal=dplyr::select(dat_focal, -cwt_1st_mark_count, -cwt_2nd_mark_count,
     locations = locations[,c("location_code","rmis_latitude","rmis_longitude", "description")]
     locations = rename(locations, recovery_location_code = location_code,
                        recovery_description = description, latitude=rmis_latitude, longitude = rmis_longitude)
-    dat_recovery_ <- dat_recovery %>% 
-      unite(recovery_location_code, state_code, marine_fw, rest_of_rec_code, sep = "")
-    dat_na = left_join(dat_recovery_, locations, by="recovery_location_code")
-
-    #Delete duplicates (they have NA's)
-      dat_recovery_loc <- dat_na %>%
-     filter(!is.na(latitude))
+    #fix locations file before left joining then may not experience as many duplicates 
+    locations <- locations %>%
+      filter(!is.na(latitude))
     
-       #add 5 year category
-    dat_recovery_loc$run_year_five <- as.vector(cut(dat_recovery_loc$rec_year, breaks=c(-Inf,1977,1982,1987,1992,1997,2002,2007,2012,Inf), labels=c("1973-1977","1978-1982","1983-1987","1988-1992","1993-1997","1998-2002","2003-2007","2008-2012","2013-2016")))
-   
+    locations <- locations %>% 
+      distinct(recovery_location_code, .keep_all = TRUE)   #took out duplicate recovery codes, keep.all = keeps the first row of values for each recovery code
+    #i think this is ok because alot of the duplicate data were just off my a 0.001 degree in the lat and long, not huge differences 
+    
+  #  dat_recovery_ <- dat_recovery %>% 
+   #   unite(recovery_location_code, state_code, marine_fw, rest_of_rec_code, sep = "")
+    dat = left_join(dat_recovery, locations, by="recovery_location_code")
 
-    write.csv(dat_recovery_loc, "dat_recovery_loc.csv")
+   # write.csv(dat, "rmis_data.csv")
     
     

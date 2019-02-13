@@ -1,5 +1,7 @@
 #CODE SPATIAL BOUND CATEGORIES
+setwd("~/Documents/GitHub/rmis/data")
 df = read.csv("recovery codes-wietkamp+shelton 12-2018 two PUSO.csv", stringsAsFactors = FALSE)
+dat = read.csv("rmis_data.csv", stringsAsFactors = FALSE)
 library(dplyr)
 library(ggplot2)
 library(RColorBrewer)
@@ -12,52 +14,46 @@ df$region <- df$Rec.area.Sullaway.Shelton
 df <- df %>% select(-c(Rec.area.Sullaway.Shelton)) 
 #df = version of lookup table with necessary columns
 
-
-#FIGURING OUT WHERE WE ARE MISSING INFO ON LOCATION CODES
-#  df_recovery <- left_join(dat_recovery, df, by = "recovery_location_code")
-#na is a list of recovery codes that did not match up to Oles look up table
-#331 recovery location codes did not match up
-   na<- df_recovery %>% filter(is.na(`Rec area.Shelton3`)) #all the recoveries that do not match up with a recovery location code in look up table // will want to use this later for when add in regions
-    recovery_location_code <- unique(na$recovery_location_code)
-    recovery_location_code <- as.data.frame(recovery_location_code)
-recovery_location_code$id <- 1
-c<- left_join(locations, recovery_location_code) #list of unique codes that are not in look up table (includes with and without lat long)
-id<- c %>% filter(id == 1) #list of unique codes that are not in look up table (includes with and without lat long)
-
-z <- id %>% filter(is.na(latitude)) # list of recovery codes that are not in lookup tanble AND that dont have lat and long - need to look up in RMIS data base?
-lat_long <- id %>% filter(!is.na(latitude)) #list of recovery codes that are not in table but DO have lat long- will use for convex hull stuff
-lat_long <- lat_long %>%
-  dplyr::select(-c(id))
-x <- left_join(dat_recovery, z) 
-v <- x %>% filter(!is.na(id)) #list of # of recoveries that dont have lat long in recovery codes
-#write_csv(lat_long,"missing_rec_code_lat_long.csv")
-
-
 #___________________________________________________________________________________________________________________________________________________
 #join DF recovery with the weitkamp updated codes 
-dat_region <- left_join(dat_recovery, df)
-dat_region <- dat_region %>%
-  filter(!is.na(rec_season))
+dat_region <- left_join(dat, df)
+    #this join only adds 109 rows, small amount of duplicates going to ignore
 
-#MAKE SURE REGIONS ARE CORRECTLY ASSIGNED!! this needs work. 
-dat_region_loc <- left_join(dat_recovery_loc, df, by = "recovery_location_code") #have to add region to dat loc so that you have lat longs just for checking
-dat_region_loc$region <- dat_region_loc$Rec.area.Sullaway.Shelton
-dat_region_loc <- dat_region_loc %>%
-  select(-c(Rec.area.Sullaway.Shelton)) %>%
-  filter(!is.na(rec_season))
-ak_loc <- dat_region_loc %>% #test to see if ak is assigned correctly
-  filter(latitude > 50)
+#write.csv(dat_region, "dat_region.csv") #SAVE DAT REGION FOR FURTHER USE       THIS FILE IS GOOD TO GO. NOW NEEDS SNOUTBASE CORRECTIONS 
 
 
+#PLOT dat_region on map and make sure they land in areas that make sense
+world <- map_data("world")
+north_america <- subset(world, region %in% c("USA"))
+north_america <- north_america %>%
+  filter(!long > -120) %>%
+  filter(!lat < 30)
 
+n <- ggplot(data = north_america) + 
+  geom_polygon(aes(x = long, y = lat, group = group), fill = "white", color = "black") + 
+  coord_fixed(1.3)+
+  theme_bw()
+n
 
+setwd("~/Documents/GitHub/Chinook_Bycatch/Maps_and_Charts_of_Regions")
+spatial_bounds_gs = read.csv("spatial_bounds_gs.csv", stringsAsFactors = FALSE)
 
+df<- spatial_bounds_gs 
 
+p_nolab<- n +
+  geom_segment(data = df, colour="orange", aes(x = as.numeric(line.start.lon), 
+                                               y = as.numeric(line.start.lat), 
+                                               xend = as.numeric(line.end.lon), 
+                                               yend = as.numeric(line.end.lat))) 
 
+w <-  p_nolab +
+  geom_point(data = dat_region, mapping = aes(x = longitude, y = latitude, color= region, alpha= 0.5))  +
+  scale_alpha(guide = 'none')+
+  theme_bw() 
 
-
-#write_csv("dat_region.csv", df_region) SAVE DAT REGION FOR FURTHER USE
-
+w
+#_______________________________________________________________________________________________________________________________________ 
+#ALL SUMMARY PLOTS
 
 #SUMMARY PLOTS OF SPATIAL BOUNDS BY SEASON
 
@@ -242,25 +238,26 @@ print(plotdf[[5]])
 
 
 
+#___________________________________________________________________________________________________________________
 
-
-
-
-
-
-
-
-
-#SUMMARIZE COUNTS IN HIGHSEAS FISHERY
-df_summ <- df_ct %>%
-  filter(FISH_TYPE == "high_seas") %>%
-  group_by(FISH_TYPE, rec_season, Region) %>%
-  summarise(ct=sum(n))
-
-
-
-
-
+#FIGURING OUT WHERE WE ARE MISSING INFO ON LOCATION CODES
+#  df_recovery <- left_join(dat_recovery, df, by = "recovery_location_code")
+#na is a list of recovery codes that did not match up to Oles look up table
+#331 recovery location codes did not match up
+          na<- df_recovery %>% filter(is.na(`Rec area.Shelton3`)) #all the recoveries that do not match up with a recovery location code in look up table // will want to use this later for when add in regions
+          recovery_location_code <- unique(na$recovery_location_code)
+          recovery_location_code <- as.data.frame(recovery_location_code)
+          recovery_location_code$id <- 1
+          c<- left_join(locations, recovery_location_code) #list of unique codes that are not in look up table (includes with and without lat long)
+          id<- c %>% filter(id == 1) #list of unique codes that are not in look up table (includes with and without lat long)
+          
+          z <- id %>% filter(is.na(latitude)) # list of recovery codes that are not in lookup tanble AND that dont have lat and long - need to look up in RMIS data base?
+          lat_long <- id %>% filter(!is.na(latitude)) #list of recovery codes that are not in table but DO have lat long- will use for convex hull stuff
+          lat_long <- lat_long %>%
+            dplyr::select(-c(id))
+          x <- left_join(dat_recovery, z) 
+          v <- x %>% filter(!is.na(id)) #list of # of recoveries that dont have lat long in recovery codes
+#write_csv(lat_long,"missing_rec_code_lat_long.csv")
 
 
 
