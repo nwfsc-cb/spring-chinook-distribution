@@ -21,7 +21,7 @@ release = dplyr::mutate(release,
 
 #fix zeros that are added
 temp.tag <- release$tag_code
-temp.tag[nchar(temp.tag)==5] <- paste("0",temp.tag[nchar(temp.tag)==5],sep="")
+temp.tag[which(nchar(temp.tag)==5)] <- paste("0",temp.tag[which(nchar(temp.tag)==5)],sep="")
 release$tag_code <- temp.tag
 
 # pull out release year
