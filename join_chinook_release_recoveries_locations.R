@@ -71,6 +71,7 @@ recovery_period=data.frame("recovery_month"=1:12,
   "recovery_period"=c(1,1,2,2,3,3,4,4,5,5,6,6))
 dat = left_join(dat, recovery_period)
 
+saveRDS(dat,file="releases_recoveries.Rds")
 
 ###################################################
 # Example analysis:
