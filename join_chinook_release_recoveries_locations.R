@@ -11,10 +11,13 @@ release = dplyr::select(release, tag_code_or_release_id, run, brood_year, first_
   dplyr::rename(tag_code = tag_code_or_release_id)
 
 # Sum up the total releases, drop unneccessary columns
-release$total_release = sum(c(as.numeric(release$cwt_1st_mark_count), as.numeric(release$cwt_2nd_mark_count), 
-                              as.numeric(release$non_cwt_1st_mark_count), as.numeric(release$non_cwt_2nd_mark_count)))
-release = dplyr::select(release, -cwt_1st_mark_count, -cwt_2nd_mark_count,
-  -non_cwt_1st_mark_count, -non_cwt_2nd_mark_count)
+
+release = dplyr::mutate(release, 
+                        cwt_1st_mark_count = ifelse(is.na(cwt_1st_mark_count), 0, cwt_1st_mark_count),
+                        cwt_2nd_mark_count = ifelse(is.na(cwt_2nd_mark_count), 0, cwt_2nd_mark_count),
+                        non_cwt_1st_mark_count = ifelse(is.na(non_cwt_1st_mark_count), 0, non_cwt_1st_mark_count),
+                        non_cwt_2nd_mark_count = ifelse(is.na(non_cwt_2nd_mark_count), 0, non_cwt_2nd_mark_count),
+                        total_release = cwt_1st_mark_count + cwt_2nd_mark_count + non_cwt_1st_mark_count + non_cwt_2nd_mark_count)
 
 #fix zeros that are added
 temp.tag <- release$tag_code
@@ -68,6 +71,9 @@ recovery_period=data.frame("recovery_month"=1:12,
   "recovery_period"=c(1,1,2,2,3,3,4,4,5,5,6,6))
 dat = left_join(dat, recovery_period)
 
+
+###################################################
+# Example analysis:
 # identify salish sea regions
 dat$recovery_coarse = NA
 dat$recovery_coarse[which(dat$recovery_rmis_region %in% c("HOOD","JUAN","SPS","MPS","NPS","SKAG","NOWA","FRTH","GST","JNST"))] = "Salish Sea"
@@ -88,7 +94,9 @@ aqw <- reshape2::dcast(aql, recovery_period ~ variable + stock_coarse)
 write.csv(aqw,"output/mean_proportions_SalishSea.csv",row.names = FALSE)
 # At this point, 'dat' is the complete release-recovery dataset for all years, coastwide
 
-# Example of filtering
+###################################################
+# Example analysis:
+# filtering
 # location codes: 2(BC), 3 (WA), 5 (OR), 6 (CA), etc.
 dat = mutate(dat, recovery_state = substr(recovery_location_code, 1,2)) %>%
   mutate(recovery_year = substr(recovery_date, 1,4),
