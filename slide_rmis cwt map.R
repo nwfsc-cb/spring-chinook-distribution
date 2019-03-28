@@ -30,7 +30,7 @@ p_ak
 high_seas <- dat %>% filter(fishery_type == "high_seas") %>%
   filter(!Latitude< 50) %>%
   dplyr::mutate(year_group=cut(rec_year, breaks=c(-Inf, 1980, 1990, 2000, Inf), labels=c("1973-1980","1980-1990", "1990-2000", "2000-2016"))) %>%
-  filter(year_group %in% c("1980-1990", "2000-2016")) %>%
+ filter(year_group %in% c("1980-1990", "2000-2016")) %>%
 group_by(year_group, fishery_name, Latitude, Longitude)
 
 high_seas <- count(high_seas, fishery_name)
@@ -59,11 +59,12 @@ plot.margin = margin(0.9,.1,1.1,.1, "cm")
 unique(ak_recovery$fishery_type)
 
 ak_recovery <- dat_everything %>% 
+  filter(release_location_state == "AK")%>%
   filter(fishery_type %in% c("high_seas", "troll")) %>%
   filter(!Longitude > -115) %>%
   filter(!Latitude< 55) %>%
   filter(!is.na(fishery_name)) %>%
-  dplyr::mutate(year_group=cut(rec_year, breaks=c(-Inf, 1980, 1990, 2000, Inf), labels=c("1973-1980","1980-1990", "1990-2000", "2000-2016"))) %>%
+#  dplyr::mutate(year_group=cut(rec_year, breaks=c(-Inf, 1980, 1990, 2000, Inf), labels=c("1973-1980","1980-1990", "1990-2000", "2000-2016"))) %>%
   dplyr::mutate(color = recode_factor(fishery_name, 
                                        'Ocean Troll (non-treaty)' = "Troll",
                                        'Ocean Troll- Day Boat' = "Troll",
@@ -74,9 +75,9 @@ ak_recovery <- dat_everything %>%
                                                'Groundfish Observer (Bering Sea)' = "High Seas",
                                                'Troll' = "Troll")) %>%
 # dplyr::mutate(year_group=cut(rec_year, breaks=c(-Inf, 1994, Inf), labels=c("1973-1993","1994-2016"))) %>%
-  group_by(year_group, facet, color, Latitude, Longitude) %>%
-  dplyr::count(color) %>%
-  filter(year_group %in% c("1980-1990", "2000-2016")) 
+  group_by(facet, color, Latitude, Longitude) %>%
+  dplyr::count(color) #%>%
+  #filter(year_group %in% c("1980-1990", "2000-2016")) 
 
   
   
@@ -87,8 +88,8 @@ ggplot( ) +
   geom_point(data= ak_recovery, mapping = aes(x= Longitude, y=Latitude, size= n, color = color), alpha=0.5) +
   scale_size_continuous(name = "CWT Recovery Count") + 
   scale_color_manual(name = " ", values=wes_palette(name="Zissou1")) +
-  facet_grid(year_group ~ facet)+
-  ggtitle("Alaska CWT Recoveries") +
+  facet_grid(~ facet)+
+  ggtitle("CWT Recoveries, Alaska Origin Fish") +
   theme( #legend.position = c(1, 1),
     #text = element_text(color = "#22211d"),
     plot.title = element_text(hjust = 0.5),
@@ -96,7 +97,7 @@ ggplot( ) +
     panel.background = element_rect(fill = "#f5f5f2", color = NA), 
     #legend.background = element_rect(fill = "#f5f5f2", color = NA), 
     legend.box.margin = margin(.6,.1,1.1,.8, "cm"),
-    plot.margin = margin(0.9,.1,1.1,.1, "cm")
+    plot.margin = margin(0.9,.1,1.7,.1, "cm")
     #plot.title = element_text(size= 16, hjust=0.1, color = "#4e4d47", margin = margin(b = -0.1, t = 0.4, l = 2, unit = "cm"))
   )
 
