@@ -1,7 +1,6 @@
 #create CWT recovery map for slide 
-library(dplyr)
-library(ggplot2)
-library(tidyr)
+
+library(tidyverse)
 library(maps)
 library(mapdata)
 library(scales)
@@ -34,7 +33,12 @@ high_seas <- dat %>% filter(fishery_type == "high_seas") %>%
 group_by(year_group, fishery_name, Latitude, Longitude)
 
 high_seas <- count(high_seas, fishery_name)
-  
+
+# for jordan    sum <- high_seas %>%
+#                      group_by(year_group) %>%
+#                     dplyr::summarise(sum = sum(n))
+
+
 ggplot( ) + 
   geom_polygon(data = ak, aes(x = long, y = lat, group = group), fill = "grey", alpha = 0.5) + 
   coord_fixed(1.3)+
@@ -79,7 +83,9 @@ ak_recovery <- dat_everything %>%
   dplyr::count(color) #%>%
   #filter(year_group %in% c("1980-1990", "2000-2016")) 
 
-  
+#  sum <- dat_everything %>%
+#    group_by(fishery_name) %>%
+#    dplyr::summarise(sum = sum(n))
   
 ggplot( ) + 
   geom_polygon(data = ak, aes(x = long, y = lat, group = group), fill = "grey", alpha = 0.5) + 
@@ -87,7 +93,7 @@ ggplot( ) +
   theme_void() +
   geom_point(data= ak_recovery, mapping = aes(x= Longitude, y=Latitude, size= n, color = color), alpha=0.5) +
   scale_size_continuous(name = "CWT Recovery Count") + 
-  scale_color_manual(name = " ", values=wes_palette(name="Zissou1")) +
+ scale_color_manual(name = " ", values=wes_palette(name="Zissou1")) +
   facet_grid(~ facet)+
   ggtitle("CWT Recoveries, Alaska Origin Fish") +
   theme( #legend.position = c(1, 1),
@@ -98,6 +104,116 @@ ggplot( ) +
     #legend.background = element_rect(fill = "#f5f5f2", color = NA), 
     legend.box.margin = margin(.6,.1,1.1,.8, "cm"),
     plot.margin = margin(0.9,.1,1.7,.1, "cm")
+    #plot.title = element_text(size= 16, hjust=0.1, color = "#4e4d47", margin = margin(b = -0.1, t = 0.4, l = 2, unit = "cm"))
+  )
+##################################### PLOT JUST PRIEST RAPIDS AND UPPER COLUMBIA RELEASES IN EARLY AND LATE RECOVERY YEARS BY FISHERY #########################################
+test <- dat_everything %>% 
+  filter(release_location_name == "YAKIMA @ PROSSER HAT") %>%
+ # group_by(Latitude, Longitude) %>%
+  dplyr::count(fishery_type) 
+
+ph <- dat_everything %>% 
+  filter(release_location_name == "YAKIMA @ PROSSER HAT") %>%
+  filter(!fishery_name %in% c("Mixed Net and Seine")) %>%
+  filter(!Longitude > -115) %>%
+  filter(!is.na(fishery_name)) %>%
+#  dplyr::mutate(year_group=cut(rec_year, breaks=c(-Inf, 1980, 1990, 2000, Inf), labels=c("1973-1980","1980-1990", "1990-2000", "2000-2016")))  %>%
+ dplyr::mutate(color = recode_factor(fishery_name, 
+                                      'Ocean Troll- Trip' = "Troll",
+                                      'Treaty Troll' = "Troll",
+                                      'Non-treaty/treaty Troll'= "Troll",
+                                      'Ocean Troll (non-treaty)' = "Troll",
+                                      'Ocean Troll- Day Boat' = "Troll",
+                                      'Terminal Troll' = "Troll", 
+                                     'Columbia Gillnet' = "Net",
+                                     'Private Sport' = "Sport",
+                                     'Ocean Sport' = "Sport",
+                                     'Charter Sport' = "Sport",
+                                     'Ocean Gillnet' = "Net",
+                                     'Commercial Seine' = "Seine",
+                                      'Aboriginal Troll'= "Troll")) %>%
+  dplyr::mutate(facet = recode_factor(color,'Groundfish Observer (Gulf AK)' = "High Seas", 
+                                      'Hake Trawl Shoreside (OR WA)' = "High Seas",
+                                      'Rockfish Trawl (CA OR WA)' = "High Seas",
+                                      'Groundfish Trawl (CA OR WA)' = "High Seas",
+                                      
+                                      'Rockfish Fishery (Gulf of AK)' = "High Seas", 
+                                      'Groundfish Observer (Bering Sea)' = "High Seas",
+                                      'Hake Trawl At Sea (CA OR WA)' = "High Seas",
+                                      'Ocean Trawl By-catch'= "High Seas",
+                                      'Troll' = "Troll")) %>%
+  # dplyr::mutate(year_group=cut(rec_year, breaks=c(-Inf, 1994, Inf), labels=c("1973-1993","1994-2016"))) %>%
+ # filter(year_group %in% c("1980-1990", "2000-2016")) %>%
+ group_by(fishery_name, color, Latitude, Longitude) %>%
+  dplyr::count(color) 
+
+ggplot( ) + 
+  geom_polygon(data = west_coast, aes(x = long, y = lat, group = group), fill = "grey", alpha = 0.5) + 
+  coord_fixed(1.3)+
+  theme_void() +
+  geom_point(data= ph, mapping = aes(x= Longitude, y=Latitude, size= n, color = color), alpha=0.5) +
+  scale_size_continuous(name = "CWT Recovery Count") + 
+  scale_color_manual(name = " ", values=wes_palette(name="Cavalcanti1")) +
+ # facet_grid( ~ facet)+
+  ggtitle("Recovery Locations for\nProsser Hat CWT Fish") +
+  theme( #legend.position = "bottom",
+    #text = element_text(color = "#22211d"),
+    plot.title = element_text(hjust = 0.5),
+    plot.background = element_rect(fill = "#f5f5f2", color = NA), 
+    panel.background = element_rect(fill = "#f5f5f2", color = NA), 
+    #legend.background = element_rect(fill = "#f5f5f2", color = NA), 
+    legend.box.margin = margin(.6,.1,1.1,.8, "cm"),
+    plot.margin = margin(0.9,.1,1.1,.1, "cm")
+    #plot.title = element_text(size= 16, hjust=0.1, color = "#4e4d47", margin = margin(b = -0.1, t = 0.4, l = 2, unit = "cm"))
+  )
+############
+
+upcr <- dat_everything %>% filter(release_location_rmis_region == "UPCR") %>%
+   filter(!fishery_type %in% c("net_seine", "sport")) %>%
+  filter(!Longitude > -115) %>%
+  filter(!is.na(fishery_name)) %>%
+    #  dplyr::mutate(year_group=cut(rec_year, breaks=c(-Inf, 1980, 1990, 2000, Inf), labels=c("1973-1980","1980-1990", "1990-2000", "2000-2016")))  %>%
+  dplyr::mutate(color = recode_factor(fishery_name, 
+                                      'Ocean Troll- Trip' = "Troll",
+                                      'Treaty Troll' = "Troll",
+                                      'Non-treaty/treaty Troll'= "Troll",
+                                      'Ocean Troll (non-treaty)' = "Troll",
+                                      'Ocean Troll- Day Boat' = "Troll",
+                                      'Terminal Troll' = "Troll", 
+                                      'Aboriginal Troll'= "Troll")) %>%
+  dplyr::mutate(facet = recode_factor(color,'Groundfish Observer (Gulf AK)' = "High Seas", 
+                                      'Hake Trawl Shoreside (OR WA)' = "High Seas",
+                                      'Rockfish Trawl (CA OR WA)' = "High Seas",
+                                      'Groundfish Trawl (CA OR WA)' = "High Seas",
+                                      
+                                      'Rockfish Fishery (Gulf of AK)' = "High Seas", 
+                                      'Groundfish Observer (Bering Sea)' = "High Seas",
+                                      'Hake Trawl At Sea (CA OR WA)' = "High Seas",
+                                      'Ocean Trawl By-catch'= "High Seas",
+                                      'Troll' = "Troll")) %>%
+  # dplyr::mutate(year_group=cut(rec_year, breaks=c(-Inf, 1994, Inf), labels=c("1973-1993","1994-2016"))) %>%
+  # filter(year_group %in% c("1980-1990", "2000-2016")) %>%
+ group_by(color, facet, Latitude, Longitude) %>%
+  dplyr::count(color) 
+
+
+ggplot( ) + 
+  geom_polygon(data = west_coast, aes(x = long, y = lat, group = group), fill = "grey", alpha = 0.5) + 
+  coord_fixed(1.3)+
+  theme_void() +
+  geom_point(data= upcr, mapping = aes(x= Longitude, y=Latitude, size= n, color = color), alpha=0.5) +
+  scale_size_continuous(name = "CWT Recovery Count") + 
+  scale_color_manual(name = " ", values=wes_palette(name="Cavalcanti1")) +
+  facet_grid( ~ facet)+
+  ggtitle("Recovery Locations for\nUpper Columbia River CWT Fish") +
+  theme( #legend.position = "bottom",
+    #text = element_text(color = "#22211d"),
+    plot.title = element_text(hjust = 0.5),
+    plot.background = element_rect(fill = "#f5f5f2", color = NA), 
+    panel.background = element_rect(fill = "#f5f5f2", color = NA), 
+    #legend.background = element_rect(fill = "#f5f5f2", color = NA), 
+    legend.box.margin = margin(.6,.1,1.1,.8, "cm"),
+    plot.margin = margin(0.9,.1,1.1,.1, "cm")
     #plot.title = element_text(size= 16, hjust=0.1, color = "#4e4d47", margin = margin(b = -0.1, t = 0.4, l = 2, unit = "cm"))
   )
 
