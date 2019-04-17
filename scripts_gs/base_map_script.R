@@ -8,7 +8,8 @@ library(raster)
 
 #This script codes the base map for other spatial graphing, 
                 #also has broader graphing of the fishery types through year, 5 years, and all years
-setwd("~/Documents/GitHub/rmis")
+#setwd("~/Documents/GitHub/rmis")
+setwd("..")
 dat_recovery_loc = read.csv("dat_recovery_loc.csv", stringsAsFactors = FALSE)
 
 #had to take the world map and parce it down by filtering out lats and longs I didnt want since subregions were not in data set
