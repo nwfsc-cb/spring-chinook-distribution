@@ -157,20 +157,20 @@ dat_focal=dplyr::select(dat_focal, -cwt_1st_mark_count, -cwt_2nd_mark_count,
     dat_recovery$rec_year <- as.numeric(dat_recovery$rec_year)
     
     #recode to have seasons
-    dat_recovery$rec_season <- dat_recovery$rec_month %>%
-      recode(
-      '11'= "winter",
-      '12'="winter",
-      '1'="winter",
-      '2'="winter",
-      '3'="winter",
-      '4'="spring",
-      '5'="spring",
-      '6'="summer",
-      '7'="summer",
-      '8'="fall",
-      '9'="fall",
-      '10'="fall")
+  #  dat_recovery$rec_season <- dat_recovery$rec_month %>%
+   #   recode(
+    #  '11'= "winter",
+     # '12'="winter",
+      #'1'="winter",
+      #'2'="winter",
+      #'3'="winter",
+      #'4'="spring",
+      #'5'="spring",
+      #'6'="summer",
+      #'7'="summer",
+      #'8'="fall",
+      #'9'="fall",
+      #'10'="fall")
     
     #dat_recovery has state, fishery gear, and just Marine fish and domain
    # write.csv(dat_recovery, "dat_recovery.csv")

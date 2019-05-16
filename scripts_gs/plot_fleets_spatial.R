@@ -62,7 +62,23 @@ s
       #HIGHSEAS
 highseas <- dat_recovery_loc %>%
   filter(fishery_type == 'high_seas')
-  
+#just AK highseas fisheries
+
+OCEAN_BYCATCH <- dat_everything %>%
+  filter(fishery_type == 'high_seas') %>%
+  filter(fishery_name %in% c("Ocean Trawl By-catch")) %>%
+  filter(!Latitude == 0)
+
+
+p1 <-  p_north_am +
+  geom_point(data = OCEAN_BYCATCH, mapping = aes(x = Longitude, y = Latitude), color = 'red') +
+  scale_alpha(guide = 'none')+
+ # colScale+
+  ggtitle("Ocean Bycatch Trawl (1981-2016)") +
+  # labs(caption = "N") +
+  theme_bw() 
+p1
+
 ## COLORS ##
 #########create color scale so fisheries always have same color
 highseas$fishery_name <- as.factor(highseas$fishery_name)
@@ -100,6 +116,9 @@ h_5yr <-  p_north_am +
   ggtitle("High Seas Recovery (Five Year Interval)") +
   theme_bw() 
 h_5yr
+
+
+
 
 #no high seas recovery in BC
 #Groundfish observer (orange) pollock pretty consistent through time until 2008, very few recoveries until 2012, sill low recoveries

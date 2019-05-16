@@ -1,9 +1,7 @@
-library(ggplot2)
+library(tidyverse)
 library(RColorBrewer)
-library(tidyr)
 library(maps)
 library(mapdata)
-library(dplyr)
 library(gridExtra)
 #this script isolates different fleets and plots how many fish  have recovered by a fleet within a fishery category
 
@@ -14,7 +12,7 @@ dat_recovery = read.csv("dat_recovery.csv", stringsAsFactors = FALSE)
 
 highseas<- dat_recovery %>% filter(fishery_type=='high_seas')
 
-#sort high seas to get recovery #s by year and fishery to look at available data through time (NOT space)
+#sort high seas to get recovery #s by year and fishery to look at available data through time 
 highseas_group <- highseas %>%
   group_by(rec_year, fishery_name) 
 highseas_count=count(highseas_group, fishery_name) 
@@ -30,6 +28,19 @@ hs_bar <- ggplot(highseas_count, aes(x=rec_year, y=n)) +
   labs(x='Recovery Year', y= 'Instance of Fish recovery')
 hs_bar
 
+
+#just AK highseas fisheries
+ak_highseas <- highseas_count %>%
+  filter(fishery_name %in% c("Groundfish Observer (Bering Sea)", "Groundfish Observer (Gulf AK)", "Rockfish Fishery (Gulf of AK)" ))
+
+ak_bar <- ggplot(ak_highseas, aes(x=rec_year, y=n)) +
+  geom_bar(position="dodge", stat="identity") +
+  facet_grid(fishery_name ~ .,scales = "free_y", labeller=label_wrap_gen(width=.1)) + 
+  ggtitle('AK High Seas Recoveries') +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  labs(x='Recovery Year', y= 'Instance of Fish recovery') +
+  theme_bw()
+ak_bar
 
 #__________________________________________________________________________________________
 ########## SPORT FISHERY #############

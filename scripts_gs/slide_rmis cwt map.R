@@ -328,9 +328,6 @@ wa <- dat_everything %>% filter(release_loc_domain == "WA") %>%
   group_by(year_group, facet, color, Latitude, Longitude) %>%
   dplyr::count(color) 
 
-
-
- 
 ggplot( ) + 
   geom_polygon(data = west_coast, aes(x = long, y = lat, group = group), fill = "grey", alpha = 0.5) + 
   coord_fixed(1.3)+
