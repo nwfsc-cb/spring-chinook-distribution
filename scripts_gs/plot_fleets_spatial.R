@@ -27,7 +27,8 @@ library(mapdata)
 
 #________________________________________________________________________________________________________________
 
-setwd("~/Documents/GitHub/rmis/scripts_gs")
+#setwd("~/Documents/GitHub/rmis/scripts_gs")
+setwd("./scripts_gs")
 source("base_map_script.R") #create base map for this script to continue to run
 
 #add spatial bounds with out labels to plot points

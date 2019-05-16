@@ -2,6 +2,17 @@
 library(tidyverse)
 library(maps)
 library(mapdata)
+<<<<<<< HEAD:scripts_gs/base_map_script.R
+library(scales)
+library(raster)
+
+#This script codes the base map for other spatial graphing, 
+                #also has broader graphing of the fishery types through year, 5 years, and all years
+#setwd("~/Documents/GitHub/rmis")
+setwd("..")
+dat_recovery_loc = read.csv("dat_recovery_loc.csv", stringsAsFactors = FALSE)
+=======
+>>>>>>> 2a10f93b7f6cbe4ab6d3226e126a5004cec5e642:scripts_gs/map_base.R
 
 #had to take the world map and parce it down by filtering out lats and longs I didnt want since subregions were not in data set
     world <- map_data("world")
