@@ -3,10 +3,15 @@ library(RColorBrewer)
 library(maps)
 library(mapdata)
 library(gridExtra)
+
+test <- dat_focal %>% filter(fishery %in% c(800, 85))
+
 #this script isolates different fleets and plots how many fish  have recovered by a fleet within a fishery category
 
 dat_recovery = read.csv("dat_recovery.csv", stringsAsFactors = FALSE)
-
+#use latest RMIS doc
+setwd("~/Documents/GitHub/rmis/data/final_data/")
+dat_recovery = read.csv("rmis_release_recovery.csv")
 #____________________________________________________________________________________________________
 ############# HIGH SEAS #############
 
@@ -14,15 +19,15 @@ highseas<- dat_recovery %>% filter(fishery_type=='high_seas')
 
 #sort high seas to get recovery #s by year and fishery to look at available data through time 
 highseas_group <- highseas %>%
-  group_by(rec_year, fishery_name) 
-highseas_count=count(highseas_group, fishery_name) 
+  group_by(rec_year, fishery) 
+highseas_count=count(highseas_group, fishery) 
 highseas_spread <- highseas_count %>%
-  spread(fishery_name, n)
+  spread(fishery, n)
 highseas_spread[is.na(highseas_spread)] <- 0
 
 hs_bar <- ggplot(highseas_count, aes(x=rec_year, y=n)) +
   geom_bar(position="dodge", stat="identity") +
-  facet_grid(fishery_name ~ .,scales = "free_y",labeller=label_wrap_gen(width=.1)) +
+  facet_grid(fishery ~ .,scales = "free_y",labeller=label_wrap_gen(width=.1)) +
   ggtitle('High Seas Recoveries') +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
   labs(x='Recovery Year', y= 'Instance of Fish recovery')
