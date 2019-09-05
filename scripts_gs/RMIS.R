@@ -9,29 +9,29 @@ library(tidyverse)
 #load recoveries
 setwd("~/Documents/GitHub/rmis")
 
-recover = read.csv("data/chinook/recoveries_1973.csv", stringsAsFactors = FALSE)
-recover = dplyr::select(recover, tag_code, recovery_id, recovery_date, fishery, gear, 
-                        recovery_location_code, recovery_location_name, estimation_level, estimated_number)
-for(y in 1974:2016) {
-  #  names change slightly in 2015,
-  temp = read.csv(paste0("data/chinook/recoveries_",y,".csv"), 
-                  stringsAsFactors = FALSE)
-  temp = dplyr::select(temp, tag_code, recovery_id, recovery_date, fishery, gear, 
-                       recovery_location_code, recovery_location_name, estimation_level, estimated_number)
-  recover = rbind(recover, temp)
-}
-
-recover = dplyr::filter(recover, !is.na(estimated_number)) %>% 
-  filter(tag_code != "")
-
-#load release data
-release = read.csv("data/chinook/all_releases.txt", header=T, stringsAsFactors = FALSE) 
-release = dplyr::select(release, tag_code_or_release_id, run, brood_year, first_release_date,
-                        release_location_code, stock_location_code, cwt_1st_mark_count, cwt_2nd_mark_count,
-                        non_cwt_1st_mark_count, non_cwt_2nd_mark_count, release_location_name,
-                        stock_location_name, release_location_state, release_location_rmis_region, 
-                        release_location_rmis_basin) %>% 
-  dplyr::rename(tag_code = tag_code_or_release_id)
+  recover = read.csv("data/chinook/recoveries_1973.csv", stringsAsFactors = FALSE)
+  recover = dplyr::select(recover, tag_code, recovery_id, recovery_date, fishery, gear, 
+                          recovery_location_code, recovery_location_name, estimation_level, estimated_number, detection_method)
+  for(y in 1974:2016) {
+    #  names change slightly in 2015,
+    temp = read.csv(paste0("data/chinook/recoveries_",y,".csv"), 
+                    stringsAsFactors = FALSE)
+    temp = dplyr::select(temp, tag_code, recovery_id, recovery_date, fishery, gear, 
+                         recovery_location_code, recovery_location_name, estimation_level, estimated_number, detection_method)
+    recover = rbind(recover, temp)
+  }
+  
+  recover = dplyr::filter(recover, !is.na(estimated_number)) %>% 
+    filter(tag_code != "")
+  
+  #load release data
+  release = read.csv("data/chinook/all_releases.txt", header=T, stringsAsFactors = FALSE) 
+  release = dplyr::select(release, tag_code_or_release_id, run, brood_year, first_release_date,
+                          release_location_code, stock_location_code, cwt_1st_mark_count, cwt_2nd_mark_count,
+                          non_cwt_1st_mark_count, non_cwt_2nd_mark_count, release_location_name,
+                          stock_location_name, release_location_state, release_location_rmis_region, 
+                          release_location_rmis_basin) %>% 
+    dplyr::rename(tag_code = tag_code_or_release_id)
 
 #left_join combines the two data frames into dat
 dat = left_join(recover, release) 
@@ -262,7 +262,7 @@ all_dat1$region<-  as.vector(cut(all_dat1$Lat, breaks=c(Inf,46.63611,45.76666,44
 
 all_dat2 <- all_dat1 %>% 
   select(id,rec_year, rec_month, rec_day, tag_code, recovery_id, fishery, fishery_type, gear, region, latitude, longitude, Lat, Long, region, recovery_location_code, recovery_location_name, estimated_number, estimation_level, brood_year, first_release_date, release_location_code, release_location_name, release_location_state, release_location_rmis_basin,
-         release_loc_domain, stock_location_code, total_release )
+         release_loc_domain, stock_location_code, total_release, detection_method )
  
 df_recovery$Haul <- NA
 df_recovery$Lat <- NA
@@ -275,7 +275,7 @@ dat_region_filter <- df_recovery %>%
   unite("id", c("rec_year", "rec_month", "rec_day", "tag_code"), remove =FALSE ) %>%
   filter(!fishery_type == "high_seas" | !rec_year > 2005) %>% #get rid of the data that is in hs_dat so then they can be bound later and duplicates wont be counted
     select(id, rec_year, rec_month, rec_day, tag_code, recovery_id, fishery, fishery_type, gear, region, latitude, longitude, Lat, Long, region, recovery_location_code, recovery_location_name, estimated_number, estimation_level,  brood_year, first_release_date, release_location_code, release_location_name, release_location_state, release_location_rmis_basin,
-         release_loc_domain, stock_location_code, total_release)
+         release_loc_domain, stock_location_code, total_release,detection_method)
 
 everything <- rbind(dat_region_filter, all_dat2, deparse.level = 1, make.row.names = TRUE)  
 
