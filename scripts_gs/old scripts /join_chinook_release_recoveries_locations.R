@@ -31,13 +31,13 @@ release = dplyr::select(release, -first_release_date)
 # recoveries
 recover = read.csv("data/chinook/recoveries_1973.csv", stringsAsFactors = FALSE)
 recover = dplyr::select(recover, tag_code, recovery_id, recovery_date, fishery, gear, 
-  recovery_location_code, recovery_location_name, estimated_number)
+  recovery_location_code, recovery_location_name, estimated_number, length)
 for(y in 1974:2016) {
   #  names change slightly in 2015,
   temp = read.csv(paste0("data/chinook/recoveries_",y,".csv"), 
     stringsAsFactors = FALSE)
   temp = dplyr::select(temp, tag_code, recovery_id, recovery_date, fishery, gear, 
-    recovery_location_code, recovery_location_name, estimated_number)
+    recovery_location_code, recovery_location_name, estimated_number, length)
   recover = rbind(recover, temp)
 }
 
