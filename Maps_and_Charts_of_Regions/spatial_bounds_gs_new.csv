@@ -12,7 +12,7 @@ WAC.1,,,wa,48.42,-123.109,48.23,-123.54,,,,,
 WAC.2,,,wa,48.23,-123.54,48.48,-124.78,,,,,
 WAC.3,,,wa,48.48,-124.78,48.48,-127,,,,,
 PUSO,,,bc,,,,,,,,,
-SGEO,,US.CAN Border,bc,-124.7177167,50.87719,-128.050364,50.97555,-127.470233,,,line is at northern edge of Johnston Strait,
+SGEO,,US.CAN Border,bc,50.87719,-124.7177167,50.97555,-128.050364,-127.470233,50.97555,,line is at northern edge of Johnston Strait,
 SWVI,,US.CAN Border,bc,49.382966,-126.544033,49.382966,-127.029133,49,-127,,,line is at area 125 and is northern border
 NWVI,,Estevan Point,bc,50.8608,-128.2543103,50.8608,-130,50,-129,,,"line is at area 125 and is southern border, east.west is north east corner of box"
 CBC,,Cape Scott plus,bc,51.9358833,-131,51.9358833,-133,51.5,-130,,,lines are complex areas inside of Haida G'wai

@@ -1,6 +1,5 @@
 library(tidyverse)
 library(here)
-
 #this file creates a new column in our lookup code file that has Alaska assignments for the NMFS stat areas and then saves it at the end. 
 
 #write.csv(dat_recovery, "dat_recovery.csv")
@@ -8,150 +7,205 @@ library(here)
 codes = read_csv("data/recovery codes-wietkamp+shelton 12-2018 two PUSO.csv") %>%
  # select(c(1:10, 17)) %>%
  # filter(state.prov == 1) %>%
-  mutate(recovery_location_code = location_code)
+  mutate(recovery_location_code = location_code) %>%
+  select(-c(Rec.area.Sullaway.Shelton.NMFSstat)) #remove previous versions for joining
+#%>%
+ # select(-c("latitude", "longitude"))
 
-#bring in RMIS data to figure out what codes need to be re-assigned 
-rmis = read.csv("data/rmis_release_recovery.csv", stringsAsFactors = FALSE) %>%
-  filter(region %in% c("NSEAK", "YAK", "PWS", "KOD", "APEN", "ALEUT","BER")) 
+location = read.csv("data/locations.txt") %>%
+ select(c("location_code","rmis_latitude","rmis_longitude", "description")) %>%
+ rename(recovery_location_code = location_code, recovery_description = description,
+                latitude=rmis_latitude, longitude = rmis_longitude) %>%
+ distinct(recovery_location_code, .keep_all = TRUE)   #took out duplicate recovery codes, keep.all = keeps the first row of values for each recovery code
+ 
 
-rec_codes_reassign <- as.data.frame(unique(rmis$recovery_location_code)) %>%
-  rename(recovery_location_code= "unique(rmis$recovery_location_code)" )
-
-#### RAN "STEP 1" OF RMIS.R TO GET TO THE DAT_RECOVERY FILE ####
-#assign recoveries to new STAT areas based on their lat and long. 
-temp_lat_long <- semi_join(dat_recovery, rec_codes_reassign) %>% #temp should be only the alaska recovery codes + associated info 
+#easier to assign codes that have lat/longs - start with those. Join on the location file to the codes to get the descriptions and lat/longs when applicable. 
+temp_lat_long <- left_join(codes, location, by=c("recovery_location_code")) %>%
+  filter(`state/prov` %in% c(1,7)) %>%
+  #filter(str_detect(tolower(recovery_location_code), "^1")) %>% #Just pulls AK recoveries 
   filter(!is.na(latitude)) %>% 
   separate(recovery_description, into = c("sea", "sector", "hemi", "Bearing", "stat_area"), sep = ",") %>%
   separate(stat_area, into = c("area_info", "stat_area"), sep = 24) %>%
-  select(3:8,13,17,31:32, 34:38) %>%
-  mutate(gs_nmfs_region = case_when(
+  mutate(longitude = case_when(longitude > 100 ~ longitude * -1,
+                               TRUE ~ longitude)) %>% # (-)'s left off of some of the longitudes 
+  filter(latitude > 50) %>%
+  mutate(Rec.area.Sullaway.Shelton.NMFSstat = case_when(
+    Rec.area.Sullaway.Shelton.YAK_SOR_NCA == "NSEAK SSEAK" ~ "NSEAK SSEAK",
+    Rec.area.Sullaway.Shelton.YAK_SOR_NCA == "NSEAK" ~ "NSEAK",
+    Rec.area.Sullaway.Shelton.YAK_SOR_NCA == "SSEAK" ~ "SSEAK",
+    Rec.area.Sullaway.Shelton.YAK_SOR_NCA == "YAK" ~ "YAK", #Ole already assigned these, so they will just carry over
+    sector== " SECTOR 4"~ "BER",
     longitude > -140 & latitude > 55.5   ~  "NSEAK", #"X650",
     longitude < -140 & longitude > -147 | longitude == -140 ~ "YAK", #"X640",
     longitude < -147 & longitude > -154 | longitude == -147 ~ "PWS", #"X630",
     longitude < -154 & longitude > -159 | longitude == -154 ~ "KOD", #"X620",
-    longitude < -159 & longitude > -170 | longitude == -159 ~ "APEN",  #"X610",
-    longitude == -172 ~ "X541", #an odd ball on the south side of aluetian islands in sector 3
-    sector== " SECTOR 4"~ "BER",
-    latitude < 55.5   ~ "SSEAK",
-        TRUE ~ "FIX_ME"))  
-#df <- df %>%
-#  filter(state =="ak")
+    latitude > 59 & longitude < -160 ~ "BER",
+    longitude < -159 & longitude > -170 | longitude == -159 & latitude < 55 ~ "APEN",  #"X610",
+    longitude == -172 & latitude < 55 ~ "APEN", #an odd ball on the south side of aluetian islands in sector 3
+    Rec.area.Sullaway.Shelton.YAK_SOR_NCA == "ALEUT" ~ "ALEUT",
+    latitude < 55.5 & longitude > -140 ~ Rec.area.Sullaway.Shelton.YAK_SOR_NCA,
+         TRUE ~ Rec.area.Sullaway.Shelton.YAK_SOR_NCA)) %>%
+  mutate(Rec.area.Sullaway.Shelton.NMFSstat = case_when(Rec.area.Sullaway.Shelton.NMFSstat == "BER" & sector == " Region 1" ~ "YAK",
+                                                        Bearing == "District 186" ~ "YAK",
+                                                        Rec.area.Sullaway.Shelton.NMFSstat == "YAK" & longitude > -137 & latitude < 58  ~ "NSEAK", #SOME OF THE YAK'S ARENT ASSIGNING CORRECLTY THIS WILL FIX IT. 
+                                                        Rec.area.Sullaway.Shelton.NMFSstat %in% c("APEN", "HSEA") & latitude < 52 & longitude < -170 ~ "ALEUT",
+                                                        Rec.area.Sullaway.Shelton.NMFSstat == "APEN" & latitude > 57 ~ "BER",
+                                                        Rec.area.Sullaway.Shelton.NMFSstat == "BER" & latitude < 54 & longitude < -170 ~ "ALEUT",
+                                                        Rec.area.Sullaway.Shelton.NMFSstat == "NSEAK" & latitude > 58 & longitude < -136.5 ~ "BER",
+                                                        Rec.area.Sullaway.Shelton.NMFSstat == "BER" & latitude < 55 ~ "APEN",
+                                                        Rec.area.Sullaway.Shelton.NMFSstat == "HSEA" & latitude == 55 ~ "SSEAK",
+                                                        Rec.area.Sullaway.Shelton.NMFSstat == "NSEAK" & latitude == 56 ~ "SSEAK",
+                                                        Rec.area.Sullaway.Shelton.NMFSstat == "YAK" & longitude > - 136.5 ~ "NSEAK",
+                                                                       TRUE ~ Rec.area.Sullaway.Shelton.NMFSstat))#TWO Yak and one SSEAK is out of line - will come back to those later. 
 
+ test <- temp_lat_long %>%
+filter(Rec.area.Sullaway.Shelton.NMFSstat == "BER")
 #plot and check to see if assignment worked
-# base <- world <- map_data("world") %>%  subset(region %in% c("USA", "Canada")) %>%
-#     filter(!group== 1511, !group== 1518, !group==1515, !group==1508, !group==1502, !group==1509) %>%
-#     filter(!long > -115) %>%
-#     filter(!lat < 34) %>%
-#     filter(!lat > 62) %>%
-#     filter(!long < -173) 
-#     ggplot(base) +
-#     geom_polygon(aes(x = long, y = lat, group = group), fill = "white", color = "black") +
-#     coord_fixed(1.3)+
-#     geom_point(data = temp_3, mapping = aes(x = longitude, y = latitude, color = gs_nmfs_region)) +
-#     geom_segment(data = df, colour="orange", aes(x = as.numeric(line.start.lon), 
-#                                                y = as.numeric(line.start.lat), 
-#                                                xend = as.numeric(line.end.lon), 
-#                                                yend = as.numeric(line.end.lat))) +
-#     geom_text(data=df, colour="darkgreen",aes(x=as.numeric(label_long2), y=as.numeric(label_lat2), label= region), size=2) +
-#     theme_bw()
+base <- world <- map_data("world") %>%  subset(region %in% c("USA", "Canada")) %>%
+    filter(!group== 1511, !group== 1518, !group==1515, !group==1508, !group==1502, !group==1509) %>%
+    filter(!long > -115) %>%
+    filter(!lat < 34) %>%
+    filter(!lat > 62) %>%
+    filter(!long < -173) %>% 
+    ggplot( ) +
+    geom_polygon(aes(x = long, y = lat, group = group), fill = "white", color = "black") +
+    coord_fixed(1.3)
 
-    #LEFT OFF HERE
-#ONCE YOU GET ASSIGNMENTS - MAKE AN RMD THAT SUMMARIZES EVERYTING - PLOT THEM IN BINS BY FISHERY (THIS WONT BE A MAP BC A LOT DONT HAVE LAT LONGS) AND MAKE A TABLE LIKE THE ONE YOU SENT TO JORDAN 
-    #AND ADD THEM TO THE RECOVERY CODE DATA BASE AS A NEW COLUMN - DO THIS IN R THEN DOWNLOAD THE DATA SHEET ADD TO RMIS 
-    #ONCE YOU UPDATE THE CODE DATABASE, GO BACK INTO RMIS.R RE-RUN THE SCRIPT, MAKE SURE EVERYRHING MAKES SENSE AND SAVE NEW RMIS CSV. 
-  
-#seperate process for codes with out a latitude 
- temp_NA <- semi_join(dat_recovery, rec_codes_reassign) %>% #temp should be only the alaska recovery codes + associated info 
+base +  geom_point(data = temp_lat_long, mapping = aes(x = longitude, y = latitude, color = Rec.area.Sullaway.Shelton.NMFSstat)) +
+    theme_bw()
+    
+#seperate process for codes without a latitude 
+temp_NA <- left_join(codes, location, by=c("recovery_location_code")) %>%
+  filter(`state/prov` %in% c(1,7)) %>%
   filter(is.na(latitude)) %>% 
+  mutate(recovery_description = as.character(recovery_description)) %>%
+  mutate(recovery_description = case_when(is.na(recovery_description) ~ description,
+                                           TRUE ~ recovery_description)) %>%
   separate(recovery_description, into = c("sea", "sector", "hemi", "Bearing", "stat_area"), sep = ",", remove = FALSE) %>%
   separate(stat_area, into = c("area_info", "stat_area"), sep = 24, remove = FALSE) %>%
- select(c(3:7,13,17,33,33:44)) %>%
-   left_join(codes) %>%
-  mutate(gs_nmfs_region = case_when(
-    recovery_location_name == "HIGH SEAS 3 N" ~ "GOA", # LOOK BACK INTO THESE **
-    recovery_location_name == "HIGH SEAS 3 N W" ~ "GOA",
+  mutate(Rec.area.Sullaway.Shelton.NMFSstat = case_when(
+    name == "HIGH SEAS 3 N" ~ "YAK PWS KOD APEN BER",  
+    name == "HIGH SEAS 3 N W" ~ "YAK PWS KOD APEN BER",
     sector== " SECTOR 4"~ "BER",
-    stat_area == "610" ~ "APEN",  #"X610",
-    stat_area == "620" ~ "KOD",  #"X620",
-    stat_area == "621" ~ "X621",
-    stat_area == "630" ~ "PWS",  #"X630", 
+    stat_area == "610" ~ "APEN",#"X610",
+    stat_area == "620" ~ "KOD", #"X620",
+    stat_area == "621" ~ "KOD", #621 = typo? put it into KOD bc that is 620 
+    stat_area == "630" ~ "PWS", #"X630", 
     stat_area == "640" ~ "YAK", #"X640",
-    stat_area == "649" ~ "X649",
-   # these should already be assigned as NSEAK- hemi %in% c(" HAINES", " ELFIN COVE", " SITKA", " SKAGWAY", " GUSTAVUS", " MEDVEJIE", " JUNEAU", " YAKUTAT") ~ "X650", #these are all sport fisheries 
-    Rec.area.Sullaway.Shelton == "YAK" ~ "YAK",  #"X640", #Yakutat assignments will stay the same, keeping the cut past -140. 
-    Rec.area.Sullaway.Shelton == "NSEAK" ~ "NSEAK", #  "X650", #These assignments didnt change
-    Rec.area.Sullaway.Shelton == "SSEAK" ~ "SSEAK", #These assignments didnt change 
-    #PWS/YAK AREA
-    Bearing == " District 225" ~ "PWS", #"X630",
-    recovery_description == "Alaska marine, Region 2, Quadrant PW" ~ "YAK",  #"X640", #630 and 640 pretty much go straight down the middle of PWS. this description is vague to start with... show Ole.
-    ## ^^ there are 186 with this vague code: "AK M 2 PW" assigned to 640/YAK. all from net/siene fishery. 
-    Bearing %in% c(" District 221", " District 212")  ~ "YAK", #"X640",
-    #KOD AREA I looked over all the descriptions and districts, they are all well within the 630 area, thus we can broadly assign them into it without parcing. 
-    Rec.area.Sullaway.Shelton == "KOD" ~ "PWS",  #"X630", #Distrcits are in cook inlet-area 630
-    #APEN - already assigned using stat area
+    stat_area == "649" ~ "YAK", #north part of PWS on the YAK side. 
+    Rec.area.Sullaway.Shelton.YAK_SOR_NCA == "YAK" ~ "YAK",  #"X640", Yakutat assignments will stay the same, keeping the cut past -140. 
+    Rec.area.Sullaway.Shelton.YAK_SOR_NCA == "NSEAK" ~ "NSEAK", #"X650", these assignments didnt change
+    Rec.area.Sullaway.Shelton.YAK_SOR_NCA == "SSEAK" ~ "SSEAK", #These assignments didnt change 
+    Rec.area.Sullaway.Shelton.YAK_SOR_NCA == "CISS" ~ "PWS", #CISS = Cook Inlet
+    Rec.area.Sullaway.Shelton.YAK_SOR_NCA == "BER" ~ "BER", #These assignments didnt change 
+    Rec.area.Sullaway.Shelton.YAK_SOR_NCA == "NSEAK SSEAK" ~ "NSEAK SSEAK",
+    Rec.area.Sullaway.Shelton.YAK_SOR_NCA == "APEN" ~ "APEN",
+    Rec.area.Sullaway.Shelton.YAK_SOR_NCA == "PWS CISS KOD AKPEN BER" ~ "PWS KOD APEN BER",
+      #PWS/YAK AREA
+    Bearing %in% c(" District 225" , " District 222",  " District 223", " District 224", " District 226", " District 227", " District 229") ~ "PWS", #"X630",
+    recovery_description == "Alaska marine, Region 2, Quadrant PW" ~ "YAK",  
+      ## ^^ there are 186 with this vague code: "AK M 2 PW" assigned to YAK. all from net/siene fishery. 
+    Bearing %in% c(" District 221", " District 212", " District 228")  ~ "YAK", #"X640",
+      #KOD AREA I looked over all the descriptions and districts, they are all well within the 630 area, thus we can broadly assign them into it without parcing. 
+    Rec.area.Sullaway.Shelton.YAK_SOR_NCA == "KOD" ~ "PWS",  #"X630"
+      #APEN - already assigned using stat area
+    Rec.area.Sullaway.Shelton.YAK_SOR_NCA == "PWS" ~ "PWS",  
+    Rec.area.Sullaway.Shelton.YAK_SOR_NCA == "ALEUT" ~ "ALEUT",  
+    Rec.area.Sullaway.Shelton.YAK_SOR_NCA == "HSEA" ~ "HSEA",  
+    sector== " SECTOR 5"~ "BER",
     TRUE ~ "FIX_ME")) 
- 
- #join the two together and then create your own column in code assignment. 
+
+ #BIND AND then create your NEW column in code assignment. 
 temp1 <-temp_lat_long %>% 
-   select(recovery_location_code, gs_nmfs_region)
+   select(recovery_location_code, Rec.area.Sullaway.Shelton.NMFSstat)
 temp2 <- temp_NA %>%
-   select(recovery_location_code, gs_nmfs_region)
+   select(recovery_location_code, Rec.area.Sullaway.Shelton.NMFSstat)
 
-temp_3 <- read.csv("data/missing_codes.csv") %>% #assign these and then **PASTE THEM IN BY HAND** 
-    filter(str_detect(tolower(recovery_location_code), "^1")) %>% #just going to focus on AK for now- filter out all others 
-    mutate(gs_nmfs_region = case_when(
-    longitude > -140 & latitude > 55.5   ~  "NSEAK", #"X650",
-    longitude < -140 & longitude > -147 | longitude == -140 ~ "YAK", #"X640",
-    longitude < -147 & longitude > -154 | longitude == -147 ~ "PWS", #"X630",
-    longitude < -154 & longitude > -159 | longitude == -154 ~ "KOD", #"X620",
-    longitude < -159 & longitude > -170 | longitude == -159 ~ "APEN",  #"X610",
-   # longitude == -172 ~ "X541", #an odd ball on the south side of aluetian islands in sector 3
-    #sector== " SECTOR 4"~ "BER",
-    latitude < 55.5   ~ "SSEAK",
-    TRUE ~ "FIX_ME")) %>%
-  select(recovery_location_code, gs_nmfs_region)
-
-
-codes_stat_area<-rbind(temp1, temp2) %>% #now combine all codes, select unique combinations so it can be added into the database of our assignments. 
-  unite(temp, c(recovery_location_code, gs_nmfs_region)) 
+#COMBINE ALL CODES AND REMOVE DUPLICATES 
+codes_stat_area<-rbind(temp1, temp2) %>% 
+  unite(temp, c(recovery_location_code, Rec.area.Sullaway.Shelton.NMFSstat)) 
 codes_stat_area<-  as.data.frame(unique(codes_stat_area$temp)) %>%
   rename(temp= "unique(codes_stat_area$temp)") %>%
-  separate(temp, into = c("recovery_location_code", "gs_nmfs_region"), sep = "_") 
- 
-join<- left_join(codes, codes_stat_area, by = c("recovery_location_code")) %>% #create a new column and save the csv. 
- # mutate(Rec.area.GS.nmfs = gs_nmfs_region) %>%
-  mutate(Rec.area.GS.nmfs = case_when(is.na(gs_nmfs_region) ~ Rec.area.Sullaway.Shelton,
-                                       TRUE ~ gs_nmfs_region)) %>%
-  select(-c(gs_nmfs_region,recovery_location_code))
- 
-# write.csv(join, "nmfs_areas_recovery codes-wietkamp+shelton 12-2018 two PUSO.csv")
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
- 
-#PLOT ALL
- temp_NA %>% 
- filter(fishery_type == "high_seas") %>%
-   group_by(rec_year, fishery, stat_area1) %>%
-      count(stat_area1)  %>%
-   ggplot(aes(x=rec_year, y=n)) +
-   geom_bar(position="dodge", stat="identity") +
-   facet_grid(stat_area1 ~ fishery, scales = "free_y", labeller=label_wrap_gen(width=.1)) +
-   ggtitle('AK Region Recoveries') +
-   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-   labs(x='Recovery Year', y= 'Instance of Fish recovery')+
-   theme_bw()+
-   ggtitle("Recoveries AK")
- 
- 
- 
+  separate(temp, into = c("recovery_location_code", "Rec.area.Sullaway.Shelton.NMFSstat"), sep = "_") 
+
+#CREATE NEW COLUMN AND BRING IN NON-ALASKA CODES 
+join<- left_join(codes, codes_stat_area, by = c("recovery_location_code")) %>%
+  mutate(Rec.area.Sullaway.Shelton.NMFSstat = case_when(is.na(Rec.area.Sullaway.Shelton.NMFSstat) ~ Rec.area.Sullaway.Shelton.YAK_SOR_NCA,
+                                                        Rec.area.Sullaway.Shelton.NMFSstat == "FIX_ME" ~ Rec.area.Sullaway.Shelton.YAK_SOR_NCA, 
+                                                        TRUE~Rec.area.Sullaway.Shelton.NMFSstat)) 
+
+####################
+#in script RMIS.R after codes area assigned, some still do not get assigned, this can be used to add in those assignments. 
+na <- read.csv("data/missing_codes.csv")
+
+base <- world <- map_data("world") %>%  subset(region %in% c("USA", "Canada")) %>%
+  filter(!group== 1511, !group== 1518, !group==1515, !group==1508, !group==1502, !group==1509) %>%
+  filter(!long > -115) %>%
+  filter(!lat < 34) %>%
+  filter(!lat > 62) %>%
+  filter(!long < -173) %>% 
+  ggplot( ) +
+  geom_polygon(aes(x = long, y = lat, group = group), fill = "white", color = "black") +
+  coord_fixed(1.3)
+
+base +  geom_point(data = bc_na, mapping = aes(x = longitude, y = latitude, color = Rec.area.Sullaway.Shelton.NMFSstat)) +
+  theme_bw()
+
+ak_na<-na %>% 
+  filter(str_detect(tolower(recovery_location_code), "^1")) %>% #Just pulls AK recoveries 
+  separate(recovery_description, into = c("sea", "sector", "hemi", "Bearing", "stat_area"), sep = ",") %>%
+  separate(stat_area, into = c("area_info", "stat_area"), sep = 24) %>%
+  mutate(Rec.area.Sullaway.Shelton.NMFSstat = case_when(
+    longitude > -155 & longitude < -145 ~ "PWS",
+    longitude < -170 ~ "ALEUT", 
+    hemi == " HOMER" ~ "KOD",
+    hemi %in% c(" GUSTAVUS"," ELFIN COVE", " JUNEAU", " SITKA" ) ~ "NSEAK",    
+    hemi %in% c(" PETERSBURG", " WRANGELL" ) ~ "SSEAK",    
+    TRUE ~ "FIX")) 
+
+
+bc_na<-na %>% 
+  filter(str_detect(tolower(recovery_location_code), "^2")) %>% #Just pulls AK recoveries 
+  separate(recovery_description, into = c("sea", "rest"), sep = ":") %>%
+  separate(rest, into = c("delete", "area_code", "location", "location_cont", "another_code"), sep = " ") %>%
+  separate(sea, into = c("stat_area", "delete"), sep = " ") %>%
+  select(-c(delete)) %>%
+  mutate(na_code = str_sub(recovery_location_code, start = 4, end = 5)) %>% #pulls out specific parts of the code useful for assignments 
+  mutate(Rec.area.Sullaway.Shelton.NMFSstat = case_when(
+    stat_area %in% c("NN", "NSPT") ~ "NBC", 
+    stat_area %in% c("CNG", "CSPT") ~ "CBC", 
+    stat_area %in% c("GSPTS", "GSRESSPT", "GSSPTC", "JSSSPT", "GSPTN") ~ "SGEO", 
+    stat_area %in% c("NWTR") ~ "NWVI", 
+    location %in% c("GILLAM") ~ "NWVI",
+    na_code == "27" & latitude > 49.382966 ~ "NWVI",
+    na_code == "27" & latitude < 49.382966 ~ "SWVI",
+    stat_area %in% c("JFSPT") ~ "SWVI",   
+    na_code == "25" ~ "NBC",
+    na_code == "26" ~ "CBC",
+    na_code == "61" ~ "SGEO",
+    na_code == "27" ~ "NWVI", # THERE ARE three codes left with no descriptions etc but the codes have similiar regions to the NWVI codes 27's and 25's so it is very likely that is where they belong. 
+    na_code %in% c("08", "SK") ~ "NWVI", # rec loc code below, but for some reason that didnt work to assign it, so I did it using the NA_code, which is unique for both of these
+    #recovery_location_code %in% c("2MNSKP004 000", "2MS08M302 000") ~ "NWVI", #These codes have no information, but they sort close to NWVI codes...so I put them there 
+    TRUE ~ stat_area)) 
+
+base +  geom_point(data = bc_na, mapping = aes(x = longitude, y = latitude, color = Rec.area.Sullaway.Shelton.NMFSstat)) +
+  theme_bw()
+ak_na<-ak_na %>%
+  select(c(recovery_location_code, latitude, longitude, Rec.area.Sullaway.Shelton.NMFSstat ))
+bc_na<-bc_na %>%
+  select(c(recovery_location_code, latitude, longitude, Rec.area.Sullaway.Shelton.NMFSstat ))
+
+na_assigned <- rbind(ak_na, bc_na) %>%
+  mutate(id= NA, `state/prov` = str_sub(recovery_location_code, start = 1, end = 1)) %>%
+  mutate(`F/M` = "M") %>%
+  mutate(location_code = recovery_location_code) %>%
+  mutate(location_type = NA, name= NA, psc_basin = NA, psc_region = NA, description = NA, rmpc_region = NA, rmpc_basin = NA, `Rec.area-W`= NA, Rec.area.Shelton = NA, Rec.area.Shelton2=NA, Rec.area.Shelton3=NA,Rec.area.Sullaway.Shelton=NA, Rec.area.Sullaway.Shelton.two.Oregon =NA,Rec.area.Sullaway.Shelton.SOR_NCA=NA, Rec.area.Sullaway.Shelton.YAK_SOR_NCA=NA) %>%
+  select(-c(latitude, longitude))
+
+#add these codes to the bottom of the master code file. 
+all_codes<-rbind(join, na_assigned) %>%
+  select(-c(id)) %>%
+  mutate(id = row_number())
+#write.csv(all_codes, "data/recovery codes-wietkamp+shelton 12-2018 two PUSO.csv")
+
+

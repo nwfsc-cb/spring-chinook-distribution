@@ -2,7 +2,7 @@ library(tidyverse)
 library(here)
 #this script joins releases and recoveries
 #Creates a file that has all release/recovery info assigned into regions 
-here()
+
 #################################################################################################################################################################
                                                                   # STEP 1: Join Release, Recoveries, and Location information. 
 ################################################################################################################################################################
@@ -142,47 +142,27 @@ dat_recovery= dat_focal %>%
                                                     #STEP 2: Assign recoveries into regions 
 ################################################################################################################################################################
 #codes updated to use the NMFS stat areas in AK 
-rec_codes_lookup = read.csv("data/nmfs_areas_recovery codes-wietkamp+shelton 12-2018 two PUSO.csv", stringsAsFactors = FALSE) %>%
+rec_codes_lookup = read.csv("data/recovery codes-wietkamp+shelton 12-2018 two PUSO.csv", stringsAsFactors = FALSE) %>%
   mutate(recovery_location_code =location_code) %>%
-  mutate(region = Rec.area.GS.nmfs) %>% 
-  select(c(recovery_location_code, region)) #change so that RMIS has same column labels 
-
-#pretty sure we dont need the location file because all the codes on this with lat long are already supplied in the RMIS data base, codes have been matched with a recovery code in the recovery codes csv
-# locations = read.csv("data/locations.txt", stringsAsFactors = FALSE) %>%
-# select(c("location_code","rmis_latitude","rmis_longitude", "description")) %>%
-# rename(recovery_location_code = location_code,
-#                    recovery_description = description, latitude=rmis_latitude, longitude = rmis_longitude) %>%
-# filter(!is.na(latitude)) %>% 
-# distinct(recovery_location_code, .keep_all = TRUE)   #took out duplicate recovery codes, keep.all = keeps the first row of values for each recovery code
-# all_rec_codes_locations <- left_join(rec_codes_lookup, locations)
+  mutate(region = Rec.area.Sullaway.Shelton.NMFSstat) %>% 
+  select(c(recovery_location_code, region)) %>% #change so that RMIS has same column labels 
+  distinct(recovery_location_code, .keep_all = TRUE) #remove duplicates 
 
 df_recovery <- left_join(dat_recovery, rec_codes_lookup, by = "recovery_location_code")
 
-#600 individuals still come up with NA's...
-
 #na is a list of recovery codes that did not match up to Oles look up table - went and added it back in to the lookup data base
 na<- df_recovery %>% filter(is.na(region)) #all the recoveries that do not match up with a recovery location code in look up table // will want to use this later for when add in regions
-
-recovery_location_code <- as.data.frame(unique(na$recovery_location_code)) %>%
+# check <- df_recovery %>% filter(region == "HSEA") %>%
+#   filter(!fishery_name == "Hake Trawl At Sea (CA OR WA)")
+na_id <- as.data.frame(unique(na$recovery_location_code)) %>%
   rename(recovery_location_code = 'unique(na$recovery_location_code)') %>%
-  mutate(id = 1)
-
-# c<- left_join(locations, recovery_location_code) #list of unique codes that are not in look up table (includes with and without lat long)
-# id<- c %>% filter(id == 1) #list of unique codes that are not in look up table (includes with and without lat long)
-# write.csv(id, "missing_codes.csv")
-
-#z <- id %>% filter(is.na(latitude)) # list of recovery codes that are not in lookup tanble AND that dont have lat and long - need to look up in RMIS data base?
-#lat_long <- id %>% filter(!is.na(latitude)) #list of recovery codes that are not in table but DO have lat long- will use for convex hull stuff
-#lat_long <- lat_long %>%
-#  dplyr::select(-c(id))
-#x <- left_join(dat_recovery, z) 
-#v <- x %>% filter(!is.na(id)) #list of # of recoveries that dont have lat long in recovery codes
+  left_join(location) #list of unique codes that are not in look up table (includes with and without lat long)
+# write.csv(na_id, "data/missing_codes.csv")
 
 #################################################################################################################################################################
-#STEP 4: SNOUTBASE - DATA PARCE AND JOIN INTO RMIS 
+                                                    #STEP 4: SNOUTBASE - DATA PARCE AND JOIN INTO RMIS 
 ################################################################################################################################################################
 #SNOUTBASE- Use to match lat and long into to RMIS Highseas to get better recovery information so the recoveries dont snap to a grid
-
 setwd("~/Documents/GitHub/Chinook_Bycatch/data/ASHOP/snoutbase")
 snout = read.csv("A-SHOP_Snoutbase_122118.csv", stringsAsFactors = FALSE) %>%
         mutate(tag_code = str_pad(CWTCode, width= 6, pad = "0", side="left")) %>% #add leading zero that r removes
@@ -208,10 +188,9 @@ snout = read.csv("A-SHOP_Snoutbase_122118.csv", stringsAsFactors = FALSE) %>%
 
 #now match lat and long into to RMIS Highseas to get better recovery information so they recoveries dont snap to a grid
 
-#snoutbase is just for highseas fisheries 
+#snoutbase is just for highseas fisheries South of AK
 hs_dat <- df_recovery %>% 
-  filter(fishery_type == "high_seas") %>%
-  filter(rec_year > 2005) %>% #snoutbase starts in 2005
+  filter((fishery_name %in% c("Hake Trawl At Sea (CA OR WA)","Ocean Trawl By-catch","Groundfish Trawl (CA OR WA)", "Rockfish Trawl (CA OR WA)", "Nearshore Groundfish (CA OR)", "Hake Trawl Shoreside (OR WA)") & rec_year > 2005)) %>% #get rid of the data that is in hs_dat so then they can be bound later and duplicates wont be counted
   mutate(rec_month = as.numeric(rec_month)) %>% 
   mutate(rec_day = as.numeric(rec_day)) %>% 
   mutate(rec_year= as.numeric(rec_year)) %>%
@@ -221,7 +200,7 @@ all_dat <- left_join(hs_dat, snout, by =  "id") %>% #combine so that rmis lat an
 filter(!is.na(Year)) %>%
 mutate(Lat = as.numeric(Lat)) %>%
 mutate(Long = as.numeric(Long)) %>%
-#add spatial bounds to these based on lat long
+#add an updated region to these based on lat long
 mutate(region = as.vector(cut(Lat, breaks=c(Inf,46.63611,45.76666,44.015, 42.6725, 42, 38.958333, -Inf), 
                                  labels=c(  
                                    "NCA",
@@ -231,8 +210,8 @@ mutate(region = as.vector(cut(Lat, breaks=c(Inf,46.63611,45.76666,44.015, 42.672
                                    "NOR",
                                    "COL",
                                    "WAC"))))%>% 
-  select(id,rec_year, rec_month, rec_day, tag_code, recovery_id, fishery, fishery_type, gear, region, latitude, longitude, Lat, Long, region, recovery_location_code, recovery_location_name, estimated_number, estimation_level, brood_year, first_release_date, release_location_code, release_location_name, release_location_state, release_location_rmis_basin,
-         stock_location_code, total_release, detection_method )
+  select(id,rec_year, rec_month, rec_day, tag_code, recovery_id, fishery, fishery_type, fishery_name, gear, region, latitude, longitude, Lat, Long, region, recovery_location_code, recovery_location_name, estimated_number, estimation_level, brood_year, first_release_date, release_location_code, release_location_name, release_location_state, release_location_rmis_basin,
+         stock_location_code, total_release, detection_method, recovery_description)
  
 df_recovery$Haul <- NA
 df_recovery$Lat <- NA
@@ -241,11 +220,13 @@ df_recovery$Ln <- NA
 df_recovery$Wt <- NA
 df_recovery$Sex <- NA
 
+#FIX THIS BC IT IS TAKING OUT SOME ALASKA TRAWLS, MAKE SO IT JUST FILTERS FOR WA OR + CA
+# Need to do some sort of filter if 
 dat_everything <- df_recovery %>%
   unite("id", c("rec_year", "rec_month", "rec_day", "tag_code"), remove =FALSE ) %>%
-  filter(!fishery_type == "high_seas" | !rec_year > 2005) %>% #get rid of the data that is in hs_dat so then they can be bound later and duplicates wont be counted
-  select(id, rec_year, rec_month, rec_day, tag_code, recovery_id, fishery, fishery_type, gear, region, latitude, longitude, Lat, Long, region, recovery_location_code, recovery_location_name, estimated_number, estimation_level,  brood_year, first_release_date, release_location_code, release_location_name, release_location_state, release_location_rmis_basin,
-          stock_location_code, total_release,detection_method)%>%
+  filter(!(fishery_name %in% c("Hake Trawl At Sea (CA OR WA)","Ocean Trawl By-catch","Groundfish Trawl (CA OR WA)", "Rockfish Trawl (CA OR WA)", "Nearshore Groundfish (CA OR)", "Hake Trawl Shoreside (OR WA)") & rec_year > 2005)) %>% #get rid of the data that is in hs_dat so then they can be bound later and duplicates wont be counted
+  select(id, rec_year, rec_month, rec_day, tag_code, recovery_id, fishery, fishery_type,fishery_name, gear, region, latitude, longitude, Lat, Long, region, recovery_location_code, recovery_location_name, estimated_number, estimation_level,  brood_year, first_release_date, release_location_code, release_location_name, release_location_state, release_location_rmis_basin,
+          stock_location_code, total_release,detection_method, recovery_description) %>%
   rbind(all_dat, deparse.level = 1, make.row.names = TRUE)  %>%
   mutate(Latitude = case_when(Lat > 0 ~ Lat,       
                              TRUE ~ latitude)) %>%  
@@ -260,30 +241,4 @@ View(dat_everything)
                                                                   # SAVE TIDY DATA FILES 
 ################################################################################################################################################################
 #
-#write.csv(dat_everything, "RMIS.csv" )
-#getwd()
-
- #CHECK TO SEE IF REGION ASSIGNMENTS PLOT CORRECTLY
-# dat <- dat_everything %>%
-#   filter(!Latitude == 0) 
-# world <- map_data("world")
-# north_america <- subset(world, region %in% c("USA", "Canada"))
-# 
-# north_america %>%
-#   filter(!group== 1511, !group== 1518, !group==1515, !group==1508, !group==1502, !group==1509) %>%
-#   filter(!long > -115) %>%
-#   filter(!lat < 46) %>%
-#   filter(!lat > 62) %>%
-#   filter(!long < -173) %>%
-#   ggplot( ) +
-#   geom_polygon(data = dat, aes(x = Longitude, y = Latitude, group = region), fill = "white", color = "black") +
-#   coord_fixed(1.3) +
-#   geom_segment(data = df, colour="orange", aes(x = as.numeric(line.start.lon), 
-#                                                y = as.numeric(line.start.lat), 
-#                                                xend = as.numeric(line.end.lon), 
-#                                                yend = as.numeric(line.end.lat))) +
-#   facet_wrap(~fishery) +
-#   #  geom_text(data=df, colour="darkgreen",aes(x=label_long1, y= label_lat1, label= region), size=2)+ #smaller labels for CA, OR, and WA so they fit
-#   theme_classic()
-
-  
+#write.csv(dat_everything, "data/RMIS.csv" )
