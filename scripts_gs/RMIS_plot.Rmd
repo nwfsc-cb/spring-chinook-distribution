@@ -1,0 +1,165 @@
+---
+title: "RMIS Summary"
+output: 
+  html_document:
+  toc: true
+  toc_float: true
+number_sections: true
+theme: cosmo
+---
+
+```{r setup, include=FALSE,warning=FALSE}
+library(tidyverse)
+library(here)
+library(PNWColors)
+
+ rmis <- here::here("data", "RMIS.csv")
+ rmis <- read_csv(rmis) 
+
+color1<- rev(pnw_palette(name="Starfish",n=7,type="discrete"))
+
+#rmis = read_csv("data/RMIS.csv")
+
+df <- here::here("Maps_and_Charts_of_Regions", "spatial_bounds_gs_new.csv")
+df <- read_csv(df) 
+```
+
+## Alaska Recoveries 
+- With lat/long only
+
+```{r Map plot, echo=FALSE, fig.height=6, fig.width=10, warning=FALSE}
+df_ak<- df %>%
+    filter(state == 'ak')
+base <- world <- map_data("world") %>%  subset(region %in% c("USA", "Canada")) %>%
+    filter(!group== 1511, !group== 1518, !group==1515, !group==1508, !group==1502, !group==1509) %>%
+    filter(!long > -115) %>%
+    filter(!lat < 55) %>%
+    filter(!lat > 62) %>%
+    filter(!long < -173) %>% 
+    ggplot( ) +
+    geom_polygon(aes(x = long, y = lat, group = group), fill = "white", color = "black") +
+    coord_fixed(1.3)+
+      geom_segment(data = df_ak, colour="black", aes(x = as.numeric(line.start.lon), 
+                                               y = as.numeric(line.start.lat), 
+                                               xend = as.numeric(line.end.lon), 
+                                               yend = as.numeric(line.end.lat))) +
+  theme_classic()
+
+plot <- rmis %>% 
+  filter(fishery_type == "high_seas") %>%
+  filter(!Latitude< 50) %>%
+  group_by(fishery_name, region, Latitude, Longitude) %>%
+  count(fishery_name)
+  # dplyr::mutate(year_group=cut(rec_year, breaks=c(-Inf, 1980, 1990, 2000, Inf), labels=c("1973-1980","1980-1990", "1990-2000", "2000-2016"))) %>%
+  # filter(year_group %in% c("1980-1990", "2000-2016")) %>%
+  base +  
+  geom_point(plot, mapping = aes(x = Longitude, y = Latitude, color = region, size = n),  alpha=0.5) +
+  scale_size_continuous(name = "CWT Recovery Counts") + 
+  scale_color_manual(name = " ", values=color1 ) +
+  facet_wrap(~fishery_name, ncol = 1) 
+
+      #   EXTRA NICE-LOOKING-PLOT-THINGS   
+# plot.title = element_text(hjust = 0.5),
+# plot.background = element_rect(fill = "#f5f5f2", color = NA), 
+# panel.background = element_rect(fill = "#f5f5f2", color = NA), 
+# #legend.background = element_rect(fill = "#f5f5f2", color = NA), 
+# legend.box.margin = margin(.6,.1,1.1,.8, "cm"),
+# plot.margin = margin(0.9,.1,1.1,.1, "cm")
+# #plot.title = element_text(size= 16, hjust=0.1, color = "#4e4d47", margin = margin(b = -0.1, t = 0.4, l = 2, unit = "cm"))
+  
+```
+
+## All Alaska High Seas Recoveries 
+
+```{r, echo=FALSE, warning=FALSE}
+table1 <- rmis %>%
+  #filter(fishery_type == "high_seas") %>%
+  filter(fishery_name == "Groundfish Observer (Bering Sea)") %>%
+  mutate(individual = 1)%>%
+  group_by(rec_year, region, fishery_name) %>%
+  summarise(sum = sum(individual)) %>%
+  spread(region, sum) %>%
+  mutate_all(funs(replace_na(.,0))) %>%
+    select(-c(2))
+
+ knitr::kable(
+  table1[1:19, 1:3], caption = 'GroundFish Bering'
+) 
+```
+
+
+```{r, echo = FALSE, warning=FALSE }
+
+table2 <- rmis %>%
+#  filter(fishery_type == "high_seas") %>%
+ filter(fishery_name == "Groundfish Observer (Gulf AK)") %>%
+  filter(!region == "X621") %>%
+  mutate(individual = 1)%>%
+  group_by(rec_year, region, fishery_name) %>%
+  summarise(sum = sum(individual)) %>%
+  spread(region, sum) %>%
+  mutate_all(funs(replace_na(.,0))) %>%
+  select(-c(2))
+
+knitr::kable(
+  table2[1:23, 1:7], caption = 'GroundFish GOA'
+) 
+```
+
+
+```{r, echo = FALSE, warning=FALSE}
+table3 <- rmis %>%
+  #filter(fishery_type == "high_seas") %>%
+  filter(fishery_name == "Rockfish Fishery (Gulf of AK)") %>%
+  mutate(individual = 1)%>%
+  group_by(rec_year, region, fishery_name) %>%
+  summarise(sum = sum(individual)) %>%
+  spread(region, sum) %>%
+  mutate_all(funs(replace_na(.,0))) %>%
+    select(-c(2))
+
+ knitr::kable(
+  table3[1:5, 1:3], caption = 'Rockfish'
+) 
+```
+
+
+## Coast-Wide Highseas recoveries 
+- There are a lot of high seas recoveries without region labels because we add them in later with the better ASHOP data
+
+```{r echo=FALSE, warning=FALSE}
+df_west <- df %>%
+  filter(!state %in% c("bc", "ak")) %>%
+  filter(!region %in% c("MONT", "SFB", "MEN"))
+base2 <- world <- map_data("world") %>%  subset(region %in% c("USA", "Canada")) %>%
+    filter(!group== 1511, !group== 1518, !group==1515, !group==1508, !group==1502, !group==1509) %>%
+    filter(!long > -115) %>%
+    filter(!lat < 40) %>%
+    filter(!lat > 49) %>%
+    filter(!long < -140) %>% 
+    ggplot( ) +
+    geom_polygon(aes(x = long, y = lat, group = group), fill = "white", color = "black") +
+    #coord_fixed(1.3)+
+    geom_segment(data = df_west, colour="black", aes(x = as.numeric(line.start.lon), 
+                                               y = as.numeric(line.start.lat), 
+                                               xend = as.numeric(line.end.lon), 
+                                               yend = as.numeric(line.end.lat))) +
+  theme_classic()
+
+plot2 <- rmis %>% 
+  filter(fishery_type == "high_seas") %>%
+  filter(Latitude< 50) %>%
+    filter(Latitude>39) %>%
+  group_by(fishery_name, region, Latitude, Longitude) %>%
+  count(fishery_name)
+  # dplyr::mutate(year_group=cut(rec_year, breaks=c(-Inf, 1980, 1990, 2000, Inf), labels=c("1973-1980","1980-1990", "1990-2000", "2000-2016"))) %>%
+  # filter(year_group %in% c("1980-1990", "2000-2016")) %>%
+  base2 +  
+  geom_point(plot2, mapping = aes(x = Longitude, y = Latitude, color = region, size = n), alpha = 0.9) +
+  facet_wrap(~fishery_name, labeller = label_wrap_gen(1), strip.position = "top", scales = "free") +
+    scale_size_continuous(name = "CWT Recovery Counts") + 
+  scale_color_manual(name = " ", values=color1 ) +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1) )
+
+```
+
