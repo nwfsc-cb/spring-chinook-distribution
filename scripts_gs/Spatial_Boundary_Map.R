@@ -12,7 +12,7 @@ df = read.csv("Maps_and_Charts_of_Regions/spatial_bounds_gs_new.csv", stringsAsF
 world <- map_data("world")
 north_america <- subset(world, region %in% c("USA", "Canada"))
 
-north_america %>%
+map<-north_america %>%
     filter(!group== 1511, !group== 1518, !group==1515, !group==1508, !group==1502, !group==1509) %>%
     filter(!long > -115) %>%
     filter(!lat < 46) %>%
@@ -28,9 +28,10 @@ north_america %>%
 #  geom_text(data=df, colour="darkgreen",aes(x=label_long1, y= label_lat1, label= region), size=2)+ #smaller labels for CA, OR, and WA so they fit
   geom_text(data=df, colour="darkgreen",aes(x=as.numeric(label_long2), y=as.numeric(label_lat2), label= region), size=2) +
   theme_classic()
+map
 
+pdf("AK_new_regions_map.pdf", width=13, height=8.5); print(map); dev.off()
 
-# pdf("regions_label_all.pdf", width=13, height=8.5); print(p); dev.off()
 # 
 # geom_polygon(aes(x = long, y = lat, group = group), fill = "white", color = "black") +
 #   coord_fixed(1.3)+
