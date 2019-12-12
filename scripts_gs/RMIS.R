@@ -234,11 +234,12 @@ dat_everything <- df_recovery %>%
                                TRUE ~longitude)) %>%
  select(-c(longitude, Long, latitude, Lat)) #now this should have all snout and rmis data with combined lat and longs
 
-View(dat_everything)
+#View(dat_everything)
 
 #test <- dat_everything %>% filter(is.na(region)) #still labout 600 NA but none of them are high seas 
 #################################################################################################################################################################
                                                                   # SAVE TIDY DATA FILES 
 ################################################################################################################################################################
 #
-#write.csv(dat_everything, "data/RMIS.csv" )
+#  write.csv(dat_everything, "data/RMIS.csv" )
+ 

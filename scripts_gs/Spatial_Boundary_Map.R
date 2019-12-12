@@ -21,7 +21,7 @@ map<-north_america %>%
     ggplot( ) +
     geom_polygon(aes(x = long, y = lat, group = group), fill = "white", color = "black") +
     coord_fixed(1.3) +
-    geom_segment(data = df, colour="orange", aes(x = as.numeric(line.start.lon), 
+    geom_segment(data = df, colour="gray", aes(x = as.numeric(line.start.lon), 
                                                y = as.numeric(line.start.lat), 
                                                xend = as.numeric(line.end.lon), 
                                                yend = as.numeric(line.end.lat))) +

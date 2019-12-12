@@ -24,7 +24,7 @@ df <- here::here("Maps_and_Charts_of_Regions", "spatial_bounds_gs_new.csv")
 df <- read_csv(df) 
 ```
 
-## Alaska Recoveries 
+## Alaska Recoveries [whole doc is Spring Chinook Only]
 - With lat/long only
 
 ```{r Map plot, echo=FALSE, fig.height=6, fig.width=10, warning=FALSE}
