@@ -30,7 +30,7 @@ map<-north_america %>%
   theme_classic()
 map
 
-pdf("AK_new_regions_map.pdf", width=13, height=8.5); print(map); dev.off()
+#pdf("AKnew_regions_map.pdf", width=13, height=8.5); print(map); dev.off()
 
 # 
 # geom_polygon(aes(x = long, y = lat, group = group), fill = "white", color = "black") +
