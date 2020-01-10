@@ -8,14 +8,15 @@ test <- dat_focal %>% filter(fishery %in% c(800, 85))
 
 #this script isolates different fleets and plots how many fish  have recovered by a fleet within a fishery category
 
-dat_recovery = read.csv("dat_recovery.csv", stringsAsFactors = FALSE)
+#dat_recovery = read.csv("dat_recovery.csv", stringsAsFactors = FALSE)
 #use latest RMIS doc
-setwd("~/Documents/GitHub/rmis/data/final_data/")
-dat_recovery = read.csv("rmis_release_recovery.csv")
+#setwd("~/Documents/GitHub/rmis/data/final_data/")
+#dat_recovery = read.csv("data/rmis_release_recovery.csv")
+rmis<- read_csv("data/RMIS.csv")
 #____________________________________________________________________________________________________
 ############# HIGH SEAS #############
 
-highseas<- dat_recovery %>% filter(fishery_type=='high_seas')
+highseas<- rmis %>% filter(fishery_type=='high_seas')
 
 #sort high seas to get recovery #s by year and fishery to look at available data through time 
 highseas_group <- highseas %>%
@@ -35,8 +36,11 @@ hs_bar
 
 
 #just AK highseas fisheries
-ak_highseas <- highseas_count %>%
-  filter(fishery_name %in% c("Groundfish Observer (Bering Sea)", "Groundfish Observer (Gulf AK)", "Rockfish Fishery (Gulf of AK)" ))
+ak_highseas <- highseas %>%
+#  filter(fishery_name %in% c("Groundfish Observer (Bering Sea)", "Groundfish Observer (Gulf AK)", "Rockfish Fishery (Gulf of AK)" ))
+  filter(fishery_name == "Rockfish Fishery (Gulf of AK)" )%>%
+  group_by(rec_year) %>%
+  count(fishery) 
 
 ak_bar <- ggplot(ak_highseas, aes(x=rec_year, y=n)) +
   geom_bar(position="dodge", stat="identity") +
@@ -46,6 +50,15 @@ ak_bar <- ggplot(ak_highseas, aes(x=rec_year, y=n)) +
   labs(x='Recovery Year', y= 'Instance of Fish recovery') +
   theme_bw()
 ak_bar
+
+ggplot(ak_highseas, aes(x=rec_year, y=n)) +
+  geom_bar(position="dodge", stat="identity") +
+#  facet_grid(fishery_name ~ .,scales = "free_y", labeller=label_wrap_gen(width=.1)) + 
+  ggtitle('Rockfish CWT Recoveries-RMIS') +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  labs(x='Recovery Year', y= 'Instance of Fish recovery') +
+  theme_bw()
+
 
 #__________________________________________________________________________________________
 ########## SPORT FISHERY #############
