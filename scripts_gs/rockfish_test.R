@@ -26,7 +26,8 @@ separate(recovery_date, into =c("rec_year_rockfish", "rec_monthrec_day"), sep = 
  # filter(rec_year == "2013") %>%
 filter(!rec_year_rockfish %in% c("2018","2019")) %>%
   mutate(data_set="rockfish") %>%
-select(-c(fishery, detection_method))
+select(-c(fishery, detection_method)) %>%
+  filter(!is.na(tag_code))
 # rename(tag_code_rockfishcwt = "tag_code")%>%
    
 test<-left_join(rockfish1,highseas,by = c("recovery_id")) %>%
