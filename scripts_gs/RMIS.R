@@ -136,7 +136,7 @@ dat_recovery= dat_focal %>%
                                            '19'="Other Troll")) %>%
   separate(recovery_date, into = c("rec_year", "rest_of_rec_date"), sep = 4) %>%
   separate(rest_of_rec_date, into = c("rec_month", "rec_day"), sep= 2) %>%
-  mutate( rec_year = as.numeric(rec_year))
+  mutate(rec_year = as.numeric(rec_year))
 
 #################################################################################################################################################################
                                                     #STEP 2: Assign recoveries into regions 
