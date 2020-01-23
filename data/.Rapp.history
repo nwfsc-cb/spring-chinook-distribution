@@ -1,1 +1,2 @@
 load("/Users/ole.shelton/GitHub/rmis/data/focal_spring_chinook_releases.RData")
+load("/Users/genoa.sullaway/Documents/GitHub/spring-chinook-distribution/data/joined_releases_recoveries_locations.rds")

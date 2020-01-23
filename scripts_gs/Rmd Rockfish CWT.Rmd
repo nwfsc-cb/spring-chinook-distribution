@@ -1,20 +1,21 @@
+---
+title: "RMD CWT Rockfish"
+author: "Genoa Sullaway"
+date: "1/21/2020"
+output:
+  html_document:
+    df_print: paged
+---
+This document matches the CWT recoveries from the Rockfish trawl fleet to RMIS to see if they can clarify specific trawl fleets in Alaska. The new data all matches into RMIS, but it doesnt give us new info in terms of matching fleets because all the RMIS matches are already coded for the rockfish fleet. It will add more specific lats and longs to RMIS if we want those. 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
 library(here)
 library(tidyverse)
-#a significant amount of the CWT recoveries reported in the rockfish dataframe that look like they never made it to RMIS. 
-#spike in recoveries in 2013 that are not in RMIS
+```
 
-#this data frame is modified, doesnt have the sensitive info. 
-# rockfish<- read_csv("data/Rockfish CWT mod trim.csv") %>%
-#   mutate(tag_code= str_pad(tag_code, pad = "0", width = 6, side = c("left"))) %>%
-#   separate(recovery_date, into =c("rec_year", "rec_monthrec_day"), sep = 4) %>%
-#   filter(!rec_year %in% c("2018","2019")) %>%
-#   mutate(source="rockfish") %>%
-#   select(-c(fishery, detection_method))
 
-#####################################################################################
-#####################################################################################
-#LOAD DATA SETS
-# this dataframe has lat and long info for recoveries
+```{r load data}
 rockfish <- read_csv("data/Rockfish CWT.csv") %>%
   mutate(Long=-1*Long) %>%
   mutate(tag_code= str_pad(tag_code, pad = "0", width = 6, side = c("left"))) %>%
@@ -32,7 +33,9 @@ rockfish <- read_csv("data/Rockfish CWT.csv") %>%
     filter(!Missing_Fins %in% c("None", "none")) #filter out recoveries where the adipose fin wasn't clipped 
 
 #need to have WD set to RMIS_data repo...
-load("data/final_data/all_chinook.Rdata")
+load("data/all_chinook.Rdata")
+#all_chinook<-as.data.frame(all_chinook) 
+#write_csv(all_chinook, "data/all_chinook.csv")
 
 all_chinook<-as.data.frame(all_chinook) %>%
   separate(recovery_date, into = c("rec_year", "rest_of_rec_date"), sep = 4) %>%
@@ -48,6 +51,10 @@ all_chinook<-as.data.frame(all_chinook) %>%
 #   filter(fishery_type == "high_seas") %>%
 #   mutate(source="rmis") %>%
 #   select(-c("rec_month")) 
+
+```
+ 
+```{r pressure, echo=FALSE}
 
 #####################################################################################
 #####################################################################################
@@ -68,6 +75,9 @@ rockfish_tagcode <- rockfish %>%
   filter(!is.na(tag_code)) %>%
   filter(!is.na(rec_year))
 
+```
+
+```{r}
 #####################################################################################
 #####################################################################################
 # Below I just use the rockfish recoveries that are associated with a tag code. 
@@ -101,6 +111,9 @@ summary1<- recovery_summary %>%
 #   filter(is.na(Observer.y))
 ######################################################
 
+```
+ 
+```{r}
 # How many rockfish recoveries from the rockfish CWT data set are not entered in RMIS? (organized by year) -- only 1. 
 summary2<- recovery_summary %>%
   filter(is.na(source.y))%>%
@@ -110,25 +123,14 @@ summary2<- recovery_summary %>%
 #sum(summary2$n) #total 1 that were not accounted for in RMIS 
 #####################################################################################
 #####################################################################################
-#Nest, try and see if there are there any patterns for the recoveries that dont match into RMIS 
-#patterns to check:
-    #location (ocean region) -- not a whole lot of diversity here, only NW.GOA in 2013. Not going to group by this 
-    #time (month and year) -- most months have some rmis data and then more rockfish data, some months, only have rockfish data but if that is the case it is just a small amount. 
-    #ship name -- Some ships are in both some are just rockfish, no huge pattern here.  
 
-ship_recoveries<- recovery_summary %>%
-  group_by(
-    #rec_year, 
-  source) %>% #grouping by rockfish recovery region because it is mre inclusive than the RMIS regions, but when they do match recoveries they have the same information. 
-  count(Vessel_name)
-
-################# THIS PLOT [BELOW] IS HELPFUL, OTHER ONES NOT SO MUCH. 
-year_month<- recovery_summary %>%
+################# 
+recovery_summary %>%
   group_by(rec_year, rec_month) %>% #grouping by rockfish recovery region because it is mre inclusive than the RMIS regions, but when they do match recoveries they have the same information. 
-  count(source)
-
-ggplot(year_month, aes(x=rec_month, y = n)) +
-  geom_bar(aes(fill=factor(source, levels=c("rockfish","both"))), stat= "identity")+
+  count(source) %>%
+ggplot( aes(x=rec_month, y = n)) +
+  geom_bar(#aes(fill=factor(source, levels=c("rockfish","both"))),
+    stat= "identity")+
   labs(fill=" ") +
   facet_wrap(~rec_year) +
   theme_classic() #most of the entries that arent in RMIS are in 2013- what happened this year? 
@@ -145,36 +147,6 @@ recovery_summary %>%
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
   labs(x='Recovery Year', y= 'Instance of Fish recovery', title = 'Rockfish CWT Recoveries') +
   theme_bw()
-
-#plot all counts/year just from rockfish data
-## There is only 1- this plot isnt super useful anymore. 
-# recovery_summary %>%
-#   filter(source =="rockfish") %>%
-#   group_by(rec_year) %>% #grouping by rockfish recovery region because it is mre inclusive than the RMIS regions, but when they do match recoveries they have the same information. 
-#   count(source) %>%
-# ggplot(aes(x=rec_year, y=n)) +
-#   geom_bar(stat= "identity") +
-#   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-#   labs(x='Recovery Year', y= 'Instance of Fish recovery', title = 'Rockfish CWT Recoveries- Data from jordan') +
-#   theme_bw()
-
-
-#####################################################################################
-#####################################################################################
-#plot map of recoveries in rmis and in extra rockfish data
-# ----> THERE ARENT THAT MANY RECOVERIES WITH LAT AND LONG, SO THIS PLOT IS MILDLY INFORMATIVE
-# world <- map_data("world")
-# north_america <- subset(world, region %in% c("USA", "Canada"))
-# 
-# north_america %>%
-#   filter(!group== 1511, !group== 1518, !group==1515, !group==1508, !group==1502, !group==1509) %>%
-#   filter(!long > -115) %>%
-#   filter(!lat < 46) %>%
-#   filter(!lat > 62) %>%
-#   filter(!long < -173) %>%
-#   ggplot( ) +
-#   geom_polygon(aes(x = long, y = lat, group = group), fill = "white", color = "black") +
-#   coord_fixed(1.3) +
-#   geom_point(data=recovery_summary, aes(x=Long, y = Lat,color=source),alpha=0.5) +
-#   theme_classic() +
-#   facet_wrap(~rec_year)
+```
+ 
+ 
