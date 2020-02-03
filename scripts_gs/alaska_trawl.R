@@ -377,7 +377,8 @@ Unique_Ref_USCG<- Unique_Ref %>%
 
 # Match in what you can from NORPAC and permit database
 match <- cwt %>% 
-  mutate(VESSEL_CODE = PERMIT,USCG = as.integer(PERMIT),ADFG = as.integer(PERMIT))%>% 
+  mutate(VESSEL_CODE = PERMIT #useless, I dontt match on these,USCG = as.integer(PERMIT),ADFG = as.integer(PERMIT)
+         )%>% 
   left_join(Unique_Ref_VESSEL_CODE, by = c("Vessel_name","VESSEL_CODE")) %>%
   left_join(Unique_Ref_PERMIT, by = c("Vessel_name","PERMIT")) %>%
  #nothing matches here---  left_join(Unique_Ref_ADFG, by = c("Vessel_name", "ADFG")) %>%
@@ -418,11 +419,12 @@ cwt_unique_na<-cwt_unique%>% #if the LENGTH IS NA FROM ABOVE, SEE IF YOU CAN RE-
   mutate(Fishery = NA)
 cwt_unique_no_na <- cwt_unique %>%
   filter(!is.na(LENGTH)) 
+#Vessels that appear twice are removed, will have to look those up in observer database, I cant reliably join them in
 cwt_length_addition <- rbind(cwt_unique_na, cwt_unique_no_na) %>% #BIND THEM BACK TOGETHER SO MAXIMUM JOINING OPPORTUNITY
   filter(!is.na(LENGTH)) %>%
   group_by(Vessel_name) %>%
   filter(n() == 1)
-#Vessels that appear twice are removed, will ahve to look those up in observer database, I cant reliably join them in
+
 match <- match %>%
   left_join(cwt_length_addition, by = c("Vessel_name")) %>%
   mutate(Fishery = (case_when(is.na(Fishery.y) ~ Fishery.x,
@@ -434,8 +436,8 @@ match <- match %>%
                              TRUE ~LENGTH.x))) %>%
   select(-c(LENGTH.y,LENGTH.x, Fishery.y,Fishery.x)) 
 
-#~50% still dont match, but atleast boat lengths are there now. 
-No_Match <- match%>%
+#~50% still dont match, but now all boat lengths were added. 
+No_Match <- match %>%
   filter(is.na(Fishery))
 
 ## Make the boats big or small based on year for Pollock fishery (not all these boats are Pollock but that is ok, will filter out later)
@@ -451,9 +453,62 @@ match <- match %>%
 #List of recoveries without Length or Fishery
   #for these, vessel names are blank, numbers, or duplicates in the NorPac database, some of these are not in the Norpac database. 
 Recoveries_NA_Length_Fishery <- match %>%
-  filter(is.na(LENGTH) & is.na(Fishery))
+  filter(#is.na(LENGTH) & 
+    is.na(Fishery))
+#write_csv(Recoveries_NA_Length_Fishery, "Recoveries_NA_Length_Fishery.csv")
 
-write_csv(Recoveries_NA_Length_Fishery, "Recoveries_NA_Length_Fishery.csv")
+#######################################################################################################
+#PLOT
+#######################################################################################################
+
+#plot out known and unknown Fishery info by year
+match %>%
+  mutate(data = case_when(is.na(Fishery) ~ "Unknown",
+                           TRUE~ "Known")) %>%
+  ungroup() %>%
+  group_by(Year) %>%
+  count(data) %>%
+  ggplot(aes(x= Year, y = n, fill = data, group=data)) +
+    geom_bar(stat = "identity")+
+  theme_classic() +
+  ylab("Recovery Count")
+
+#######################################################################################################
+# Get unique data to pair with observer database
+#######################################################################################################
+
+Duplicate_vessel_names <- rbind(cwt_unique_na, cwt_unique_no_na) %>% #duplicate vessel names from Norpac that are also present in CWT recovery data
+  select(-c(Fishery)) %>%
+  filter(!is.na(LENGTH)) %>%
+  group_by(Vessel_name,LENGTH) %>%
+  filter(!n() > 1)
+
+# create unique observer, vessel name and permit number list to match to observer database 
+unique_list <- unique(Recoveries_NA_Length_Fishery[c("Observer", "Year", "Month", "Day","Cruise_no", "Vessel_name", "PERMIT")])
+# replacing empty string with NA
+unique_list <- unique_list %>% mutate_each(funs(sub("^$", NA, .)), PERMIT)           
+
+write_csv( unique_list,"unique_list.csv")
+
+# filling missing PERMIT values if boat with same name has a permit # elsewhere ... 
+df <- unique_list %>% 
+  group_by(Vessel_name) %>%
+  fill(PERMIT,.direction = "down")%>%
+  fill(PERMIT,.direction = "up") %>%
+  mutate_each(funs(sub("^$", NA, .)), PERMIT)     
+ 
+#plott when recoveries are from the unique list 
+
+unique_list %>%
+  group_by(Year) %>%
+  count(Vessel_name) %>%
+  ggplot(aes(x= Year, y = n)) +
+  geom_bar(stat = "identity")+
+  theme_classic() +
+  ylab("Recovery Count")
+
+
+
 
 #######################################################################################################
 # ASSIGN FISHING BASED ON POLLOCK FLEET FISHING DATES (??)
