@@ -213,7 +213,6 @@ rm(temp,y)
 #######################################################################################################
   #RBIND EACH FISHERY SO THEY CAN BE MATCHED WITH CWT AND NORPAC TO LINK ACTUAL RECOVERIES TO FISHERY
 #######################################################################################################
-
 permit_numbers<- data.frame(rbind(Mothership,Inshore_Coop_Pollock,Catcher_Processor,Catcher_Vessel_Pollock)) %>%
    group_by(Fishery,Vessel_name,ADFG,AFA) %>%
    count(USCG) %>%
@@ -352,7 +351,7 @@ reference <- left_join(norpac, permit_numbers, by=c("Vessel_name")) #permit,ADFG
 reference_no_na <- reference %>% 
   filter(!is.na(Fishery)) %>%
   group_by(Vessel_name, VESSEL_CODE, LENGTH,PERMIT, USCG,ADFG) %>% 
-  mutate(Fishery = paste(Fishery, collapse=",")) #one line/all fisheries associated with that permit number 
+  summarise(Fishery = paste(Fishery, collapse=",")) #one line/all fisheries associated with that permit number 
 
 Unique_Ref<-  unique(reference_no_na[c("LENGTH","VESSEL_CODE", "Vessel_name","Fishery", "PERMIT", "ADFG", "USCG")])
 
