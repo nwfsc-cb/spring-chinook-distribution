@@ -15,18 +15,15 @@
    group_by(year,month,day, CRUISE, AKR_VESSEL_ID, CATCHER_BOAT_ADFG) %>% 
    summarise(trip_target_code = paste(trip_target_code, collapse=",")) %>% # one line/all fisheries associated with that permit number 
    # simplify so it is either pollock or other - will help remove duplicates for matching 
-   mutate(trip_target_code =  case_when(grepl("pollock", trip_target_code) ~ "pollock",
+   mutate(trip_target_code =  case_when(grepl("pollock", trip_target_code) & grepl("other", trip_target_code) ~ "pollock, other",
+                                        grepl("pollock", trip_target_code) ~ "pollock",
                                         grepl("other", trip_target_code) ~ "other",
                                         TRUE ~ "FIX")) %>%
    data.frame() 
 
 bycatch.load <-  readRDS("data/AK_recovery_data_trawl/Observer_data_base/bycatch_data.RDS") 
 #deal with these seperately because info before 1991 isnot in observer database 
-bycatch.early <- bycatch.load %>%
-  separate(week_end_date, into = c("year", "month", "day"),sep="-") %>%
-  dplyr::select(week_end_date, trip_target_code, vessel_id, gf_processing_sector,trip_target_name, ves_akr_name, ves_akr_length, ves_akr_adfg, 
-                ves_akr_cg_num, catcher_vessel_id, processor_permit_id) %>%
-  filter(year < 1996)
+
 bycatch<- bycatch.load %>% #this data doesnt specify anything within a week. date is the end of week date, cant get specific trip info past that. 
             dplyr::select(week_end_date, trip_target_code, vessel_id, gf_processing_sector,trip_target_name, ves_akr_name, ves_akr_length, ves_akr_adfg, 
                   ves_akr_cg_num, catcher_vessel_id, processor_permit_id) %>% #right now I am going to trust the _akr_ data columns because they align with NORPAC. If the vessel names are the same for both columns but lengths differ, the akr column has the same info as norpac
@@ -40,16 +37,21 @@ bycatch<- bycatch.load %>% #this data doesnt specify anything within a week. dat
                                #   trip_target_code == "K" ~ "rockfish", 
                                   TRUE ~ "other")) %>%
   select(-c(trip_target_name)) %>%
-  group_by(week_end_date, vessel_id, gf_processing_sector,ves_akr_name, ves_akr_length, 
-          ves_akr_cg_num, ves_akr_adfg, catcher_vessel_id, processor_permit_id ) %>% 
+  separate(week_end_date, into = c("year", "month", "day"),sep="-") %>%
+  #for the bycatch data, the date provided is "week end date" not recovery date, that is not helpful when matching to CWT, so I condensed for bycatch/month. Fleet will either be pollock, other or pollock/other. 
+  group_by(year, month, vessel_id, gf_processing_sector,ves_akr_cg_num, ves_akr_adfg, #catcher_vessel_id, 
+           #processor_permit_id,
+           ves_akr_name, ves_akr_length) %>% 
   summarise(trip_target_code = paste(trip_target_code, collapse=",")) %>% #one line/all fisheries associated with that permit number 
-#simplify so it is either pollock or other - will help remove duplicates for matching 
-  mutate(trip_target_code =  case_when(grepl("pollock", trip_target_code) ~ "pollock",
+#simplify so it is either pollock, other, or pollock&other
+  mutate(trip_target_code =  case_when(grepl("pollock", trip_target_code) & grepl("other", trip_target_code) ~ "pollock, other",
+                                             grepl("pollock", trip_target_code) ~ "pollock",
                                              grepl("other", trip_target_code) ~ "other",
                                                      TRUE ~ "FIX")) %>%
-                  data.frame()  %>%
-  separate(week_end_date, into = c("year", "month", "day"),sep="-") %>%
-  filter(year > 1995)
+                  data.frame()   
+
+bycatch.early <- bycatch %>% filter(year < 1996)
+bycatch <- bycatch %>% filter(year > 1995)
 rm(bycatch.load)
 
 #akr_vessel_id in the observer data == the vessel.id in the bycatch data
@@ -173,76 +175,89 @@ obs_renamed <- observer %>%
   mutate(id = "observer", year= as.numeric(year), month=as.numeric(month), day=as.numeric(day)) 
   
 test_obs_join <- cwt %>%
-  filter(year > 1995) %>% 
+#  filter(year > 1995) %>% 
   left_join(obs_renamed, by = c("Cruise_no", "year", "month", "day")) %>%
-  filter(!is.na(id))
+  filter(!is.na(id)) %>%
+  select(-c(id))
 
 #######################################################################################################
 # HOW OFTEN DOES A BOAT FISH FOR SOMETHING DIFFERENT THAN POLLOCK? Happens annually, not monthly. Means this amy be able to match to CWT- when this gets matched it only matches 495, similiar to above. IDK if the matches are the same or differnt... 
       #only 142 duplicates between the observer matches and the bycatch matches, if I can make sure that I get rid of the duplicates than I will get more than 500 matches. 
 #######################################################################################################
-bycatch_vessel_name <- bycatch %>%
-  filter(!gf_processing_sector == "M") %>%
-  group_by(year,month,day, gf_processing_sector, ves_akr_name, ves_akr_length) %>%
-  count(trip_target_code)
-
-test <-unique(bycatch_vessel_name[c("year","gf_processing_sector", "month", "ves_akr_name","ves_akr_length", "trip_target_code")])
-
-test <- test %>%
-  group_by(gf_processing_sector,ves_akr_name,ves_akr_length,year,month) %>%
-  count(trip_target_code) %>% #only one type of trip target/month--- that is good. Indicates maybe I can match by year, month, vessel name and get the rest of the info I want. 
+bycatch_forjoin <- bycatch %>%
   rename(Vessel_name = ves_akr_name) %>%
-  ungroup() %>%
   mutate(year= as.numeric(year), month=as.numeric(month))
-
-#25% join post 1995 
+  
+#25% join post 1995 (413 recoveries)
 test_bycatch_join <- cwt %>%
-  filter(!year < 1996) %>%
-  left_join(test, by=c("year","month", "Vessel_name")) %>%
+#  filter(!year < 1996) %>%
+  left_join(bycatch_forjoin, by=c("year","month", "Vessel_name")) %>%
   filter(!is.na(gf_processing_sector))
 
 #see if they overlap
-#these are the ones that overlap, filter these out of the other two, rbind all three? That will get me somewhere. 
+#these are the ones that overlap, filter these out of the other two, rbind all three - That will get me somewhere. 
 overlapping_inner_join <- inner_join(test_obs_join,test_bycatch_join) 
-obs_individ <- anti_join(test_obs_join,overlapping_inner_join)
-bycatch_individ <- anti_join(test_bycatch_join,overlapping_inner_join)
+obs_individ <- anti_join(test_obs_join,overlapping_inner_join) %>% #filter out the redundant ones. 
+  mutate(gf_processing_sector = NA, ves_akr_length= NA,ves_akr_cg_num=NA,ves_akr_adfg=NA, vessel_id = NA)
+bycatch_individ <- anti_join(test_bycatch_join,overlapping_inner_join) %>% #filter out the redundant ones. 
+  mutate(AKR_VESSEL_ID = NA, CATCHER_BOAT_ADFG= NA) 
 
-
-#these will bind if I can deal with the column names... will give me almost half of the post 1995 recoveries... 
+#723 MATCHES HERE 
 cwt_matches <- rbind(overlapping_inner_join,obs_individ,bycatch_individ)
 
+#now this is what I have left to match to. filter out the ones I already matched.  
+cwt_needmatch <- anti_join(cwt, cwt_matches) 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+#######################################################################################################
+# CAN I MATCH PRE-1996 DATA BASED ON BOATS THAT WERE FISHING BEFORE AND AFTER 1995? -- able to match 57 (out of 430) of these using the bycatch data
+    #Also tried this with the observer data base after it was matched with the late cwt, to see if it informs any of the early CWT. able to match 32
+    #good news is the matches between observer and bycatch are unique, so matched a total of 89 early recoveries to fleet (but not all of these have processing sector info)
+#######################################################################################################
+#get unique data from bycatch that could be used to match with CWT data. IE- if a boat has only ever fished for pollock then it would be pretty likely they only fished for pollock before 95. 
+unique_bycatch  <- bycatch.early %>%
+  group_by(vessel_id, ves_akr_adfg,ves_akr_name, ves_akr_length) %>%
+  summarise(trip_target_code = paste(trip_target_code, collapse=","),gf_processing_sector=paste(gf_processing_sector, collapse= ",")) %>% # one line/all fisheries associated with that permit number 
+  # simplify so it is either pollock or other - will help remove duplicates for matching 
+  mutate(trip_target_code =  case_when(grepl("pollock", trip_target_code) & grepl("other", trip_target_code) ~ "pollock, other",
+                                       grepl("pollock", trip_target_code) ~ "pollock",
+                                       grepl("other", trip_target_code) ~ "other",
+                                       TRUE ~ "FIX"))  %>%
+  mutate(gf_processing_sector =  case_when(grepl("CP", gf_processing_sector) & grepl("M", gf_processing_sector) ~ "CP,M",
+                                           grepl("CP", gf_processing_sector) & grepl("S", gf_processing_sector) ~ "CP,S",
+                                       grepl("CP", gf_processing_sector) ~ "CP",
+                                       grepl("M", gf_processing_sector) ~ "M",
+                                       grepl("S", gf_processing_sector) ~ "S",
+                                       TRUE ~ "FIX"))  %>%
+  rename(Vessel_name = ves_akr_name) 
 
 #get a list of boat names that never targeted Pollock 
+cwt.early <- cwt %>% filter(year <1996)
+#Match these on to the CWT data that is prior to 1995 and see if any join in. 
+early_join_bycatch <- left_join(cwt.early, unique_bycatch) %>%
+ select(c(1:12, 16,17)) %>% #may want to adjust this later
+filter(!is.na(trip_target_code))
 
+#########  WITH OBSERVER X CWT DATA
+unique_observer  <- test_obs_join %>%
+  group_by(Vessel_name, PERMIT,AKR_VESSEL_ID, CATCHER_BOAT_ADFG) %>%
+  summarise(trip_target_code = paste(trip_target_code, collapse=",")) %>% # one line/all fisheries associated with that permit number 
+  # simplify so it is either pollock or other - will help remove duplicates for matching 
+  mutate(trip_target_code =  case_when(grepl("pollock", trip_target_code) & grepl("other", trip_target_code) ~ "pollock, other",
+                                       grepl("pollock", trip_target_code) ~ "pollock",
+                                       grepl("other", trip_target_code) ~ "other",
+                                       TRUE ~ "FIX"))   
 
+early_join_observer <- left_join(cwt.early, unique_observer) %>%
+  filter(!is.na(trip_target_code)) %>%
+  mutate(gf_processing_sector=NA) %>%
+  select(c(1:12,15,16))  #may want to adjust this later
 
-
-
+early_matched<-rbind(early_join_observer, early_join_bycatch)
+ 
 
 #######################################################################################################
 # try and match vessel name, AKR VESSEL ID, CATCHER adfg number and year /month - this is kind of useless because it has a lot of duplicates. 
 #######################################################################################################
-obs_renamed <- observer %>% 
-  rename(ves_akr_adfg=CATCHER_BOAT_ADFG, vessel_id = AKR_VESSEL_ID)  %>%
-  mutate(id = "observer")
-test <- left_join(bycatch,obs_renamed,by = c("year", "month", "ves_akr_adfg", "vessel_id", "trip_target_code"))
-test2<-filter(test,!is.na(id))
-
 #how many of the columns with similiar names have different info?? need to check ---> Looks like you should use the AKR column  
 # unique_bycatch <- unique(bycatch[c("ves_cfec_name", "ves_cfec_length","ves_akr_name","ves_akr_length")])
 # #unique_bycatch_ves_name <- unique(bycatch[c("ito_vname", "ves_cfec_name","ves_akr_name")])
