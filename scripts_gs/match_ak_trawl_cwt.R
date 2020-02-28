@@ -4,6 +4,10 @@ library(zoo)
 #######################################################################################################
 # LOAD BYCATCH AND OBSERVER DATA FROM AFSC - MATCH SO MAX INFO CAN BE MATCHED WITH CWT AND MINIMIZE DUPES. 
 #######################################################################################################
+# RUN THIS TO GET THE POLLOCK FISHING DATES THAT ARE MATCHED IN LATER source(tidy_pollock_fishing_dates.R)
+dates<-readRDS("data/pollock_fishing_dates/pollock_fishing_dates.RDS") #%>%
+ #already did this in tidy pollock file  filter(ocean_region == "GOA") 
+
 observer.load <- readRDS("data/AK_recovery_data_trawl/Observer_data_base/comp_obs_haul_v3.rds") 
 
 observer.first.ten <- readRDS("data/AK_recovery_data_trawl/Observer_data_base/comp_obs_haul_v2_toptenrows.rds") 
@@ -29,7 +33,7 @@ bycatch.load <-  readRDS("data/AK_recovery_data_trawl/Observer_data_base/bycatch
 #deal with these seperately because info before 1991 isnot in observer database 
 
 bycatch<- bycatch.load %>% #this data doesnt specify anything within a week. date is the end of week date, cant get specific trip info past that. 
-  dplyr::select(week_end_date, year.1,trip_target_code, vessel_id, gf_processing_sector,trip_target_name, ves_akr_name, ves_akr_length, ves_akr_adfg, 
+  dplyr::select(week_end_date, reporting_area_code, year.1,trip_target_code, vessel_id, gf_processing_sector,trip_target_name, ves_akr_name, ves_akr_length, ves_akr_adfg, 
                 ves_akr_cg_num, catcher_vessel_id, processor_permit_id) %>% #right now I am going to trust the _akr_ data columns because they align with NORPAC. If the vessel names are the same for both columns but lengths differ, the akr column has the same info as norpac
   # but in some cases vessel names differ between columns... for not just going to be consistent and use AKR here. 
   # not sure what vessel ID type to use out of: vessel_id, catcher_vessel_id, processor_permit_id
@@ -44,7 +48,7 @@ bycatch<- bycatch.load %>% #this data doesnt specify anything within a week. dat
   select(-c(trip_target_name)) %>%
   # separate(week_end_date, into = c("year", "month", "day"),sep="-") %>%
   #for the bycatch data, the date provided is "week end date" not recovery date, that is not helpful when matching to CWT, so I condensed for bycatch/month. Fleet will either be pollock, other or pollock/other. 
-  group_by(year.1,week_end_date, vessel_id, gf_processing_sector,ves_akr_cg_num, ves_akr_adfg, #catcher_vessel_id, 
+  group_by(year.1,week_end_date, vessel_id, reporting_area_code,gf_processing_sector,ves_akr_cg_num, ves_akr_adfg, #catcher_vessel_id, 
            #processor_permit_id,
            vessel_name, ves_akr_length) %>% 
   summarise(trip_target_code = paste(trip_target_code, collapse=",")) %>% #one line/all fisheries associated with that permit number 
@@ -59,10 +63,73 @@ bycatch.early <- bycatch %>% filter(year.1 < 1996)
 bycatch <- bycatch %>% filter(year.1 > 1995)
 #rm(bycatch.load)
 #akr_vessel_id in the observer data == the vessel.id in the bycatch data
+#######################################################################################################
+# MATCH BYCATCH AND OBSERVER INFORMATION
+#######################################################################################################
+#able to join ~75% of them. this gives me more complete info-- but also adds duplicates... 
+#this doesnt actually matter that much now that I have more complete observer info--> 
+join <- left_join(observer, bycatch, by = c("week_end_date", "vessel_name", "ves_akr_adfg")) %>% #observer has more complete record and 
+  #sometimes the bycatch data doesn match up, using that to get vessel_lengths. since they wont change/boat name I am just filling in below within a group
+  group_by(vessel_name) %>%
+  fill(ves_akr_length, .direction = "down") %>%
+  fill(ves_akr_length, .direction = "up")   %>%
+  mutate(REPORTING_AREA_CODE= case_when(is.na(REPORTING_AREA_CODE) ~ reporting_area_code,
+                                        TRUE ~ REPORTING_AREA_CODE)) %>%
+  select(-c(reporting_area_code))
+
+#how many dont match?
+# join %>%
+#   filter(is.na(ves_akr_length)) %>%
+#   summarise(sum(n()))
+#######################################################################################################
+# MAP PREP 
+#######################################################################################################
+df = read.csv("Maps_and_Charts_of_Regions/spatial_bounds_gs_new.csv", stringsAsFactors = FALSE) %>%
+  filter(state == 'ak')
+
+#This map plots the spatial boxes that we assign effort and recovery too. 
+world <- map_data("world")
+north_america <- subset(world, region %in% c("USA", "Canada"))
+
+map<-north_america %>%
+  filter(!group== 1511, !group== 1518, !group==1515, !group==1508, !group==1502, !group==1509) %>%
+  filter(!long > -115) %>%
+  filter(!lat < 46) %>%
+  filter(!lat > 62) %>%
+  filter(!long < -173) %>%
+  ggplot( ) +
+  geom_polygon(aes(x = long, y = lat, group = group), fill = "white", color = "black") +
+  coord_fixed(1.3) +
+  geom_segment(data = df, colour="gray", aes(x = as.numeric(line.start.lon), 
+                                             y = as.numeric(line.start.lat), 
+                                             xend = as.numeric(line.end.lon), 
+                                             yend = as.numeric(line.end.lat))) +
+  #  geom_text(data=df, colour="darkgreen",aes(x=label_long1, y= label_lat1, label= region), size=2)+ #smaller labels for CA, OR, and WA so they fit
+  geom_text(data=df, colour="darkgreen",aes(x=as.numeric(label_long2), y=as.numeric(label_lat2), label= region), size=2) +
+  theme_classic()
+#map
 
 #######################################################################################################
 # LOAD AND CORRECT VESSEL NAMES IN CWT DATA 
 #######################################################################################################
+#setwd("~/Documents/GitHub/spring-chinook-distribution")
+rec_codes_lookup = read.csv("data/recovery codes-wietkamp+shelton 12-2018 two PUSO.csv", stringsAsFactors = FALSE) %>%
+  mutate(recovery_location_code =location_code) %>%
+  mutate(region = Rec.area.Sullaway.Shelton.NMFSstat) %>% 
+  select(c(recovery_location_code, region)) %>% #change so that RMIS has same column labels 
+  distinct(recovery_location_code, .keep_all = TRUE) #remove duplicates 
+
+#setwd("~/Documents/GitHub/rmis-data")
+load("data/final_data/all_chinook.Rdata")
+all_chinook<-data.frame(all_chinook) %>%
+  separate(recovery_date,c("year","rest"), sep = 4)%>%
+  separate(rest, c("month","day"), sep = 2)%>%
+  filter(year >1995) %>%
+  filter(fishery %in% c(81, 82))
+
+match <- all_chinook %>%
+  left_join(rec_codes_lookup, by = "recovery_location_code")
+
 cwt <- read.csv("data/AK_recovery_data_trawl/HighSeasCWT2006a_for_Jordan.csv") %>%
   separate(recovery_date, into = c("year", "restofdate"), sep = 4) %>%
   separate(restofdate, into = c("month", "day"), sep = 2) %>%
@@ -71,11 +138,22 @@ cwt <- read.csv("data/AK_recovery_data_trawl/HighSeasCWT2006a_for_Jordan.csv") %
     Vessel_name = as.character(Vessel_name)) %>%
   filter(!year == 2018) %>%
   rename(PERMIT = "Vessel_or_Plant_code", vessel_name= Vessel_name,cruise_no=Cruise_no) %>% #Vessel code is the equivalent to PERMIT in Norpac database. A lot of boat names in CWT are some sort of permit #, and match with permit number. Ex. A0825
-  select(recovery_id, tag_code, Observer, vessel_name, cruise_no, PERMIT, Haul_or_Delivery_no, year, month, day, Lat, Long) %>%
+  select(recovery_id, tag_code, Observer, vessel_name, cruise_no, PERMIT, Haul_or_Delivery_no, year, month, day, Lat, latmin, Long, Longmin) %>%
   #filter(!is.na(Cruise_no) & !is.na(PERMIT)) %>% #remove entries that dont have any info 
   #mutate(VESSEL_CODE = as.character(PERMIT), PERMIT= as.character(PERMIT)) %>%#some CWT recoveries have the Vessel_Code classified as PERMIT #, Will use that in to match to norpac too
   #vessel_nameS ARE MESSED UP, FIX THEM HERE SO MATCHING IS BETTER 
-  mutate(vessel_name = case_when(vessel_name == "Viking Explorer" ~ "VIKING EXPLORER",
+  mutate(vessel_name = case_when(vessel_name %in% c("Ak Beauty", "A_BEAUTY", "Alaska Beauty") ~ "ALASKA BEAUTY",
+                                 vessel_name %in% c("A_DAWN","A366") ~ "ALASKA DAWN",
+                                 vessel_name %in% c("ALASKA_ROSE") ~ "ALASKA ROSE",
+                                 vessel_name %in% c("A_J") ~ "AJ", 
+                                 vessel_name %in% c("A_NO1") ~ "ALEUTIAN NO 1",
+                                 vessel_name %in% c("A_FJORD") ~ "ARCTIC FJORD",
+                                 vessel_name %in% c("A_VICTORY","ALASKA_VICTORY") ~ "ALASKA VICTORY",
+                                 vessel_name %in% c("AM_1","AMERICAN_NOI") ~ "AMERICAN NO I",
+                                 vessel_name %in% c("AMERICAN_CHALLENGER") ~ "AMERICAN CHALLENGER",                      
+                                 vessel_name %in% c("A_OCEAN") ~ "ALASKA OCEAN",
+                                 vessel_name %in% c("Anthem; A714", "Anthem") ~ "ANTHEM",
+                                 vessel_name %in% c("VIKING_EXPLORER", "Viking Explorer") ~ "VIKING EXPLORER",
                                  vessel_name == "C_KIWANDA" ~ "CAPE KIWANDA",
                                  vessel_name %in% c("C_BROTHERS", "COLLIER BROS", "Collier Bros", "Collier Brothers") ~ "COLLIER BROTHERS",
                                  vessel_name %in% c("Caravelle", "CORAVILLE", "Caravelle/A322", "CARAVILLE", "Cavavelle" )~ "CARAVELLE",     
@@ -105,10 +183,12 @@ cwt <- read.csv("data/AK_recovery_data_trawl/HighSeasCWT2006a_for_Jordan.csv") %
                                  vessel_name %in% c("Golden Fleece")~"GOLDEN FLEECE",
                                  vessel_name %in% c("EXCALIBUR_II","EXCALIBER II","EXCALLIBUR II","EX_II") ~ "EXCALIBUR II",
                                  vessel_name %in% c("FIERCE_ALLIGIANCE","FIERCE ALLIANCE") ~  "FIERCE ALLEGIANCE",
-                                 vessel_name %in% c("GOLDEN_ALASKA","GOLDEN_ALASKA","GOLDEN_ALASKA", "G_A_(GOLDEN_ALASKA?)","G_ALASKA","GOLDEN AK","M/V_GA") ~ "GOLDEN_ALASKA",  
+                                 vessel_name %in% c("GOLDEN_ALASKA","GOLDEN_ALASKA","GOLDEN_ALASKA", "G_A_(GOLDEN_ALASKA?)","G_ALASKA","GOLDEN AK","M/V_GA") ~ "GOLDEN ALASKA",  
                                  vessel_name %in% c("G_DAWN", "GOLDEN_DAWN")~"GOLDEN DAWN",
                                  vessel_name %in% c("G_PACIFIC", "GREAT_PACIFIC")~ "GREAT PACIFIC",
-                                 vessel_name %in% c("GOLD_RUSH","G_RUSH","Gold Rush")~ "GOLD RUSH",
+                                 vessel_name %in% c("GOLD_RUSH","G_RUSH","Gold Rush")~ "GOLD RUSH", 
+                                 vessel_name %in% c("GRUMPY_J")~ "GRUMPY J",
+                                 vessel_name %in% c("JAMIE_MARIE")~ "JAMIE MARIE",
                                  vessel_name %in% c("H_LORRAINE","HAZEL_LORRAINE","Hazel Lorraine") ~ "HAZEL LORRAINE",
                                  vessel_name %in% c("HARVESTER ENTERPRSEI") ~ "HARVESTER ENTERPRSE",
                                  vessel_name %in% c("Hickory Wind", "H_WIND","HICKORY") ~ "HARVESTER ENTERPRSE",
@@ -171,7 +251,13 @@ cwt <- read.csv("data/AK_recovery_data_trawl/HighSeasCWT2006a_for_Jordan.csv") %
                                  vessel_name %in% c("W_DAWN") ~"WESTERN DAWN",
                                  vessel_name %in% c("Walter N","WALTER_N","WALTER_W") ~"WALTER N",
                                  vessel_name %in% c("WESTWARD_1","WESTWARD_I") ~"WESTWARD I",
-                                 TRUE ~ vessel_name))
+                                 TRUE ~ vessel_name)) %>%
+  unite("Lat", c("Lat", "latmin"), sep =".") %>%
+  unite("Long", c("Long", "Longmin"), sep = ".") %>%
+  mutate(longitude = as.numeric(Long) * -1, latitude = as.numeric(Lat))  
+ 
+################ plot existing locations on a map to see if assignments worked
+map + geom_point(data= cwt, mapping = aes(x= longitude, y=latitude, color =region), alpha=0.5) 
 
 #use norpac to fill in some of the blank or coded CWT vessel names  - it fills in ~ 700 names 
 norpac <- read.csv("data/AK_recovery_data_trawl/Norpac Vessel Table_2020.csv")%>%
@@ -192,29 +278,34 @@ cwt <- left_join(cwt, norpac_vessel_code, by=c("vessel_name")) %>%
                                  TRUE ~ actual_ves_name)) %>%
   select(-c(actual_ves_name))
 cwt.early <- cwt %>% filter(year < 1996)
-cwt.late <- cwt %>% filter(year > 1995)
-#######################################################################################################
-# MATCH BYCATCH AND OBSERVER INFORMATION
-#######################################################################################################
-#able to join ~75% of them. this gives me more complete info-- but also adds duplicates... 
-#this doesnt actually matter that much now that I have more complete observer info--> 
-join <- left_join(observer, bycatch, by = c("week_end_date", "vessel_name", "ves_akr_adfg")) %>% #observer has more ocmplete record and 
-  #sometimes the bycatch data doesn match up, using that to get vessel_lengths. since they wont hcange/boat name I am just filling in below within a group
-  group_by(vessel_name) %>%
-  fill(ves_akr_length, .direction = "down") %>%
-  fill(ves_akr_length, .direction = "up")   
 
-#how many dont match?
-# join %>%
-#   filter(is.na(ves_akr_length)) %>%
-#   summarise(sum(n()))
-
+#JOIN RMIS CWT DATA TO GET LOCATIONS FOR RECOVERIES 
+cwt.late <- cwt %>% filter(year > 1995) %>%
+  mutate(recovery_id = as.character(recovery_id)) %>%
+  left_join(match, by = c("recovery_id", "tag_code")) %>%
+  select(recovery_id, tag_code, Observer, vessel_name, cruise_no, PERMIT, Haul_or_Delivery_no, latitude, longitude, 
+         year.x, month.x, day.x, region) %>% #what do we get if we use RMIS dates instead of cwt dates 
+  rename(year=year.x, month=month.x, day=day.x) %>% #only 25 without ocean region, some of them have lat and long so use that to match in 
+  mutate(region = case_when(is.na(region) & longitude > -140 & latitude > 55.5   ~  "NSEAK", #"X650",
+                                is.na(region) & longitude < -140 & longitude > -147 | longitude == -140 ~ "NE.GOA", #"X640",
+                                is.na(region) & longitude < -147 & longitude > -154 | longitude == -147 ~ "NW.GOA", #"X630",
+                                is.na(region) & longitude < -154 & longitude > -159 | longitude == -154 ~ "W.APEN", #"X620",
+                                is.na(region) & latitude > 54 & longitude < -161 ~ "BER",
+                                is.na(region) & latitude < 55 & longitude > -164 ~ "E.APEN",
+                                is.na(region) & longitude < -159 & longitude > -170 | longitude == -159 & latitude < 55 ~ "E.APEN",
+                                is.na(region) & #latitude < 55 & longitude > -164 ~ "E.APEN",
+                                is.na(region) & longitude < -159 & longitude > -161 & latitude < 54 ~ "E.APEN",
+                                is.na(region) & longitude < -170 & latitude < 54 ~ "ALEUT",
+                                is.na(region) & longitude > -136 ~ "SSEAK",
+                                                            TRUE ~ region)) %>%
+  filter(!region %in% c("ALEUT", "BER")) #FOR NOW JUST FOCUS ON GOA 
 #######################################################################################################
 # MATCH CWT AND OBSERVER  -- it doesnt work to match on any of the permit numbers.....
 #######################################################################################################
-# 771 match.  
+#ABOUT 100 DUPLICATES ADDED HERE....
 cwt_observer_join<- left_join(cwt.late, join, by = c("year", "month","day","vessel_name")) %>%
-  select(c(1:12,17,20,25)) %>%
+  select(recovery_id, tag_code, Observer, vessel_name, cruise_no.x, PERMIT, Haul_or_Delivery_no, year, month,day,
+         longitude, latitude, region,gf_processing_sector.x,trip_target_code.x,REPORTING_AREA_CODE, ves_akr_length) %>%
   rename(trip_target_code=trip_target_code.x, gf_processing_sector=gf_processing_sector.x, cruise_no = cruise_no.x)
 
 #how many match? 
@@ -229,9 +320,11 @@ join1<- cwt_observer_join %>%
 #this adds 104 more matches 
 cwt_observer_join1<- cwt_observer_join %>%
   filter(is.na(trip_target_code)) %>%
-  select(c(1:12)) %>%
+  select(recovery_id, tag_code, Observer, vessel_name, cruise_no, PERMIT, Haul_or_Delivery_no, year, month,day,
+         longitude, latitude, region) %>%
   left_join(join, by = c("year", "month","day","cruise_no")) %>%
-  select(c(1:12,14,17,20,25)) %>%
+  select(recovery_id, tag_code, Observer, vessel_name.x,vessel_name.y,cruise_no, PERMIT, Haul_or_Delivery_no, year, month,day,
+         longitude, latitude, region,gf_processing_sector.x,trip_target_code.x,REPORTING_AREA_CODE, ves_akr_length) %>%
   rename(trip_target_code=trip_target_code.x, gf_processing_sector=gf_processing_sector.x) %>%
   mutate(vessel_name = case_when(vessel_name.x == "" ~ vessel_name.y,      #this match adds some vessel names 
                                  TRUE ~ vessel_name.x)) %>%
@@ -244,42 +337,112 @@ cwt_observer_join1 %>%
 #pull out the matched data and tidy it so it can be bound later 
 join2<- cwt_observer_join1 %>%
   filter(!is.na(trip_target_code))  
-#875 match ~ 45% of the late cwt recoveries. 
+ 
+#keep these to try and figure out which ones dont match 
+na_join<-cwt_observer_join1 %>%
+  filter(is.na(trip_target_code))  
 
+#AVOID DOING THIS FOR NOW BC IT IS KIND OF JANKY-- SEE IF THERE ARE BETTER WAYS TO MATCH THE UNKNOWNS BASED ON DATE AND SECTOR/VESSEL NAME
 #now match on year, month,vessel name 
 #set up observer data so you can get fishing targets and sectors within a month for each vessel
-obs_year_month <- join %>%
-  rename(trip_target_code=trip_target_code.x, gf_processing_sector=gf_processing_sector.x) %>% 
-  group_by(vessel_name, year,month,ves_akr_length) %>%
-  summarise(trip_target_code = paste(trip_target_code, collapse=","),gf_processing_sector=paste(gf_processing_sector, collapse= ",")) %>% # one line/all fisheries associated with that permit number 
-  # simplify so it is either pollock or other - will help remove duplicates for matching 
-  mutate(trip_target_code =  case_when(grepl("pollock", trip_target_code) & grepl("other", trip_target_code) ~ "pollock, other",
-                                       grepl("pollock", trip_target_code) ~ "pollock",
-                                       grepl("other", trip_target_code) ~ "other",
-                                       TRUE ~ "FIX"))  %>%
-  mutate(gf_processing_sector =  case_when(grepl("CP", gf_processing_sector) & grepl("M", gf_processing_sector) ~ "CP,M",
-                                           grepl("CP", gf_processing_sector) & grepl("S", gf_processing_sector) ~ "CP,S",
-                                           grepl("CP", gf_processing_sector) ~ "CP",
-                                           grepl("M", gf_processing_sector) ~ "M",
-                                           grepl("S", gf_processing_sector) ~ "S",
-                                           TRUE ~ "FIX")) 
-cwt_observer_join2<- cwt_observer_join1 %>%
-  filter(is.na(trip_target_code)) %>%
-  select(c(1:11,15)) %>%
-  #rename(vessel_name = vessel_name.x) %>%
-  left_join(obs_year_month, by = c("year", "month", "vessel_name"))
-
-#this adds 653 more matches 
-cwt_observer_join2 %>%
-  filter(!is.na(trip_target_code)) %>%
-  summarise(sum(n()))
-join3<- cwt_observer_join2 %>%
-  filter(!is.na(trip_target_code)) 
-#1537 total == 79.7 % of the late cwt recoveries. 
-
+# obs_year_month <- join %>%
+#   rename(trip_target_code=trip_target_code.x, gf_processing_sector=gf_processing_sector.x) %>% 
+#   group_by(vessel_name, year,month,ves_akr_length) %>%
+#   summarise(trip_target_code = paste(trip_target_code, collapse=","),gf_processing_sector=paste(gf_processing_sector, collapse= ",")) %>% # one line/all fisheries associated with that permit number 
+#   # simplify so it is either pollock or other - will help remove duplicates for matching 
+#   mutate(trip_target_code =  case_when(grepl("pollock", trip_target_code) & grepl("other", trip_target_code) ~ "pollock, other",
+#                                        grepl("pollock", trip_target_code) ~ "pollock",
+#                                        grepl("other", trip_target_code) ~ "other",
+#                                        TRUE ~ "FIX"))  %>%
+#   mutate(gf_processing_sector =  case_when(grepl("CP", gf_processing_sector) & grepl("M", gf_processing_sector) ~ "CP,M",
+#                                            grepl("CP", gf_processing_sector) & grepl("S", gf_processing_sector) ~ "CP,S",
+#                                            grepl("CP", gf_processing_sector) ~ "CP",
+#                                            grepl("M", gf_processing_sector) ~ "M",
+#                                            grepl("S", gf_processing_sector) ~ "S",
+#                                            TRUE ~ "FIX")) 
+# cwt_observer_join2<- cwt_observer_join1 %>%
+#   filter(is.na(trip_target_code)) %>%
+#   select(recovery_id, tag_code, Observer, vessel_name, cruise_no, PERMIT, Haul_or_Delivery_no, year, month,day,
+#          longitude, latitude, region,REPORTING_AREA_CODE) %>%
+#   left_join(obs_year_month, by = c("year", "month", "vessel_name"))
+# 
+# #this adds 653 more matches 
+# cwt_observer_join2 %>%
+#   filter(!is.na(trip_target_code)) %>%
+#   summarise(sum(n()))
+# 
+# join3<- cwt_observer_join2 %>%
+#   filter(!is.na(trip_target_code)) 
+# #1537 total == 79.7 % of the late cwt recoveries. 
+# na_from_join<-  cwt_observer_join2 %>%
+#   filter(is.na(trip_target_code)) 
 #rbind - this give the total CWT recoveries that matched after 1995.
-cwt_matches_late<- rbind(join1, join2, join3)
-#I can up this number by fixing more of the CWT names manually. 
+cwt_matches_late<- rbind(join1, join2) 
+#######################################################################################################
+# MATCH CWT AND POLLOCK SEASON FISHING DATES  
+#######################################################################################################
+#set up date so it matches 
+cwt_matches_late <- cwt_matches_late %>%
+  unite("fishing_date", c("month", "day","year"),sep = "-", remove=FALSE) %>%
+  mutate(fishing_date= as.Date(fishing_date, "%m-%d-%Y")) %>%
+  left_join(dates, by = c("fishing_date", "region")) %>%
+  mutate(trip_target_code = case_when(gf_processing_sector == "CP" ~ "pollock", #under assumption that everything is pollock
+                                      trip_target_code == "pollock, other" & is.na(fishing) ~ "other", 
+                                      trip_target_code == "pollock, other" & fishing=="pollock" ~ "pollock", 
+                                      TRUE~ trip_target_code)) %>%
+  select(-c(REPORTING_AREA_CODE))
+# cwt_matches_late %>%
+#   filter(is.na(region)) %>%
+#   summarise(sum(n()))
+# unique(cwt_matches_late$region)
+#######################################################################################################
+#FIGURE OUT WHAT IS HAPPENING WITH BOATS THAT DON'T JOIN ABOVE ~ 884 BOATS 
+#######################################################################################################
+#get unique combinations of boat names, sector, and length match in here ----
+unique_boat_sector_length <- unique(join[c("year", "month", "vessel_name", "gf_processing_sector.x", "ves_akr_length")])
+unique_boat_sector_length <- unique_boat_sector_length %>% 
+  group_by(year,month,vessel_name,ves_akr_length) %>%
+  summarise(gf_processing_sector = paste(gf_processing_sector.x, collapse=","))
+
+#this adds 125
+na_join <- na_join %>% 
+  unite("fishing_date", c("month", "day","year"),sep = "-", remove=FALSE) %>%
+  mutate(fishing_date= as.Date(fishing_date, "%m-%d-%Y")) %>%
+  left_join(dates, by = c("fishing_date", "region")) %>%
+  mutate(trip_target_code = case_when(gf_processing_sector == "CP" ~ "pollock", #under assumption that everything is pollock
+                                      trip_target_code == "pollock, other" & is.na(fishing) ~ "other", 
+                                      trip_target_code == "pollock, other" & fishing=="pollock" ~ "pollock", 
+                                      TRUE~ trip_target_code)) %>%
+  select(-c(14:17)) %>% 
+  left_join(unique_boat_sector_length, by = c("vessel_name", "year", "month")) %>%
+  mutate(trip_target_code = case_when(gf_processing_sector == "CP" ~ "pollock", #under assumption that everything is pollock 
+                                    TRUE ~ fishing)) %>%
+  mutate(trip_target_code=case_when(is.na(trip_target_code) ~ "other",
+                                    TRUE ~ trip_target_code)) 
+
+na_join %>%
+     filter(!is.na(trip_target_code)) %>%
+     summarise(sum(n()))
+
+all_cwt_late<- rbind(na_join, cwt_matches_late) %>% #add a few more in. 
+  mutate(gf_processing_sector = case_when(vessel_name %in% c("TRIDENT",  "TRIDENT AKUTAN", "TRIDENT SEAFOODS SAND POINT","UNISEA","WESTERN_AK_FISHERIES", "SANDPOINT PLANT-TRIDENT SEAFOODS",
+                                                             "NEW_WEST_FISHERIES") ~ "CP", #all of these are catcher processors 
+    TRUE ~ gf_processing_sector))
+
+#still some that dont match, some of these are processors. 
+unid_sectors <- all_cwt_late %>%
+  filter(is.na(gf_processing_sector)) 
+
+#######################################################################################################
+# ASSIGN LATE RECOVERIES BASED ON SIZE
+#######################################################################################################
+all_cwt_late<- all_cwt_late %>%
+  # mutate(LENGTH = as.integer(ves_akr_length)) %>%
+  mutate(length_category = case_when(gf_processing_sector == "CP" ~ "Large",
+                                     ves_akr_length < 125 & year < 2013 ~ "Small",
+                                     ves_akr_length < 60 & year > 2013 ~ "Small",
+                                     is.na(ves_akr_length) ~ "NA",
+                                     TRUE ~ "Large" )) 
 
 #######################################################################################################
 # Do boats fish for the same target within a trip? - generally yes. 
@@ -310,7 +473,7 @@ observer_target <- observer %>%
   data.frame()   
 
 #######################################################################################################
-# CAN I MATCH PRE-1996 DATA BASED ON BOATS THAT WERE FISHING BEFORE AND AFTER 1995? -- able to match 57 (out of 430) of these using the bycatch data
+# EARLY ----- CAN I MATCH PRE-1996 DATA BASED ON BOATS THAT WERE FISHING BEFORE AND AFTER 1995? -- able to match 57 (out of 430) of these using the bycatch data
 #Also tried this with the observer data base after it was matched with the late cwt, to see if it informs any of the early CWT. able to match 32
 #good news is the matches between observer and bycatch are unique, so matched a total of 89 early recoveries to fleet (but not all of these have processing sector info)
 #######################################################################################################
@@ -361,14 +524,15 @@ cwt_matches_early<- rbind(early_join_bycatch,early_join_observer)
 #######################################################################################################
 # BIND EARLY AND LATE RECOVERIES AND GROUP THEM BASED ON SIZE ETC .
 #######################################################################################################
-cwt_matches_all<- rbind(cwt_matches_early, cwt_matches_late) %>%
-  # mutate(LENGTH = as.integer(ves_akr_length)) %>%
-  mutate(length_category = case_when(ves_akr_length < 125 & year < 2013 ~ "Small",
-                                     ves_akr_length < 60 & year > 2013 ~ "Small",
-                                     is.na(ves_akr_length) ~ "NA",
-                                     TRUE ~ "Large" ))
+# cwt_matches_all<- rbind(cwt_matches_early, cwt_matches_late) %>%
+#   # mutate(LENGTH = as.integer(ves_akr_length)) %>%
+#   mutate(length_category = case_when(ves_akr_length < 125 & year < 2013 ~ "Small",
+#                                      ves_akr_length < 60 & year > 2013 ~ "Small",
+#                                      is.na(ves_akr_length) ~ "NA",
+#                                      TRUE ~ "Large" ))
 
 
-write_csv(cwt_matches_all, "cwt_ak_matches.csv")
-#770 dont have lat and long 
-saveRDS(cwt_matches_all,"cwt_ak_matches.RDS")
+
+#write_csv(cwt_matches_all, "cwt_ak_matches.csv")
+#saveRDS(cwt_matches_all,"cwt_ak_matches.RDS")
+saveRDS(unid_sectors, "unid_sectors.RDS")
