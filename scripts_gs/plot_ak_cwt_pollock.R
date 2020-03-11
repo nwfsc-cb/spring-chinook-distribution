@@ -8,12 +8,12 @@ library(ggpubr)
 # LATE RECOVERY PLOTS
 #######################################################################################################
 df <- all_cwt_late %>%
-  filter(gf_processing_sector %in% c("CP", "M", "S"))
+  filter(processing_sector %in% c("CP", "M", "S"))
 
 #source("match_ak_trawl_cwt.R")
-uniq <- unique(df$gf_processing_sector)
+uniq <- unique(df$processing_sector)
 lapply(seq_along(uniq), function(x) {
-  filter(df, df$gf_processing_sector == uniq[x])
+  filter(df, df$processing_sector == uniq[x])
 }
 ) -> df_list
 names(df_list) <- uniq
@@ -33,7 +33,9 @@ plot[[i]] <-   df_list[[i]] %>%
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
   ggtitle(paste(as.character(uniq[[i]])))
 }
-
+  plot[[]] 
+  
+  
 pdf("ak_cwt_plots_YEAR.pdf")
 for (i in 1:3){
  plot(plot[[i]])
@@ -57,7 +59,7 @@ for (i in 1:length(df_list)) {
     theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
     ggtitle(paste(as.character(uniq[[i]])))
 }
-plot[[1]]
+
 pdf("ak_cwt_plots_MONTH.pdf")
 for (i in 1:3){
   plot(plot[[i]])
