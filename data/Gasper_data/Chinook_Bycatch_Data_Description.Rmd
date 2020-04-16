@@ -1,0 +1,220 @@
+---
+title: "R Notebook"
+output:
+  html_document:
+    df_print: paged
+---
+
+```{r,message=FALSE,warning=FALSE}
+library(tidyverse)
+library(tidyr)
+library(DBI)
+library(odbc)
+```
+
+
+```{r,eval=FALSE}
+con <- dbConnect(odbc::odbc(), "akfin", UID="jwatson", PWD= rstudioapi::askForPassword("Enter AKFIN Password"))
+
+dbFetch(dbSendQuery(con,"SELECT a.psc_fishery_code,
+                                                a.year,
+                                                a.el_report_id,
+                                                a.trip_target_date,
+                                                r.landing_date,
+                                                r.port_code,
+                                                a.processing_sector,
+                                                a.catcher_vessel_id,
+                                                a.management_program_code,
+                                                a.agency_gear_code,
+                                                a.adfg_stat_area_code,
+                                                a.reporting_area_code,
+                                                a.pscnq_estimate,
+                                                a.species_count,
+                                                a.rate_precedence,
+                                                a.rate,
+                                                a.retained_gf_basis_weight AS RETAINED_GF_WEIGHT,
+                                                a.total_gf_basis_weight,
+                                                a.rate*a.total_gf_basis_weight as manual_CALC_example,
+                                                a.trip_target_code,
+                                                a.species_group_code,
+                                                a.fmp_sub_area_code
+                                                
+                                                FROM akr.v_cas_txn_primary_psc a
+                                                LEFT JOIN akr.V_ELLR_REPORT r
+                                                on r.report_id=a.el_report_id
+                                                
+                                                where a.species_group_code='CHNK'
+                                                and a.FMP_SUB_AREA_CODE in ('BS','GOA','AI')
+                                                and a.agency_gear_code in ('NPT','PTR')")) %>% 
+  rename_all(tolower) %>% 
+  saveRDS(file="Chinook_Rates_add_species.RDS")
+
+#  Pull in vessel info
+dbFetch(dbSendQuery(con,"SELECT distinct catcher_vessel_id,ves_akr_length,year from council.comprehensive_blend_ca")) %>% 
+  rename_all(tolower) %>% 
+  mutate(year=as.numeric(year)) %>% 
+  saveRDS(file="Catcher_vessel_id_length.RDS")
+
+#  Pull in look up table of trip target codes
+dbFetch(dbSendQuery(con,"SELECT distinct trip_target_code,trip_target_name from council.comprehensive_blend_ca")) %>% 
+  rename_all(tolower) %>% 
+  saveRDS(file="Trip_Target_Codes.RDS")
+```
+
+Merge and edit the trip target codes, round calculated fields to reduce file size, and create a pollock/non-target field.
+
+```{r, eval=FALSE}
+data <- readRDS("Chinook_Rates_add_species.RDS")
+vessels <- readRDS("Catcher_vessel_id_length.RDS")
+targets <- readRDS("Trip_Target_Codes.RDS")
+
+data %>% 
+  left_join(vessels) %>% 
+  left_join(targets) %>% 
+  mutate(pscnq_estimate=round(pscnq_estimate,3),
+         rate=round(rate,4),
+         retained_gf_weight=round(retained_gf_weight,3),
+         total_gf_basis_weight=round(total_gf_basis_weight,3),
+         manual_calc_example=round(manual_calc_example,3),
+         target=ifelse(trip_target_code%in%c("B","P"),"pollock","non-pollock")) %>% 
+  saveRDS(file="Chinooky_Rates_merged.RDS")
+```
+
+Now read in and explore the data. I am going to create some shorter column names for ease of using the data as well. 
+
+```{r}
+data <- readRDS("Chinooky_Rates_merged.RDS") %>% 
+  dplyr::select(-psc_fishery_code,
+                sector=processing_sector,
+                cv_id=catcher_vessel_id,
+                mgmt_code=management_program_code,
+                gear=agency_gear_code,
+                statarea=adfg_stat_area_code,
+                nmfsarea=reporting_area_code,
+                vlength=ves_akr_length,
+                fmp_area=fmp_sub_area_code)
+
+head(data)
+```
+
+What are the different trip target codes?
+
+```{r}
+data %>% 
+  distinct(trip_target_code,trip_target_name) %>% 
+  data.frame
+```
+
+So I think there are a couple of key pieces to what we're interested in here. 
+Note that there are a few places where the field descriptions will say "Null if the amount was reported". By "reported" I believe they mean, directly observed. And by "null" I believe that they mean "Zero". I have a query out to Cathy Tide to see if she can clarify both of those points.
+Some of the descriptions below are a little redundant because I pulled the descriptions from several different tables in different DB schemas.
+
+**pscnq_estimate**
+The estimated amount of prohibited species catch (PSC), before any adjustments for mortality rate (PSCNQ_ESTIMATE = RATE * GROUNDFISH_BASIS_WEIGHT). 
+Null if the PSC species amount was reported.
+
+**rate**
+Calculated rate of discards for non-CDQ hauls with PSC bycatch; Counts for chinook; depends on which precedence level is used
+If the species amount is estimated, the rate used to calculate the species estimate  (RATE * GROUNDFISH_BASIS_WEIGHT = PSCNQ_ESTIMATE). Null if the amount was reported.
+Unit is "# of salmon / mt groundfish"
+
+**rate_precedence**
+If I understand correctly, the rate_precedence field is what determines the psc_rate (i.e., multiplier) for a given vessel, sector, fleet, time period, etc.
+From Council.comprehensive_psc table in AKFIN, we get this description of rate_precedence:
+"Relative priority of a prohibited species / non-quota rate record:  50 = vessel-specific, 45 = coop-specific, 40 = processing sector, 30 = 3-week moving average, 25 = 3-month moving average, 20 = FMP area."
+
+From akr.v_cas_txn_primary_psc, we get this description of rate_precedence:
+"If the species amount is estimated, the precendence (e.g. 50, 40, 30, 20, etc.) of the rate factor of the rate used to calculate the estimate. Null if the amount is reported."
+
+That said, I don't think we'll actually need this but it's helpful to get a better sense of how the multipliers (rate) work.
+
+**species_count**
+The amount of the species in number of animals (Salmon and Crab). Null if the species group is measured by weight (Halibut and Herring).
+
+**RETAINED_GF_WEIGHT**
+The retained basis weight is the sum of weights of all retained groundfish (excluding PSC and non-target species) on the catch report. A species group is considered to be a groundfish species if the GROUNDFISH_FLAG on the associated SPECIES_GROUP record = 'Y'.
+
+**total_gf_basis_weight**
+The total basis weight is the sum of weights of all retained groundfish and estimated discards of groundfish (excluding PSC and non-target species) on the catch report. A species group is considered to be a groundfish species if the GROUNDFISH_FLAG on the associated SPECIES_GROUP record = 'Y'.
+
+Note that this is the field by which the rate is multiplied to get our Chinook estimate when there is no observer record.
+
+**el_report_id** 
+This just tells us if the data came from an observer or from an electronic trip reporting record (ie., no observer). So we don't really need this but if it's NA then it was likely an observed trip (when they are observed, they must not have to file an eLandings report). But I think this is relevant because it tells the database to use a certain rate precendence code and to estimate the bycatch.
+
+--------------------------------
+
+Okay, since the **rate_precedence** is what dictates the **rate** and thus, the estimated number of Chinook, let's look at this field. 
+This is also relevant because it shows how 
+
+
+
+
+```{r}
+data %>% 
+  filter(fmp_area=="BS") %>% 
+  group_by(rate_precedence,year) %>% 
+  tally() %>% 
+  spread(year,n)
+```
+
+```{r}
+data %>% 
+  filter(fmp_area=="GOA") %>% 
+  group_by(rate_precedence,year) %>% 
+  tally() %>% 
+  spread(year,n)
+```
+
+There are some **rate** values that are greater than 1 but they account for < 0.05% of all records. Below is a distribution of the rates between 0 and 1.
+
+```{r,message=FALSE}
+data %>% 
+  filter(rate>0 & rate<1) %>% 
+  ggplot(aes(rate)) + 
+  geom_histogram() + 
+  facet_wrap(~fmp_area) +
+  theme_bw()
+```
+
+The official reported PSC statistics from the AK Region are here:
+https://www.fisheries.noaa.gov/sites/default/files/akro/goasalmonmort2020.html
+While our numbers don't match theirs exactly, that's not totally surprising, because even these official tallies change period (including historical data). Buuuut, we get really close. 
+
+We see, for example that 
+
+```{r}
+data %>% 
+  filter(target=="pollock" & fmp_area%in%c("GOA")) %>% 
+  group_by(year) %>% 
+  summarise(est_count=sum(pscnq_estimate,na.rm=TRUE),
+            spp_count=sum(species_count,na.rm=TRUE)) %>% 
+  data.frame
+```
+
+If we compare to the published BSAI data we get really close (below)
+https://www.fisheries.noaa.gov/sites/default/files/akro/chinook_salmon_mortality2020.html
+
+Here, we see annual w/ CDQ is 24,984 for pollock directed fisheries in 2019. If we look at spp_count, for example, we get 25,038. That's pretty close.
+I think that est_count loses its utility here because this is some strange unobserved fraction which shouldn't really exist any more for BSAI pollock trawl. 
+If we look at 2018, the published number is 13,740 and our table below gives us 13,740. Woohoo. Going back earlier in time, say 2003 and 2004, we see published values of 45,661 and 51,762, respectively. And from the table below we see almost identical numbers in the spp_column.
+
+```{r}
+data %>% 
+  filter(target=="pollock" & fmp_area%in%c("BS","AI")) %>% 
+  group_by(year) %>% 
+  summarise(est_count=sum(pscnq_estimate,na.rm=TRUE),
+            spp_count=sum(species_count,na.rm=TRUE)) %>% 
+  data.frame
+```
+
+Let's look at the Rockfish Pilot Program. 
+
+```{r}
+data %>% 
+  filter(mgmt_code=="RPP" & nmfsarea%in%c(610,620,630)) %>% 
+  group_by(year) %>% 
+  summarise(est_count=sum(pscnq_estimate,na.rm=TRUE),
+            spp_count=sum(species_count,na.rm=TRUE)) %>% 
+  data.frame
+```
