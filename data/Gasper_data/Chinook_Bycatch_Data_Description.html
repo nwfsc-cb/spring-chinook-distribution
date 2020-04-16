@@ -1738,8 +1738,9 @@ head(data)</code></pre>
 <p><strong>RETAINED_GF_WEIGHT</strong> The retained basis weight is the sum of weights of all retained groundfish (excluding PSC and non-target species) on the catch report. A species group is considered to be a groundfish species if the GROUNDFISH_FLAG on the associated SPECIES_GROUP record = ‘Y’.</p>
 <p><strong>total_gf_basis_weight</strong> The total basis weight is the sum of weights of all retained groundfish and estimated discards of groundfish (excluding PSC and non-target species) on the catch report. A species group is considered to be a groundfish species if the GROUNDFISH_FLAG on the associated SPECIES_GROUP record = ‘Y’.</p>
 <p>Note that this is the field by which the rate is multiplied to get our Chinook estimate when there is no observer record.</p>
+<p><strong>el_report_id</strong> This just tells us if the data came from an observer or from an electronic trip reporting record (ie., no observer). So we don’t really need this but if it’s NA then it was likely an observed trip (when they are observed, they must not have to file an eLandings report). But I think this is relevant because it tells the database to use a certain rate precendence code and to estimate the bycatch.</p>
 <hr />
-<p>Okay, since the <strong>rate_precendence</strong> is what dictates the <strong>rate</strong> and thus, the estimated number of Chinook, let’s look at this field. This is also relevant because it shows how</p>
+<p>Okay, since the <strong>rate_precedence</strong> is what dictates the <strong>rate</strong> and thus, the estimated number of Chinook, let’s look at this field. This is also relevant because it shows how</p>
 <pre class="r"><code>data %&gt;% 
   filter(fmp_area==&quot;BS&quot;) %&gt;% 
   group_by(rate_precedence,year) %&gt;% 
@@ -1796,14 +1797,14 @@ head(data)</code></pre>
 </div>
 <p>Let’s look at the Rockfish Pilot Program.</p>
 <pre class="r"><code>data %&gt;% 
-  filter(trip_target_code==&quot;K&quot; &amp; nmfsarea%in%c(610,620,630)) %&gt;% 
+  filter(mgmt_code==&quot;RPP&quot; &amp; nmfsarea%in%c(610,620,630)) %&gt;% 
   group_by(year) %&gt;% 
   summarise(est_count=sum(pscnq_estimate,na.rm=TRUE),
             spp_count=sum(species_count,na.rm=TRUE)) %&gt;% 
   data.frame</code></pre>
 <div data-pagedtable="false">
 <script data-pagedtable-source type="application/json">
-{"columns":[{"label":["year"],"name":[1],"type":["dbl"],"align":["right"]},{"label":["est_count"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["spp_count"],"name":[3],"type":["dbl"],"align":["right"]}],"data":[{"1":"2003","2":"800.663","3":"800.7000"},{"1":"2004","2":"884.559","3":"884.5700"},{"1":"2005","2":"450.240","3":"450.2100"},{"1":"2006","2":"260.668","3":"260.7100"},{"1":"2007","2":"2023.978","3":"2023.9900"},{"1":"2008","2":"1957.758","3":"1957.7200"},{"1":"2009","2":"1266.191","3":"1266.1800"},{"1":"2010","2":"1540.295","3":"1540.2961"},{"1":"2011","2":"977.538","3":"977.5350"},{"1":"2012","2":"1497.834","3":"1497.8340"},{"1":"2013","2":"2319.590","3":"2319.5913"},{"1":"2014","2":"1200.180","3":"1200.1790"},{"1":"2015","2":"1905.967","3":"1905.9668"},{"1":"2016","2":"382.788","3":"382.7881"},{"1":"2017","2":"519.786","3":"519.7875"},{"1":"2018","2":"336.355","3":"336.3522"},{"1":"2019","2":"301.954","3":"301.9547"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
+{"columns":[{"label":["year"],"name":[1],"type":["dbl"],"align":["right"]},{"label":["est_count"],"name":[2],"type":["dbl"],"align":["right"]},{"label":["spp_count"],"name":[3],"type":["dbl"],"align":["right"]}],"data":[{"1":"2007","2":"509.601","3":"509.6200"},{"1":"2008","2":"1688.941","3":"1688.9300"},{"1":"2009","2":"860.194","3":"860.2000"},{"1":"2010","2":"1246.492","3":"1246.4930"},{"1":"2011","2":"699.389","3":"699.3891"},{"1":"2012","2":"1238.610","3":"1238.6108"},{"1":"2013","2":"2263.589","3":"2263.5913"},{"1":"2014","2":"649.180","3":"649.1790"},{"1":"2015","2":"1854.967","3":"1854.9668"},{"1":"2016","2":"392.711","3":"392.7108"},{"1":"2017","2":"490.953","3":"490.9573"},{"1":"2018","2":"305.417","3":"305.4181"},{"1":"2019","2":"297.510","3":"297.5104"}],"options":{"columns":{"min":{},"max":[10]},"rows":{"min":[10],"max":[10]},"pages":{}}}
   </script>
 </div>
 

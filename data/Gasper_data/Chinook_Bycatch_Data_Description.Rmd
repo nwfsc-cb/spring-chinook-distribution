@@ -139,11 +139,13 @@ The total basis weight is the sum of weights of all retained groundfish and esti
 
 Note that this is the field by which the rate is multiplied to get our Chinook estimate when there is no observer record.
 
+**el_report_id** 
+This just tells us if the data came from an observer or from an electronic trip reporting record (ie., no observer). So we don't really need this but if it's NA then it was likely an observed trip (when they are observed, they must not have to file an eLandings report). But I think this is relevant because it tells the database to use a certain rate precendence code and to estimate the bycatch.
+
 --------------------------------
 
-Okay, since the **rate_precendence** is what dictates the **rate** and thus, the estimated number of Chinook, let's look at this field. 
+Okay, since the **rate_precedence** is what dictates the **rate** and thus, the estimated number of Chinook, let's look at this field. 
 This is also relevant because it shows how 
-
 
 
 
@@ -210,7 +212,7 @@ Let's look at the Rockfish Pilot Program.
 
 ```{r}
 data %>% 
-  filter(trip_target_code=="K" & nmfsarea%in%c(610,620,630)) %>% 
+  filter(mgmt_code=="RPP" & nmfsarea%in%c(610,620,630)) %>% 
   group_by(year) %>% 
   summarise(est_count=sum(pscnq_estimate,na.rm=TRUE),
             spp_count=sum(species_count,na.rm=TRUE)) %>% 
