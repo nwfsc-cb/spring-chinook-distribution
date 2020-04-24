@@ -24,6 +24,8 @@ dbFetch(dbSendQuery(con,"SELECT a.psc_fishery_code,
                                                 r.port_code,
                                                 a.processing_sector,
                                                 a.catcher_vessel_id,
+                                                a.catch_report_type_code,
+                                                a.data_source_type_code,
                                                 a.management_program_code,
                                                 a.agency_gear_code,
                                                 a.adfg_stat_area_code,
@@ -142,6 +144,12 @@ Note that this is the field by which the rate is multiplied to get our Chinook e
 **el_report_id** 
 This just tells us if the data came from an observer or from an electronic trip reporting record (ie., no observer). So we don't really need this but if it's NA then it was likely an observed trip (when they are observed, they must not have to file an eLandings report). But I think this is relevant because it tells the database to use a certain rate precendence code and to estimate the bycatch.
 
+**catch_report_type_Code**
+Character code that identifies the type of catch report from which this transaction originated: CDQ = CDQ Catch Report, ELLR = eLandings Landing Report, ELPR = eLandings Production Report, OBS = Observer haul, SLOG = Shoreside Logbook, SWPR = Shoreside Weekly Production Report, VWPR = Vessel Weekly Production Report.
+
+**data_source_type_code**
+Character code that identifies the type of species record from which this transaction originated: View V_CAS_DATA_SOURCE for a list of possible values.
+
 --------------------------------
 
 Okay, since the **rate_precedence** is what dictates the **rate** and thus, the estimated number of Chinook, let's look at this field. 
@@ -157,6 +165,7 @@ data %>%
   tally() %>% 
   spread(year,n)
 ```
+
 
 ```{r}
 data %>% 
@@ -217,4 +226,27 @@ data %>%
   summarise(est_count=sum(pscnq_estimate,na.rm=TRUE),
             spp_count=sum(species_count,na.rm=TRUE)) %>% 
   data.frame
+```
+
+
+
+```{r,eval=FALSE}
+con <- dbConnect(odbc::odbc(), "akfin", UID="jwatson", PWD= rstudioapi::askForPassword("Enter AKFIN Password"))
+
+dbFetch(dbSendQuery(con,"select a.haul_date,
+a.akr_gear_code,
+a.target_fishery_code,
+a.pscnq_processing_sector,
+a.sample_number,
+a.sample_weight,
+a.extrapolated_weight,
+a.extrapolated_number,
+a.ves_akr_cg_num,
+a.ves_AKR_length,
+a.reporting_area_code
+from council.comprehensive_obs a
+where a.species_group_code='CHNK'
+and a.akr_gear_code in ('PTR','NPT')")) %>% 
+  rename_all(tolower) %>% 
+  saveRDS(file="Chinook_extrapolated_weight.RDS")
 ```
