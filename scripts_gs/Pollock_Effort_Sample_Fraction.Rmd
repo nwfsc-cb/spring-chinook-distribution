@@ -1,0 +1,430 @@
+---
+title: "Pollock Effort"
+output:
+  pdf_document: default
+  word_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, message=FALSE, warning = FALSE)
+
+library(tidyverse)
+library(tinytex)
+library(here)
+library(gmodels)
+library(gplots)
+
+all_effort <- readRDS("data/AK_Effort_Trawl/Gasper_data/Chinooky_Rates_merged.RDS") %>%
+filter(fmp_sub_area_code == "GOA", target =="pollock") %>%
+  mutate(length_category = case_when(ves_akr_length < 125 & year < 2013 ~ "Small",
+                                     ves_akr_length > 124 & year < 2013 ~ "Large",
+                                     ves_akr_length > 59 & year > 2012 ~ "Large",
+                                     ves_akr_length < 60 & year > 2012 ~ "Small",
+                                     TRUE ~ as.character(ves_akr_length)),
+         region = case_when(reporting_area_code == "610" ~ "E.APEN", 
+                            reporting_area_code == "620" ~ "W.APEN",  
+                            reporting_area_code %in% c("630") ~ "NW.GOA", 
+                            reporting_area_code %in% c("640", "640 ") ~ "NE.GOA", 
+                            reporting_area_code %in% c("649") ~ "NE.NW.GOA", #there are about 600 records from this stat area- need to divide them in half between NE and NW GOA, can do this based on ADFG numbers. check w ole before doing this.  
+                            TRUE ~ "TBD")) %>% #there are none of these. 
+        separate(trip_target_date, into = c("year", "month", "day"), sep = "-")
+
+# data <- all_effort %>%
+#   filter(fmp_sub_area_code == "GOA")
+# 
+# table(data$year[!is.na(data$el_report_id)],data$processing_sector[!is.na(data$el_report_id)],exclude=NULL)
+
+
+col.br= colorRampPalette(c("white", "blue","purple","red")) #colors for heatmap
+every_nth = function(n) {
+  return(function(x) {x[c(TRUE, rep(FALSE, n - 1))]})
+}
+```
+
+\n This uses data from J. Gasper at AFSC. These data are observed and unobserved effort from the AI, BS and GOA groundfish fleets. 
+
+\n The goal here is to summarize fishery effort into boat days for observed and non-observed effort. Data were grouped by year, month, region (NMFS Stat Area), length category (Small [which is less than 125ft before 2013, greater than 60 feet after 2013] or Large) and processing sector (Catcher Processer and Shoreside). 
+ 
+\n I grouped data into Target: Pollock or non-Pollock, the below data are filtered to the Pollock target only. These data are also GOA only, but can expand that pretty easily if we are interested in AI or BS. 
+
+\n Data start in 2006 (not 2003 like we thought) based on how the codes that tell us if a trip was observed or not, I need to check-in with Jordan and ask what is going on with that and if there is other info I should look for from 2003-2006.  
+
+```{r parce effort data, echo =FALSE,message=FALSE,warning=FALSE}
+#bring in obs and unobs compiled effort data and summarize to boat days
+all_effort_boat_days<- all_effort %>%
+        group_by(year,month,region,length_category,processing_sector) %>%
+        dplyr::summarise(
+          all_boat_days=n() ,
+          all_vessel_count = n_distinct(catcher_vessel_id),
+          #retained_catch_MT=sum(retained_gf_weight), #retained catch only starts in 2009 for some reason
+          all_catch_MT=sum(total_gf_basis_weight))
+
+#summarized observed effort data
+#first just summarize observed effort off of the total effort 
+
+obs_effort_boat_days <- all_effort %>%
+  filter(observers_onboard > 0) %>%
+  group_by(year,month,region,length_category,processing_sector) %>%
+  dplyr::summarise(
+    obs_boat_days=n(),
+    obs_vessel_count=n_distinct(catcher_vessel_id),
+    #retained_catch_MT=sum(retained_gf_weight), #retained catch only starts in 2009 for some reason
+    obs_catch_MT=sum(total_gf_basis_weight))
+
+unobs_effort_boat_days <- all_effort %>%
+filter(observers_onboard == 0) %>%
+  group_by(year,month,region,length_category,processing_sector) %>%
+  dplyr::summarise(
+    unobs_boat_days=n(),
+    unobs_vessel_count=n_distinct(catcher_vessel_id),
+    #retained_catch_MT=sum(retained_gf_weight), #retained catch only starts in 2009 for some reason
+    unobs_catch_MT=sum(total_gf_basis_weight))
+
+effort <- left_join(all_effort_boat_days, obs_effort_boat_days) %>%
+  left_join(unobs_effort_boat_days) %>%
+ mutate(obs_boat_days= replace_na(obs_boat_days,0),
+        obs_vessel_count= replace_na(obs_vessel_count,0),
+        obs_catch_MT= replace_na(obs_catch_MT,0))
+```
+ 
+\n Looks like there is effort data within all of the seasons, april and may tend to have little to no effort, but with the seasonal grouping there will be effort in each box. 
+
+```{r stacked bar plots, echo=FALSE, fig.height=5, fig.width=9}
+temp.year <- as.character(c(2003:2020))
+temp.month <- as.character(c(01:12))
+temp.region <-  as.character(c("E.APEN", "W.APEN",  "NW.GOA", "NE.GOA", "NE.NW.GOA"))
+category <-  as.character(c("unobs_boat_days", "obs_boat_days"))
+year.month<- expand.grid(temp.year, temp.month,category,temp.region) %>%  #fully factorial match between all categories 
+rename(category="Var3", region="Var4")
+year.month$Var2<- str_pad(year.month$Var2, width= 2, pad = "0", side="left") #add a zero before month 1-9 so that I can keep months in order
+year.month <- unite(year.month, "year.month", c("Var1", "Var2"), sep = ".", remove= TRUE) #join month and year in its own dataframe 
+
+temp.lab = as.data.frame(temp.year) #create df with all years
+temp <- as.data.frame(temp.lab[rep(1:nrow(temp.lab),1,each=12),]) #duplicate each row 12 times
+temp$`temp.lab[rep(1:nrow(temp.lab), 1, each = 12), ]`[duplicated(temp$`temp.lab[rep(1:nrow(temp.lab), 1, each = 12), ]`)] <- " " #fill duplicates with a space
+temp$label<-  temp$`temp.lab[rep(1:nrow(temp.lab), 1, each = 12), ]`  #change column name and remove old column
+
+#Small boats/year 
+ effort %>%  
+  select(1:5,9,12) %>%   
+  unite("year.month",1:2, sep = ".") %>%
+  filter(length_category == "Small")%>%
+  filter(processing_sector == "S") %>%
+  ungroup() %>%
+  select(-c(processing_sector,length_category)) %>%
+  gather(3:4, key = "category", value = "boat_days") %>%
+  merge(year.month, all = TRUE) %>%
+ # mutate(year.month=as.numeric(year.month)) %>%
+  mutate(boat_days= replace_na(boat_days,0)) %>%
+  ggplot() +
+    geom_bar(aes(x=year.month,y=boat_days, fill = category), position="stack", stat="identity",alpha = 0.8) +
+    facet_wrap(~region, scales = "free", ncol=5) +
+    ggtitle("Boat Days (Small Shoreside Pollock)") + # no small CP's
+    theme_classic() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))  +
+   scale_x_discrete(breaks = every_nth(n = 12))
+ 
+```
+\n The way the length categories are grouped is kind of funky because some effort clearly switches over between small and large in 2013.
+\n We may not need to group based on lengths because we have the actual data and don't have to get unobserved data based on the chart that groups observer rates based on boat lengths...? 
+```{r fig.height=5, fig.width=9}
+
+#Large
+ effort %>%  
+  select(1:5,9,12) %>%   
+  unite("year.month",1:2, sep = ".") %>%
+  filter(length_category == "Large",processing_sector == "S") %>%
+   ungroup() %>%
+  select(-c(processing_sector,length_category)) %>%
+  gather(3:4, key = "category", value = "boat_days") %>%
+  merge(year.month, all = TRUE) %>%
+ # mutate(year.month=as.numeric(year.month)) %>%
+  mutate(boat_days= replace_na(boat_days,0)) %>%
+  ggplot() +
+    geom_bar(aes(x=year.month,y=boat_days, fill = category), position="stack", stat="identity") +
+    facet_wrap(~region, scales = "free", ncol = 5) +
+    ggtitle("Boat Days (Large Shoreside Pollock)") + # no small CP's
+    theme_classic() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))  +
+   scale_x_discrete(breaks = every_nth(n = 12))
+
+```
+
+
+```{r, eval = FALSE}
+#NOT MUCH CATCHER PROCESSER INFO
+#Large
+ effort %>%  
+  select(1:5,9,12) %>%   
+  unite("year.month",1:2, sep = ".") %>%
+  filter(processing_sector == "CP") %>%
+   ungroup() %>%
+  select(-c(processing_sector,length_category)) %>%
+  gather(3:4, key = "category", value = "boat_days") %>%
+  merge(year.month, all = TRUE) %>%
+ # mutate(year.month=as.numeric(year.month)) %>%
+  mutate(boat_days= replace_na(boat_days,0)) %>%
+  ggplot() +
+    geom_bar(aes(x=year.month,y=boat_days, fill = category), position="stack", stat="identity",alpha = 0.8) +
+    facet_wrap(~region, scales = "free",ncol=5) +
+    ggtitle("Boat Days (Catcher Processor)") + # no small CP's
+    theme_classic() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1))  +
+   scale_x_discrete(breaks = every_nth(n = 12))
+  
+```
+
+
+```{r heatmap setup}
+#do year.month combo to merge in
+temp.year <- as.character(c(2006:2020))
+temp.month <- as.character(c(01:12))
+temp.region <-  as.character(c("E.APEN", "W.APEN",  "NW.GOA", "NE.GOA", "NE.NW.GOA"))
+temp.length <-  as.character(c("Small", "Large"))
+temp.processor <-  as.character(c("S","CP"))
+
+year.month<- expand.grid(temp.year, temp.month,temp.length,temp.processor,temp.region) %>%  #fully factorial match between all categories 
+rename(length_category="Var3", processing_sector="Var4", region="Var5")
+
+year.month$Var2<- str_pad(year.month$Var2, width= 2, pad = "0", side="left") #add a zero before month 1-9 so that I can keep months in order
+year.month <- unite(year.month, "year.month", c("Var1", "Var2"), sep = ".", remove= TRUE) #join month and year in its own dataframe 
+
+#merge.total$region.use <- recode(merge.total$region, 'WAC'=1, 'COL'=2, 'NOR'=3, 'SOR'=4, 'NCA'= 5, 'MEN'=6, 'SFB' = 7, 'MONT' = 8)
+
+#create an label for x axis with blanks so you can see years 
+temp.lab = as.data.frame(temp.year) #create df with all years
+temp <- as.data.frame(temp.lab[rep(1:nrow(temp.lab),1,each=12),]) #duplicate each row 12 times
+temp$`temp.lab[rep(1:nrow(temp.lab), 1, each = 12), ]`[duplicated(temp$`temp.lab[rep(1:nrow(temp.lab), 1, each = 12), ]`)] <- " " #fill duplicates with a space
+temp$label<-  temp$`temp.lab[rep(1:nrow(temp.lab), 1, each = 12), ]`  #change column name and remove old column
+temp <- temp %>% 
+  dplyr::select(-c(`temp.lab[rep(1:nrow(temp.lab), 1, each = 12), ]`))
+#recode regions so they are numbered with North = 1, so north is on top. 
+#temp.region <- c('WAC','COL','NOR','SOR', 'NCA', 'MEN', 'SFB', 'MONT')
+```
+
+Heatmap Key: Black = No effort
+This heatmap has log(boat days) for all effort (observed and unobserved) for all sectors and all boat length categories
+```{r heatmap ALL EFFORT ALL SECTORS ETC}
+spread.total <- effort %>%
+  filter(!year<2006) %>%
+  unite("year.month",1:2, remove=FALSE, sep = ".") %>%
+  group_by(year.month, region) %>%
+  summarise(total_effort = sum(all_boat_days)) %>% #,total_effort = sum(all_boat_days), )
+  #filter(length_category == "Small", processing_sector == "S", year > 2005) %>%
+  #mutate(fraction_observed = obs_boat_days/all_boat_days)  
+ merge(year.month %>% select(-c(processing_sector, length_category)) %>% group_by(year.month) %>% count(region) %>%select(-c(n)), all = TRUE) %>%
+  dplyr::select(year.month,region, total_effort) %>%
+  tidyr::spread(year.month, total_effort) 
+
+#set up matrix for heatmap 
+spread.total<- spread.total[1:5,] 
+region<- spread.total$region
+spread.total<- spread.total[,2:181]
+matrix <- data.matrix(spread.total)
+row.names(matrix) <- region
+#matrix[matrix < 0.1] <- NA #turn 0 to NA so that it doesnt get messed up in log function
+
+matrix <- log(matrix) #log matrix values so that scale 
+
+heatmap.2(matrix, Rowv=FALSE, Colv=FALSE, 
+          xlab = "Year.Month",  
+          scale="none", margins=c(4,6), 
+          dendrogram="none", trace="none",
+          col=col.br(20), #breaks=pairs.breaks,
+          na.color = "black",
+          key =TRUE,
+          keysize = 1.5, #labRow = year_list,
+          key.title = "log scale",
+          adjCol = c(0.5,1.1),
+          labCol = temp$label, #tell it to use dummy variable for X axis years
+          labRow = temp.region, #use dummy variable for Y axis regions so they can be north to south 
+          cexCol = 0.6,
+          sepcolor = "black",
+          main = "Total Effort\n(log boat days\nall sectors all boat lengths)", 
+          density.info = ("none"),
+          #( "bottom.margin", "left.margin", "top.margin", "right.margin" )
+          key.par=list(mar=c(2,1, 1,0.1)))
+
+```
+
+This heatmap has log(boat days) for all effort (observed and unobserved) for small shoreside boats - again can see disparity between 2013 length categories. (these categories make more sense for BS and AI, but in GOA there arent any shoreside boats > 125 feet). 
+```{r heatmap OBS AND UNOBS EFFORT SMALL SHORESIDE}
+spread.total <- effort %>%
+  filter(!year<2006, processing_sector == "S", length_category =="Small") %>%
+  unite("year.month",1:2, remove=FALSE, sep = ".") %>%
+  group_by(year.month, region) %>%
+  summarise(total_effort = sum(all_boat_days)) %>% #,total_effort = sum(all_boat_days), )
+  #filter(length_category == "Small", processing_sector == "S", year > 2005) %>%
+  #mutate(fraction_observed = obs_boat_days/all_boat_days)  
+ merge(year.month %>% select(-c(processing_sector, length_category)) %>% group_by(year.month) %>% count(region) %>%select(-c(n)), all = TRUE) %>%
+  dplyr::select(year.month,region, total_effort) %>%
+  tidyr::spread(year.month, total_effort) %>%
+    dplyr::select(-c(region))
+
+#set up matrix for heatmap 
+#spread.total<- spread.total[1:5,] 
+#region<- spread.total$region
+spread.total<- spread.total[,-1]
+matrix <- data.matrix(spread.total)
+row.names(matrix) <- region
+#matrix[matrix < 0.1] <- NA #turn 0 to NA so that it doesnt get messed up in log function
+
+matrix <- log(matrix) #log matrix values so that scale 
+
+heatmap.2(matrix, Rowv=FALSE, Colv=FALSE, 
+           xlab = "Year.Month",  
+          scale="none", margins=c(4,6), 
+          dendrogram="none", trace="none",
+          col=col.br(20), #breaks=pairs.breaks,
+          na.color = "black",
+          key =TRUE,
+          keysize = 1.5, #labRow = year_list,
+          key.title = "log scale",
+          adjCol = c(0.5,1.1),
+          labCol = temp$label, #tell it to use dummy variable for X axis years
+          labRow = temp.region, #use dummy variable for Y axis regions so they can be north to south 
+          cexCol = 0.6,
+          sepcolor = "black",
+          main = "Small Shoreside Obs and Unobs",  
+          density.info = ("none"),
+          #( "bottom.margin", "left.margin", "top.margin", "right.margin" )
+          key.par=list(mar=c(2,1, 1,0.1)))
+
+```
+
+
+```{r heatmap OBS AND UNOBS EFFORT LARGE SHORESIDE}
+spread.total <- effort %>%
+  filter(!year<2006, processing_sector == "S", length_category =="Large") %>%
+  unite("year.month",1:2, remove=FALSE, sep = ".") %>%
+  group_by(year.month, region) %>%
+  summarise(total_effort = sum(all_boat_days)) %>% #,total_effort = sum(all_boat_days), )
+  #filter(length_category == "Small", processing_sector == "S", year > 2005) %>%
+  #mutate(fraction_observed = obs_boat_days/all_boat_days)  
+ merge(year.month %>% select(-c(processing_sector, length_category)) %>% group_by(year.month) %>% count(region) %>%select(-c(n)), all = TRUE) %>%
+  dplyr::select(year.month,region, total_effort) %>%
+  tidyr::spread(year.month, total_effort) %>%
+    dplyr::select(-c(region))
+
+#set up matrix for heatmap 
+#spread.total<- spread.total[1:5,] 
+#region<- spread.total$region
+spread.total<- spread.total[,-1]
+matrix <- data.matrix(spread.total)
+row.names(matrix) <- region
+#matrix[matrix < 0.1] <- NA #turn 0 to NA so that it doesnt get messed up in log function
+
+matrix <- log(matrix) #log matrix values so that scale 
+
+heatmap.2(matrix, Rowv=FALSE, Colv=FALSE, 
+          xlab = "Year.Month",  
+          scale="none", margins=c(4,6), 
+          dendrogram="none", trace="none",
+          col=col.br(20), #breaks=pairs.breaks,
+          na.color = "black",
+          key =TRUE,
+          keysize = 1.5, #labRow = year_list,
+          key.title = "log scale",
+          adjCol = c(0.5,1.1),
+          labCol = temp$label, #tell it to use dummy variable for X axis years
+          labRow = temp.region, #use dummy variable for Y axis regions so they can be north to south 
+          cexCol = 0.6,
+          sepcolor = "black",
+          main = "Large Shoreside Obs and Unobs", 
+          density.info = ("none"),
+          #( "bottom.margin", "left.margin", "top.margin", "right.margin" )
+          key.par=list(mar=c(2,1, 1,0.1)))
+
+```
+
+Catcher Processor Effort
+
+```{r heatmap OBS AND UNOBS EFFORT ALL CP there are no small CPs}
+spread.total <- effort %>%
+  filter(!year<2006, processing_sector == "CP") %>%
+  unite("year.month",1:2, remove=FALSE, sep = ".") %>%
+  group_by(year.month, region) %>%
+  summarise(total_effort = sum(all_boat_days)) %>% #,total_effort = sum(all_boat_days), )
+  #filter(length_category == "Small", processing_sector == "S", year > 2005) %>%
+  #mutate(fraction_observed = obs_boat_days/all_boat_days)  
+ merge(year.month %>% select(-c(processing_sector, length_category)) %>% group_by(year.month) %>% count(region) %>%select(-c(n)), all = TRUE) %>%
+  dplyr::select(year.month,region, total_effort) %>%
+  tidyr::spread(year.month, total_effort) %>%
+    dplyr::select(-c(region))
+
+#set up matrix for heatmap 
+#spread.total<- spread.total[1:5,] 
+#region<- spread.total$region
+spread.total<- spread.total[,-1]
+matrix <- data.matrix(spread.total)
+row.names(matrix) <- region
+#matrix[matrix < 0.1] <- NA #turn 0 to NA so that it doesnt get messed up in log function
+
+matrix <- log(matrix) #log matrix values so that scale 
+
+heatmap.2(matrix, Rowv=FALSE, Colv=FALSE, 
+         xlab = "Year.Month",  
+          scale="none", margins=c(4,6), 
+          dendrogram="none", trace="none",
+          col=col.br(20), #breaks=pairs.breaks,
+          na.color = "black",
+          key =TRUE,
+          keysize = 1.5, #labRow = year_list,
+          key.title = "log scale",
+          adjCol = c(0.5,1.1),
+          labCol = temp$label, #tell it to use dummy variable for X axis years
+          labRow = temp.region, #use dummy variable for Y axis regions so they can be north to south 
+          cexCol = 0.6,
+          sepcolor = "black",
+          main = "Catcher Processor, Observed and Unobs", 
+          density.info = ("none"),
+          #( "bottom.margin", "left.margin", "top.margin", "right.margin" )
+          key.par=list(mar=c(2,1, 1,0.1)))
+
+```
+
+
+Fraction of Boat Days with an observer onboard.
+Black = no effort, white = no observed effort
+```{r heatmap FRACTION OBSERVED all sectors all lengths}
+spread.total <- effort %>%
+  filter(!year<2006 #, processing_sector == "CP"
+         ) %>%
+  unite("year.month",1:2, remove=FALSE, sep = ".") %>%
+  group_by(year.month, region) %>%
+  summarise(total_effort = sum(all_boat_days),obs_boat_days = sum(obs_boat_days)) %>%
+  mutate(fraction_observed = obs_boat_days/total_effort)  %>%
+  merge(year.month %>% select(-c(processing_sector, length_category)) %>% group_by(year.month) %>% count(region) %>%select(-c(n)), all = TRUE) %>%
+  dplyr::select(year.month,region, fraction_observed) %>%
+  tidyr::spread(year.month, fraction_observed) %>%
+  dplyr::select(-c(region))
+
+#set up matrix for heatmap 
+#spread.total<- spread.total[1:5,] 
+#region<- spread.total$region
+spread.total<- spread.total[,-1]
+matrix <- data.matrix(spread.total)
+row.names(matrix) <- region
+#matrix[matrix < 0.1] <- NA #turn 0 to NA so that it doesnt get messed up in log function
+
+heatmap.2(matrix, Rowv=FALSE, Colv=FALSE, 
+           xlab = "Year.Month",  
+          scale="none", margins=c(4,6), 
+          dendrogram="none", trace="none",
+          col=col.br(20), #breaks=pairs.breaks,
+          na.color = "black",
+          key =TRUE,
+          keysize = 1.5, #labRow = year_list,
+          adjCol = c(0.5,1.1),
+          labCol = temp$label, #tell it to use dummy variable for X axis years
+          labRow = temp.region, #use dummy variable for Y axis regions so they can be north to south 
+          cexCol = 0.6,
+          sepcolor = "black",
+          main = "Fraction of Boat Days Observed\n (all sectors and lengths)", 
+          density.info = ("none"),
+          #( "bottom.margin", "left.margin", "top.margin", "right.margin" )
+          key.par=list(mar=c(2,1, 1,0.1)))
+
+```
+
