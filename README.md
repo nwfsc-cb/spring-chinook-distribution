@@ -24,3 +24,11 @@ Scripts in /scripts_gs :_
 "RMIS.R"_is a script that joins releases and recoveries from our focal species and then matches in the recovery code spatial assignments and parces RMIS so it is ready for further use
 
 "Spatial Boundary Map.R" will plot our current spatial assignments on a map, just plots boundaries but can use this as a base to overlay points/data 
+
+
+GS Notes 5/15/20 re AK data
+CWT Recoveries: "Ak_match_trawl_cwt.R" this uses AKFIN data to match RMIS CWT Recoveries to specific trawl fleets. as of 5/15/20 GS has matched ~80% but I think I can go back and refine some of it. 
+
+Pollock Effort: "AK_pollock_effort_sample_fraction.RMD" Takes data from Jason Gasper and uses the column with # of observers onboard to differentiate effort between obs and unobs effort. Summarizes different types of effort, plots, and calculates sample fraction based of effort and observer protocols re JW.
+
+Rockfish Effort: We have CWT Data and I believe we can get obs and unobs effort from Gasper's data. Jordan may have passed it off already in a different form, but if he did I forget/didn't transfer that data to my WFH computer, so if we want to use it I will do some more work with this! 

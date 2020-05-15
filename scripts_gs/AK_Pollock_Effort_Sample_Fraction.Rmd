@@ -1,8 +1,6 @@
 ---
 title: "Pollock Effort"
 output:
-  pdf_document: default
-  word_document: default
   html_document: default
 ---
 
@@ -122,8 +120,8 @@ temp$label<-  temp$`temp.lab[rep(1:nrow(temp.lab), 1, each = 12), ]`  #change co
     facet_wrap(~region, scales = "free", ncol=5) +
     ggtitle("Boat Days (Small Shoreside Pollock)") + # no small CP's
     theme_classic() +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1))  +
-   scale_x_discrete(breaks = every_nth(n = 12))
+    theme(axis.text.x = element_text(angle = 90, hjust = 1,size=7))  +
+   scale_x_discrete(breaks = every_nth(n = 24))
  
 ```
 \n The way the length categories are grouped is kind of funky because some effort clearly switches over between small and large in 2013.
@@ -170,7 +168,7 @@ temp$label<-  temp$`temp.lab[rep(1:nrow(temp.lab), 1, each = 12), ]`  #change co
     facet_wrap(~region, scales = "free",ncol=5) +
     ggtitle("Boat Days (Catcher Processor)") + # no small CP's
     theme_classic() +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1))  +
+    theme(axis.text.x = element_text(angle = 90,size=7, hjust = 1))  +
    scale_x_discrete(breaks = every_nth(n = 12))
   
 ```

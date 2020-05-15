@@ -51,7 +51,7 @@ all_chinook<-as.data.frame(all_chinook) %>%
 
 #####################################################################################
 #####################################################################################
-#for the rest of the script I have filtered 2018/2019 data, fish that dont have adipose clips, and  tag code na's out of the rockfish data set. 
+#for the rest of the script I have filtered out 2018/2019 data, fish that dont have adipose clips, and  tag code na's out of the rockfish data set. 
 
 #how many rockfish recoveries dont have a tag code? (by year and month) 
 df_NA <- rockfish %>%
