@@ -21,7 +21,9 @@ dbFetch(dbSendQuery(con,"SELECT a.psc_fishery_code,
                                                 a.el_report_id,
                                                 a.trip_target_date,
                                                 r.landing_date,
+                                                r.tender_vessel_adfg_number,
                                                 r.port_code,
+                                                r.observers_onboard,
                                                 a.processing_sector,
                                                 a.catcher_vessel_id,
                                                 a.catch_report_type_code,
@@ -149,6 +151,12 @@ Character code that identifies the type of catch report from which this transact
 
 **data_source_type_code**
 Character code that identifies the type of species record from which this transaction originated: View V_CAS_DATA_SOURCE for a list of possible values.
+
+**observers_onboard**
+Number of state, federal, or authorized contractor fisheries observers on board the vessel.
+
+**tender_vessel_adfg_number**
+Identifies whether a vessel delivered to a tender. Deliveries to tenders do not get sampled for CWTs at all so instead of a 1/10 fraction for these, it would just be a zero. These should also only occur when catch_report_type_code is ELLR. ALso, looks like this field isn't filled out prior to 2008 :(. 
 
 --------------------------------
 
