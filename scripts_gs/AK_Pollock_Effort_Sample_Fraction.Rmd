@@ -3,17 +3,30 @@ title: "Pollock Effort"
 output:
   html_document: default
 ---
+\n This uses data from J. Gasper at AFSC. These data are observed and unobserved effort from the AI, BS and GOA groundfish fleets. 
+
+\n The goal here is to summarize fishery effort into boat days for observed and non-observed effort. Data were grouped by year, month, region (NMFS Stat Area), length category (Small [which is less than 125ft before 2013, greater than 60 feet after 2013] or Large) and processing sector (Catcher Processer and Shoreside). 
+ 
+\n I grouped data into Target: Pollock or non-Pollock, the below data are filtered to the Pollock target only. These data are also GOA only, but can expand that pretty easily if we are interested in AI or BS. 
+
+\n Data from 2003-2006 do not have records of observed data (in "observers_onboard" and "catch_report_type" columns), even though the observer program indicates that there should be observed effort (https://drive.google.com/file/d/1ubVMTT7dEN6GXasLwOoktARVS6HafgNB/view?usp=sharing). 
+
+\n Data from 2006-2020 the column "observers_onboard" indicates how many observers were onboard, we use htis to assign a trip to observed or unobserved effort. 
+
+
+\n call w jordan 5/20 re early and late data: 
+e-reporting started in 2003
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE, message=FALSE, warning = FALSE)
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning = FALSE)
 
 library(tidyverse)
-library(tinytex)
 library(here)
 library(gmodels)
 library(gplots)
+library(readr)
 
-all_effort <- readRDS("data/AK_Effort_Trawl/Gasper_data/Chinooky_Rates_merged.RDS") %>%
+all_effort<- readRDS(here("data","AK_Effort_Trawl","Gasper_data","Chinooky_Rates_merged.RDS")) %>%
 filter(fmp_sub_area_code == "GOA", target =="pollock") %>%
   mutate(length_category = case_when(ves_akr_length < 125 & year < 2013 ~ "Small",
                                      ves_akr_length > 124 & year < 2013 ~ "Large",
@@ -24,34 +37,41 @@ filter(fmp_sub_area_code == "GOA", target =="pollock") %>%
                             reporting_area_code == "620" ~ "W.APEN",  
                             reporting_area_code %in% c("630") ~ "NW.GOA", 
                             reporting_area_code %in% c("640", "640 ") ~ "NE.GOA", 
-                            reporting_area_code %in% c("649") ~ "NE.NW.GOA", #there are about 600 records from this stat area- need to divide them in half between NE and NW GOA, can do this based on ADFG numbers. check w ole before doing this.  
-                            TRUE ~ "TBD")) %>% #there are none of these. 
+                            reporting_area_code == "649" & adfg_stat_area_code %in% c("466032","466033","466003") ~ "NE.GOA",
+                            reporting_area_code == "649" & adfg_stat_area_code %in% c("476006","486001","476035","476005","476007","476003",
+                                                                                      "476004","476034", "475933","476031","476008","485932") ~ "NW.GOA", #there are about 600 records from NMFS AREA 649, which is the most northern part of PWS stat area- going to divide these based on in the 630/640 line continued into PWS and assign via ADFG #'s
+                            TRUE ~ "MISSING_LOCATION_INFO"))%>% #there are 14 of these because they are in area 649 but have missing ADFG #'s, all from a few days  in 2003
         separate(trip_target_date, into = c("year", "month", "day"), sep = "-")
+#assign half of unknowns to NE, half to NW. 
 
-# data <- all_effort %>%
-#   filter(fmp_sub_area_code == "GOA")
-# 
-# table(data$year[!is.na(data$el_report_id)],data$processing_sector[!is.na(data$el_report_id)],exclude=NULL)
+    temp.assign <- all_effort %>%    
+            filter(region == "MISSING_LOCATION_INFO") %>% 
+            mutate(temp.numb = rep(1:2, times =7)) %>%
+            mutate(region = case_when(region == "MISSING_LOCATION_INFO" & temp.numb == 1 ~ "NE.GOA",
+                        region == "MISSING_LOCATION_INFO" & temp.numb == 2 ~ "NW.GOA",
+                        TRUE ~ region)) %>%
+            select(-c(temp.numb))
 
+    all_effort <- all_effort %>%
+      filter(!region == "MISSING_LOCATION_INFO") %>%
+      rbind(temp.assign) %>%
+      mutate(season = case_when(month %in% c("01", "02", "03", "12","11") ~ "winter",
+                                month %in% c("04", "05") ~ "spring",
+                                month %in% c("06","07") ~ "summer",
+                                month %in% c("08","09","10") ~ "fall",
+                                TRUE~"SEASON_NA"))   #add season for plotting purposes- season structure = what ole uses in 2020 paper
 
 col.br= colorRampPalette(c("white", "blue","purple","red")) #colors for heatmap
 every_nth = function(n) {
   return(function(x) {x[c(TRUE, rep(FALSE, n - 1))]})
 }
+
 ```
-
-\n This uses data from J. Gasper at AFSC. These data are observed and unobserved effort from the AI, BS and GOA groundfish fleets. 
-
-\n The goal here is to summarize fishery effort into boat days for observed and non-observed effort. Data were grouped by year, month, region (NMFS Stat Area), length category (Small [which is less than 125ft before 2013, greater than 60 feet after 2013] or Large) and processing sector (Catcher Processer and Shoreside). 
- 
-\n I grouped data into Target: Pollock or non-Pollock, the below data are filtered to the Pollock target only. These data are also GOA only, but can expand that pretty easily if we are interested in AI or BS. 
-
-\n Data start in 2006 (not 2003 like we thought) based on how the codes that tell us if a trip was observed or not, I need to check-in with Jordan and ask what is going on with that and if there is other info I should look for from 2003-2006.  
 
 ```{r parce effort data, echo =FALSE,message=FALSE,warning=FALSE}
 #bring in obs and unobs compiled effort data and summarize to boat days
 all_effort_boat_days<- all_effort %>%
-        group_by(year,month,region,length_category,processing_sector) %>%
+        group_by(year,season,month,region,length_category,processing_sector) %>%
         dplyr::summarise(
           all_boat_days=n() ,
           all_vessel_count = n_distinct(catcher_vessel_id),
@@ -63,7 +83,7 @@ all_effort_boat_days<- all_effort %>%
 
 obs_effort_boat_days <- all_effort %>%
   filter(observers_onboard > 0) %>%
-  group_by(year,month,region,length_category,processing_sector) %>%
+  group_by(year,season,month,region,length_category,processing_sector) %>%
   dplyr::summarise(
     obs_boat_days=n(),
     obs_vessel_count=n_distinct(catcher_vessel_id),
@@ -72,7 +92,7 @@ obs_effort_boat_days <- all_effort %>%
 
 unobs_effort_boat_days <- all_effort %>%
 filter(observers_onboard == 0) %>%
-  group_by(year,month,region,length_category,processing_sector) %>%
+  group_by(year,season,month,region,length_category,processing_sector) %>%
   dplyr::summarise(
     unobs_boat_days=n(),
     unobs_vessel_count=n_distinct(catcher_vessel_id),
@@ -105,15 +125,13 @@ temp$label<-  temp$`temp.lab[rep(1:nrow(temp.lab), 1, each = 12), ]`  #change co
 
 #Small boats/year 
  effort %>%  
-  select(1:5,9,12) %>%   
-  unite("year.month",1:2, sep = ".") %>%
-  filter(length_category == "Small")%>%
+  select(1:6,10,13) %>%   
+  unite("year.month",c("year","month"), sep = ".") %>%
   filter(processing_sector == "S") %>%
   ungroup() %>%
   select(-c(processing_sector,length_category)) %>%
   gather(3:4, key = "category", value = "boat_days") %>%
-  merge(year.month, all = TRUE) %>%
- # mutate(year.month=as.numeric(year.month)) %>%
+  merge(year.month, all = TRUE) %>% # add in labels
   mutate(boat_days= replace_na(boat_days,0)) %>%
   ggplot() +
     geom_bar(aes(x=year.month,y=boat_days, fill = category), position="stack", stat="identity",alpha = 0.8) +
@@ -124,8 +142,115 @@ temp$label<-  temp$`temp.lab[rep(1:nrow(temp.lab), 1, each = 12), ]`  #change co
    scale_x_discrete(breaks = every_nth(n = 24))
  
 ```
+
+```{r plot seperately by seasons SPRING}
+#make specific x-axes
+temp.region <-  as.character(c("E.APEN", "W.APEN",  "NW.GOA", "NE.GOA"))
+category <-  as.character(c("unobs_boat_days", "obs_boat_days"))
+
+temp<- expand.grid(temp.year, category,temp.region) %>%  #fully factorial match between all categories 
+  rename(year="Var1",category="Var2", region="Var3") #%>%
+  mutate(Var2= str_pad(Var2, width= 2, pad = "0", side="left"))%>%
+  unite("year.month", c("Var1", "Var2"), sep = ".", remove= TRUE) #join month and year in its own dataframe 
+
+ 
+```
+
+```{r SPRING}
+#SPRING
+effort %>%  
+  select(1:6,10,13) %>%   
+  filter(month %in% c("04","05"), processing_sector == "S") %>%
+  gather(7:8, key = "category", value = "boat_days") %>%
+  group_by(year,region,category) %>%
+  summarise(boat_days=sum(boat_days))%>%
+  ungroup() %>%
+  merge(temp, all = TRUE) %>%
+  mutate(boat_days= replace_na(boat_days,0)) %>%
+  ggplot() +
+    geom_bar(aes(x=year,y=boat_days, fill = category), position="stack", stat="identity",alpha = 0.8) +
+    facet_grid(~region, scales = "free") +
+    ggtitle("Spring Boat Days (Shoreside Pollock)") + 
+    theme_classic() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1,size=7))  +
+    scale_x_discrete(breaks = every_nth(n = 2))
+```
+
+\n No summer effort!
+```{r SUMMER SPLIT}
+#SUMMER
+effort %>%  
+  select(1:6,10,13) %>%   
+  filter(month %in% c("06","07"), processing_sector == "S") %>%
+  gather(7:8, key = "category", value = "boat_days") %>%
+  group_by(year,region,category) %>%
+  summarise(boat_days=sum(boat_days))%>%
+  ungroup() %>%
+  merge(temp, all = TRUE) %>%
+  mutate(boat_days= replace_na(boat_days,0)) %>%
+  ggplot() +
+    geom_bar(aes(x=year,y=boat_days, fill = category), position="stack", stat="identity",alpha = 0.8) +
+    facet_grid(~region, scales = "free") +
+    ggtitle("Summer Boat Days (Shoreside Pollock)") + 
+    theme_classic() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1,size=7))  +
+    scale_x_discrete(breaks = every_nth(n = 2))
+ 
+```
+
+```{r FALL}
+#split by seasons
+#FALL
+effort %>%  
+  select(1:6,10,13) %>%   
+  filter(month %in% c("08","09","10"), processing_sector == "S") %>%
+  gather(7:8, key = "category", value = "boat_days") %>%
+  group_by(year,region,category) %>%
+  summarise(boat_days=sum(boat_days))%>%
+  ungroup() %>%
+  merge(temp, all = TRUE) %>%
+  mutate(boat_days= replace_na(boat_days,0)) %>%
+  ggplot() +
+    geom_bar(aes(x=year,y=boat_days, fill = category), position="stack", stat="identity",alpha = 0.8) +
+    facet_grid(~region, scales = "free") +
+    ggtitle("Fall Boat Days (Shoreside Pollock)") + 
+    theme_classic() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1,size=7))  +
+    scale_x_discrete(breaks = every_nth(n = 2))
+ 
+```
+
+```{r WINTER}
+ #WINTER
+ effort %>%  
+  select(1:6,10,13) %>%   
+  filter(month %in% c("11","12","01","02","03"), processing_sector == "S") %>%
+  mutate(season.temp = case_when(month %in% c("11","12") ~ "winter.1",
+                       month %in% c("01","02", "03") ~ "winter.2",
+                       TRUE ~ "NA")) %>%
+  gather(7:8, key = "category", value = "boat_days") %>%
+  group_by(year, season.temp,region,category) %>%
+  summarise(boat_days=sum(boat_days)) %>%
+  ungroup() %>%
+  mutate(year=as.numeric(year), year.new = case_when(season.temp == "winter.2" ~ year -1,
+                              TRUE ~ year)) %>%
+  group_by(year.new, region, category) %>%
+  summarise(boat_days=sum(boat_days)) %>%
+  merge(temp) %>%
+  mutate(boat_days= replace_na(boat_days,0)) %>%
+  ggplot() +
+    geom_bar(aes(x=year.new,y=boat_days, fill = category), position="stack", stat="identity",alpha = 0.8) +
+    facet_grid(~region, scales = "free") +
+    ggtitle("Winter Boat Days ( Shoreside Pollock)") + # no small CP's
+    theme_classic() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1,size=7)) 
+
+ 
+```
+
 \n The way the length categories are grouped is kind of funky because some effort clearly switches over between small and large in 2013.
 \n We may not need to group based on lengths because we have the actual data and don't have to get unobserved data based on the chart that groups observer rates based on boat lengths...? 
+
 ```{r fig.height=5, fig.width=9}
 
 #Large
@@ -149,7 +274,6 @@ temp$label<-  temp$`temp.lab[rep(1:nrow(temp.lab), 1, each = 12), ]`  #change co
 
 ```
 
-
 ```{r, eval = FALSE}
 #NOT MUCH CATCHER PROCESSER INFO
 #Large
@@ -172,7 +296,6 @@ temp$label<-  temp$`temp.lab[rep(1:nrow(temp.lab), 1, each = 12), ]`  #change co
    scale_x_discrete(breaks = every_nth(n = 12))
   
 ```
-
 
 ```{r heatmap setup}
 #do year.month combo to merge in
@@ -336,7 +459,9 @@ heatmap.2(matrix, Rowv=FALSE, Colv=FALSE,
 
 ```
 
-Catcher Processor Effort
+\n Catcher Processor Effort
+
+\n Not many catcher processors in GOA
 
 ```{r heatmap OBS AND UNOBS EFFORT ALL CP there are no small CPs}
 spread.total <- effort %>%
@@ -382,7 +507,6 @@ heatmap.2(matrix, Rowv=FALSE, Colv=FALSE,
 
 ```
 
-
 Fraction of Boat Days with an observer onboard.
 Black = no effort, white = no observed effort
 ```{r heatmap FRACTION OBSERVED all sectors all lengths}
@@ -426,3 +550,38 @@ heatmap.2(matrix, Rowv=FALSE, Colv=FALSE,
 
 ```
 
+```{r data comparison to see how we can use 2003-2006 data}
+
+#summarize proportion of obs and un obs data based on columns: obs_onboard & catch_report_type_code 
+#do they give the same info? is that info comparable to the observer table? then can use the trip type for 2003-2006 data. 
+
+#chart from observer coverage program says that trips between 2003 and 2012 should have sel-selected coverage for a minimum 30% of fishing days by gear/quarter and at least one trip/fishery
+
+#take month and length category to compare to expected observer rates 
+effort.comp<- all_effort %>% 
+  mutate(catch_type_code_temp=case_when(catch_report_type_code == "OBS" ~ "observed_catch_type_code",
+                                   TRUE ~ "unobs_catch_type_code"), 
+         observer_num_temp = case_when(observers_onboard > 0 ~ "observed_number",
+         TRUE ~ "unobs_number")) %>%
+  gather(34:35, key = "data_type", value="obs_unobs") %>%
+   mutate(quarter = case_when(month %in% c("01","02","03") ~ "quarter.1",
+                             month %in% c("04","05","06") ~ "quarter.2",
+                             month %in% c("07","08","09") ~ "quarter.3",
+                             month %in% c("10","11","12") ~ "quarter.4",
+                             TRUE ~ "UNASS")) %>%
+  group_by(year,quarter,processing_sector,data_type) %>%
+ #change month to quarter to compare to observer chart
+  count(obs_unobs) %>%
+  ungroup() %>%
+  dplyr::select(-c("data_type")) %>%
+  spread(obs_unobs,n) %>%
+  mutate(observed_catch_type_code=replace_na(observed_catch_type_code,0),
+         observed_number=replace_na(observed_number,0),
+         fraction.obs.catch.report = observed_catch_type_code/unobs_catch_type_code,
+         fraction.obs.number=observed_number/unobs_number)
+
+temp<-effort.comp %>%
+  filter(year > 2005, year<2013, processing_sector=="S") %>%
+  select(year, quarter,fraction.obs.catch.report,fraction.obs.number)
+  
+```
