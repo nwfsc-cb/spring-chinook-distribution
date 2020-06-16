@@ -1,5 +1,5 @@
 ---
-title: "Rockfish Effort"
+title: "rockfish effort"
 output: html_document
 ---
 
@@ -17,19 +17,14 @@ every_nth = function(n) {
 }
 ```
 
-### Unobserved Data (2007-2012 Shoreside only)
-\n 2007-2012: Shoreside-- Have total effort here, don't know the fraction observed, use management code to ID trips.
+ 
+\n How does RMIS classify a rockfish trip? See last figure,RMIS recoveries and effort match better when I classify Rockfish trips using the target code rather than the management code
 
-\n 2013-2017: [see observed data bc 100% census] 
+\n Data here is 2010-2017. Jordan suggests identifying trips based on the mangement code RPP, but when I do that, effort and recoveries have a larger mismatch than when I identify rockfish trips by trip target code K. (See last two figures) 
 
-### Observed Data 
-\n This data uses "Unique trips observed.RDS".
+\n If we use rockfish trip code data starts in 1996 but 1996- 2013 observer fraction in not known. If we use the management code, management code is used in the data starting in 2010. 2010-2013 the observed fraction is also unknown. For both data sets, 100% census starting in 2013. 
 
-\n 2010-2012: During the rockfish pilot program. Jordan suggests identifying trips based on the mangement code RPP, these entries start in 2010, but 2010-2012 is CP only, & because they dont use elandings fish ticket stuff I do not have info on unobserved effort for these, are they fully observed??
-
-\n 2013-2017: ID trips using RPP and target trip code, 100% observed. (CP and Shoreside, comes from "Unique trips observed.RDS")
-
-```{r observed data prep}
+```{r prep data}
 rockfish_observed<-readRDS(here("data","AK_Effort_Trawl","Gasper_data","Unique_trips_Observed.RDS")) %>%
   rename_all(tolower) %>% 
   mutate(month=as.numeric(format(haul_date,"%m")),
@@ -38,69 +33,59 @@ rockfish_observed<-readRDS(here("data","AK_Effort_Trawl","Gasper_data","Unique_t
                             reporting_area_code %in% c("630") ~ "NW.GOA",
                             reporting_area_code %in% c("640", "640 ") ~ "NE.GOA",
                             TRUE ~ "MISSING_LOCATION_INFO")) %>% 
-  group_by(year,management_program_code,
+  group_by(year,#management_program_code,
            catcher_boat_adfg,pscnq_processing_sector,trip_target_code, month,akr_gear_code,region, reporting_area_code) %>%
   summarise(haul_days=length(unique(haul_date[!is.na(haul_date)])),
             vlength=ves_cfec_length[1],
             gf_catch=sum(official_total_catch,na.rm=TRUE)) %>%
-  filter(case_when(year >2006 & year <2013 ~ management_program_code == "RPP", #pilot program, not 100% coverage. 
-                   year>2012 ~ trip_target_code=="K" | management_program_code == "RPP"), #100% coverage
-         !reporting_area_code == "650") %>%  #only 4 entries with 650 in mid 1990s
+  filter(trip_target_code=="K",!reporting_area_code == "650" #only 4 entries with 650 in mid 1990s
+         ) %>% #Filter for rockfish 
   ungroup() %>%
   mutate(year = as.numeric(year)) %>%  
-  group_by(year,pscnq_processing_sector,month,region) %>%
-  summarise(observed_boat_days = sum(haul_days)) %>%  
-  mutate(observed_boat_days=(replace_na(observed_boat_days, 0))) 
-
-
-#2010 - 2012
-observed_rockfish_2010_2012 <- rockfish_observed %>%
-  filter(year > 2009 & year<2013)
-
-#2013-2017
-full_census_rockfish<-rockfish_observed %>%
-  filter(year > 2012) 
-
-
-
+  group_by(year,pscnq_processing_sector,trip_target_code,month,region) %>%
+  summarise(boat_days = sum(haul_days)
+            # obs_catch_MT=sum(gf_catch)
+            ) %>%  
+ mutate(obs_boat_days=(replace(boat_days, year<2012, NA)))
 ```
 
-### 2013- 2017 Plot Effort (All Observed, 100% Census)
+\n Vertical line is at the start of 2013 to show when RMIS starts recording rockfish as a seperate fleet
 
-```{r stacked bar plots new, echo=FALSE, fig.height=5, fig.width=9}
-temp.year <- as.character(c(2013:2017))
+```{r bar plots new, fig.height=5, fig.width=9}
+temp.year <- as.character(c(2010:2017))
 temp.month <- as.character(c(01:12))
 temp.region <-  as.character(c("E.APEN", "W.APEN",  "NW.GOA", "NE.GOA"))
-category <-  as.character(c("S", "CP"))
-year.month<- expand.grid(temp.year, temp.month,category, temp.region) %>%  #fully factorial match between all categories 
-  rename(pscnq_processing_sector = "Var3", region="Var4")
+temp.sector <- as.character(c("CP", "S"#,"M"
+                              ))
+year.month<- expand.grid(temp.year, temp.month,temp.region, temp.sector) %>%  #fully factorial match between all categories 
+rename(region="Var3", pscnq_processing_sector="Var4")
 year.month$Var2<- str_pad(year.month$Var2, width= 2, pad = "0", side="left") #add a zero before month 1-9 so that I can keep months in order
 year.month <- unite(year.month, "year.month", c("Var1", "Var2"), sep = ".", remove= TRUE) #join month and year in its own dataframe 
 
 #general plot of all effort. 
-full_census_rockfish %>%  
+rockfish_observed %>%  
   ungroup() %>%
-  select(year,month,region,pscnq_processing_sector,observed_boat_days) %>%   
-  mutate(month = str_pad(month, "left", pad=0, width = 2)) %>%
+  filter(!pscnq_processing_sector=="M") %>%
+  select(year,month,region,pscnq_processing_sector,obs_boat_days) %>%   
+  mutate(month = str_pad(month, "left", pad=0, width = 2) ) %>%
   unite("year.month",c("year","month"), sep = ".") %>%
- # gather(4:5, key = "category", value = "boat_days") %>%
   merge(year.month, all = TRUE) %>% # add in labels
-  mutate(observed_boat_days= replace_na(observed_boat_days,0)) %>%
-#  filter(!boat_days<0) %>%
+  mutate(obs_boat_days= replace_na(obs_boat_days,0)) %>%
     ggplot() +
-      geom_bar(aes(x=year.month,y=observed_boat_days), position="dodge", stat="identity",alpha = 0.8) +
-      facet_grid(pscnq_processing_sector~region, scales = "free") +
-      ggtitle("Observed Boat Days") +  
+      geom_bar(aes(x=year.month,y=obs_boat_days), stat="identity",alpha = 0.8) +
+      facet_grid(region~pscnq_processing_sector, scales = "free") +
+      ggtitle("Boat Days (Rockfish)") +  
       theme_classic() +
       theme(axis.text.x = element_text(angle = 90, hjust = 1,size=7))  +
-      scale_x_discrete(breaks = every_nth(n = 12))
+      scale_x_discrete(breaks = every_nth(n = 12)) +
+  geom_vline(aes(xintercept="2013.01"),color="magenta")
  
 ```
 
 \n Now check seasonal coverage 
 
 ```{r plot seperately by seasons }
-temp<- expand.grid(temp.year, temp.region,category) %>%  #fully factorial match between all categories 
+temp<- expand.grid(temp.year, temp.region,temp.sector) %>%  #fully factorial match between all categories 
   rename(year="Var1",region="Var2", pscnq_processing_sector="Var3") #%>%
   #mutate(Var2= str_pad(Var2, width= 2, pad = "0", side="left")) #%>%
 #  unite("year.month", c("Var1", "Var2"), sep = ".", remove= TRUE) #join month and year in its own dataframe 
@@ -108,21 +93,22 @@ temp<- expand.grid(temp.year, temp.region,category) %>%  #fully factorial match 
 
 ```{r SPRING new}
 #SPRING
-full_census_rockfish %>%  
+rockfish_observed %>%  
   ungroup() %>%
-  select(year,month,region,pscnq_processing_sector,observed_boat_days) %>%   
+  filter(!pscnq_processing_sector=="M") %>%
+  select(year,month,region,pscnq_processing_sector,obs_boat_days) %>%   
   filter(month %in% c(4,5)) %>%
   group_by(year,region,pscnq_processing_sector) %>%
-  summarise(observed_boat_days=sum(observed_boat_days))%>%
+  summarise(obs_boat_days=sum(obs_boat_days))%>%
   ungroup() %>%
   merge(temp, all = TRUE) %>%
-  mutate(observed_boat_days= replace_na(observed_boat_days,0)) %>%
+  mutate(obs_boat_days= replace_na(obs_boat_days,0)) %>%
    ggplot() +
-    geom_bar(aes(x=year,y=observed_boat_days),stat="identity",alpha = 0.8) +
+    geom_bar(aes(x=year,y=obs_boat_days),stat="identity",alpha = 0.8) +
     facet_grid(pscnq_processing_sector~region, scales = "free") +
     ggtitle("Spring Boat Days (Rockfish)") + 
     theme_classic() +
-  #  geom_vline(aes(xintercept="2013"),color="magenta")+
+    geom_vline(aes(xintercept="2013"),color="magenta")+
     theme(axis.text.x = element_text(angle = 90, hjust = 1,size=7))  +
     scale_x_discrete(breaks = every_nth(n = 5))
 ```
@@ -132,19 +118,19 @@ full_census_rockfish %>%
 rockfish_observed %>%  
   ungroup() %>%
   filter(!pscnq_processing_sector=="M") %>%
-  select(year,month,region,pscnq_processing_sector,observed_boat_days) %>%   
+  select(year,month,region,pscnq_processing_sector,obs_boat_days) %>%   
   filter(month %in% c(6,7)) %>%
   group_by(year,region,pscnq_processing_sector) %>%
-  summarise(observed_boat_days=sum(observed_boat_days))%>%
+  summarise(obs_boat_days=sum(obs_boat_days))%>%
   ungroup() %>%
   merge(temp, all = TRUE) %>%
-  mutate(observed_boat_days= replace_na(observed_boat_days,0)) %>%
+  mutate(obs_boat_days= replace_na(obs_boat_days,0)) %>%
    ggplot() +
-    geom_bar(aes(x=year,y=observed_boat_days),stat="identity",alpha = 0.8) +
+    geom_bar(aes(x=year,y=obs_boat_days),stat="identity",alpha = 0.8) +
     facet_grid(pscnq_processing_sector~region, scales = "free") +
     ggtitle("Summer Boat Days (Rockfish)") + 
     theme_classic() +
-  #  geom_vline(aes(xintercept="2013"),color="magenta") +
+    geom_vline(aes(xintercept="2013"),color="magenta") +
     theme(axis.text.x = element_text(angle = 90, hjust = 1,size=7))  +
     scale_x_discrete(breaks = every_nth(n = 5))
 
@@ -156,19 +142,19 @@ rockfish_observed %>%
 rockfish_observed %>%  
   ungroup() %>%
   filter(!pscnq_processing_sector=="M") %>%
-  select(year,month,region,pscnq_processing_sector,observed_boat_days) %>%   
+  select(year,month,region,pscnq_processing_sector,obs_boat_days) %>%   
   filter(month %in% c(8,9,10)) %>%
   group_by(year,region,pscnq_processing_sector) %>%
-  summarise(observed_boat_days=sum(observed_boat_days))%>%
+  summarise(obs_boat_days=sum(obs_boat_days))%>%
   ungroup() %>%
   merge(temp, all = TRUE) %>%
-  mutate(observed_boat_days= replace_na(observed_boat_days,0)) %>%
+  mutate(obs_boat_days= replace_na(obs_boat_days,0)) %>%
    ggplot() +
-    geom_bar(aes(x=year,y=observed_boat_days),stat="identity",alpha = 0.8) +
+    geom_bar(aes(x=year,y=obs_boat_days),stat="identity",alpha = 0.8) +
     facet_grid(pscnq_processing_sector~region, scales = "free") +
     ggtitle("Fall Boat Days (Rockfish)") + 
     theme_classic() +
-  #  geom_vline(aes(xintercept="2013"),color="magenta") +
+    geom_vline(aes(xintercept="2013"),color="magenta") +
     theme(axis.text.x = element_text(angle = 90, hjust = 1,size=7))  +
     scale_x_discrete(breaks = every_nth(n = 5))
 
@@ -179,227 +165,31 @@ rockfish_observed %>%
 rockfish_observed %>%  
   ungroup() %>%
   filter(!pscnq_processing_sector=="M") %>%
-  select(year,month,region,pscnq_processing_sector,observed_boat_days) %>% 
+  select(year,month,region,pscnq_processing_sector,obs_boat_days) %>% 
   filter(month %in% c(1,2,3,11,12)) %>%
   mutate(season.temp = case_when(month %in% c(11,12) ~ "winter.1",
                        month %in% c(1:3) ~ "winter.2",
                        TRUE ~ "NA")) %>%
   group_by(year, season.temp,region,pscnq_processing_sector) %>%
-  summarise(observed_boat_days=sum(observed_boat_days)) %>%
+  summarise(obs_boat_days=sum(obs_boat_days)) %>%
   ungroup() %>%
   mutate(year=as.numeric(year), year.new = case_when(season.temp == "winter.2" ~ year -1,
                               TRUE ~ year)) %>%
   group_by(year.new, region, pscnq_processing_sector) %>%
-  summarise(observed_boat_days=sum(observed_boat_days)) %>%
+  summarise(obs_boat_days=sum(obs_boat_days)) %>%
   dplyr::rename(year=year.new) %>%
   merge(temp) %>%
-  mutate(observed_boat_days= replace_na(observed_boat_days,0)) %>%
+  mutate(obs_boat_days= replace_na(obs_boat_days,0)) %>%
   ggplot() +
-    geom_bar(aes(x=year,y=observed_boat_days), stat="identity",alpha = 0.8) +
+    geom_bar(aes(x=year,y=obs_boat_days), stat="identity",alpha = 0.8) +
     facet_grid(pscnq_processing_sector~region, scales = "free") +
     ggtitle("Winter Boat Days ( Rockfish)") + 
     theme_classic() +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1,size=7))# +
- # geom_vline(aes(xintercept=2013),color="magenta")
+    theme(axis.text.x = element_text(angle = 90, hjust = 1,size=7)) +
+  geom_vline(aes(xintercept=2013),color="magenta")
 
  
 ```
-
-### Observed CP 2010-2012
-\n but we have no info about total effort in 2010-2012, were CP's fully observed? Can we get the total effort for these years? 
-```{r}
-  #2010 - 2012
-temp.year <- as.character(c(2010:2012))
-temp.month <- as.character(c(01:12))
-temp.region <-  as.character(c("W.APEN", "NW.GOA"))
-year.month<- expand.grid(temp.year, temp.month, temp.region) %>%  #fully factorial match between all categories 
-  rename(region = "Var3")
-year.month$Var2<- str_pad(year.month$Var2, width= 2, pad = "0", side="left") #add a zero before month 1-9 so that I can keep months in order
-year.month <- unite(year.month, "year.month", c("Var1", "Var2"), sep = ".", remove= TRUE) #join month and year in its own dataframe 
-
-  
-observed_rockfish_2010_2012 %>%  
-  ungroup() %>%
-  select(year,month,region,observed_boat_days) %>%   
-  mutate(month = str_pad(month, "left", pad=0, width = 2)) %>%
-  unite("year.month",c("year","month"), sep = ".") %>%
- # gather(4:5, key = "category", value = "boat_days") %>%
-  merge(year.month, all = TRUE) %>% # add in labels
-  mutate(observed_boat_days= replace_na(observed_boat_days,0)) %>%
-    ggplot() +
-      geom_bar(aes(x=year.month,y=observed_boat_days), position="dodge", stat="identity",alpha = 0.8) +
-      facet_wrap(~region, scales = "free") +
-      ggtitle("Observed Boat Days CP") +  
-      theme_classic() +
-      theme(axis.text.x = element_text(angle = 90, hjust = 1,size=7))  +
-      scale_x_discrete(breaks = every_nth(n = 12))
- 
-```
-
-### Total Effort Shoreside 2007-2012
-\n Dont have information on observed effort during this time.
-```{r unobs + obs data 2007 to 2012}
-#this is shoreside only!! 
-rockfish_fish_ticket<-readRDS(here("data","AK_Effort_Trawl","Gasper_data","fishtix_snippet.RDS")) %>% 
-   filter(adfg_h_mgt_program_id == "RPP") %>%
-   mutate(fishing_start_date=as.Date(ft_date_fishing_began,format="%Y%m%d"), # the dates are wonky - convert to acutal dates
-         date_landed=as.Date(ft_date_landed,format="%Y%m%d"),
-         region = case_when(reporting_area_code == "610" ~ "E.APEN", 
-                            reporting_area_code == "620" ~ "W.APEN",
-                            reporting_area_code %in% c("630") ~ "NW.GOA",
-                            reporting_area_code %in% c("640", "640 ") ~ "NE.GOA",
-                            TRUE ~ "MISSING_LOCATION_INFO")) %>% 
-  group_by(vessel_id,adfg_number,date_landed,year,region) %>% # group by vessel-date_landed-year,reporting_area_code
-  summarise(ft_observers_onboard=ft_observers_onboard[1], # this observers_onboard field seems pretty useless.
-              observed=observed[1], #  this flag for whether a vessel is observed seems somewhat more useful. Maybe you'll find it helpful?
-              fishing_start_date=min(fishing_start_date), # for a particular landed date there may be multiple start dates. Pick the earliest one.
-              pounds=sum(pounds[earnings>0],na.rm=TRUE)) %>%  # summarise pounds of only those species for which they got paid
-  data.frame %>% 
-  rowwise() %>% 
-  mutate(fish_days=as.vector(difftime(date_landed,fishing_start_date,units="days")), # determine number of days between start and landed. Note that if landed the same day it will be a zero. Maybe you want to add 1? [line below]
-         fish_days = case_when(fishing_start_date==date_landed ~ 1,
-                               TRUE ~ fish_days),
-         month=as.numeric(format(date_landed,"%m")),
-         year=as.numeric(format(date_landed,"%Y")),
-         # season = case_when(month %in% c(1,2,3,11,12) ~ "winter",
-         #                        month %in% c(4, 5) ~ "spring",
-         #                        month %in% c(6,7) ~ "summer",
-         #                        month %in% c(8,9,10) ~ "fall",
-         #                        TRUE~"SEASON_NA")
-         ) %>% # extract a month and year field
- group_by(year,month,region) %>% #  group by vessel-date_landed-year,reporting_area_code
- summarise(total_effort = sum(fish_days) #,
-            # all_catch_MT=sum(pounds*0.000453592)
-            )%>% #convert to MT, 0.000453592 MT = 1 LB 
- filter(!region == "MISSING_LOCATION_INFO", year >2006 & year < 2013) 
-
-#for seasonal plotting
-temp<- expand.grid(temp.year, temp.region) %>%  #fully factorial match between all categories 
-  rename(year="Var1",region="Var2") 
-
-```
-
-```{r stacked bar plots 2007 to 2012, echo=FALSE, fig.height=5, fig.width=9}
-temp.year <- as.character(c(2007:2012))
-temp.month <- as.character(c(01:12))
-temp.region <-  as.character(c("W.APEN",  "NW.GOA"))
-year.month<- expand.grid(temp.year, temp.month, temp.region) %>%  #fully factorial match between all categories 
-  rename(region = "Var3")
-year.month$Var2<- str_pad(year.month$Var2, width= 2, pad = "0", side="left") #add a zero before month 1-9 so that I can keep months in order
-year.month <- unite(year.month, "year.month", c("Var1", "Var2"), sep = ".", remove= TRUE) #join month and year in its own dataframe 
-
-#general plot of all effort. 
-rockfish_fish_ticket %>%  
-  ungroup() %>%
-  select(year,month,region,total_effort) %>%   
-  mutate(month = str_pad(month, "left", pad=0, width = 2)) %>%
-  unite("year.month",c("year","month"), sep = ".") %>%
-  merge(year.month, all = TRUE) %>% # add in labels
-  mutate(total_effort= replace_na(total_effort,0)) %>%
-    ggplot() +
-      geom_bar(aes(x=year.month,y=total_effort), position="dodge", stat="identity",alpha = 0.8) +
-      facet_wrap(~region, scales = "free") +
-      ggtitle("Total Effort") +  
-      theme_classic() +
-      theme(axis.text.x = element_text(angle = 90, hjust = 1,size=7))  +
-      scale_x_discrete(breaks = every_nth(n = 12))
- 
-```
-
-\n Seasonal for total effort 
-
-```{r SPRING total}
-#SPRING
-rockfish_fish_ticket %>%  
-  ungroup() %>%
-  select(year,month,region,total_effort) %>%   
-  filter(month %in% c(4,5)) %>%
-  group_by(year,region) %>%
-  summarise(total_effort=sum(total_effort))%>%
-  ungroup() %>%
-  merge(temp, all = TRUE) %>%
-  mutate(total_effort= replace_na(total_effort,0)) %>%
-   ggplot() +
-    geom_bar(aes(x=year,y=total_effort),stat="identity",alpha = 0.8) +
-    facet_wrap(~region, scales = "free") +
-    ggtitle("Spring Total Boat Days (Rockfish)") + 
-    theme_classic() +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1,size=7))  +
-    scale_x_discrete(breaks = every_nth(n = 5))
-```
-
-```{r SUMMER total}
-#SUMMER
-rockfish_fish_ticket %>%  
- # ungroup() 
-  select(year,month,region,total_effort) %>%   
-  filter(month %in% c(6,7)) %>%
-  group_by(year,region) %>%
-  summarise(total_effort=sum(total_effort))%>%
-  ungroup() %>%
-  merge(temp, all = TRUE) %>%
-  mutate(total_effort= replace_na(total_effort,0)) %>%
-   ggplot() +
-    geom_bar(aes(x=year,y=total_effort),stat="identity",alpha = 0.8) +
-    facet_wrap(~region, scales = "free") +
-    ggtitle("Summer Boat Days (Rockfish)") + 
-    theme_classic() +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1,size=7))  +
-    scale_x_discrete(breaks = every_nth(n = 5))
-
- 
-```
-
-```{r FALL total}
-#FALL
-rockfish_fish_ticket %>%  
-  ungroup() %>%
-  select(year,month,region,total_effort) %>%   
-  filter(month %in% c(8,9,10)) %>%
-  group_by(year,region) %>%
-  summarise(total_effort=sum(total_effort))%>%
-  ungroup() %>%
-  merge(temp, all = TRUE) %>%
-  mutate(total_effort= replace_na(total_effort,0)) %>%
-   ggplot() +
-    geom_bar(aes(x=year,y=total_effort),stat="identity",alpha = 0.8) +
-    facet_wrap(~region, scales = "free") +
-    ggtitle("Fall Boat Days (Rockfish)") + 
-    theme_classic() +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1,size=7))  +
-    scale_x_discrete(breaks = every_nth(n = 5))
-
-```
-
-```{r WINTER total}
- #WINTER
-rockfish_fish_ticket %>%  
-  ungroup() %>%
-  select(year,month,region,total_effort) %>% 
-  filter(month %in% c(1,2,3,11,12)) %>%
-  mutate(season.temp = case_when(month %in% c(11,12) ~ "winter.1",
-                       month %in% c(1:3) ~ "winter.2",
-                       TRUE ~ "NA")) %>%
-  group_by(year, season.temp,region) %>%
-  summarise(total_effort=sum(total_effort)) %>%
-  ungroup() %>%
-  mutate(year=as.numeric(year), year.new = case_when(season.temp == "winter.2" ~ year -1,
-                              TRUE ~ year)) %>%
-  group_by(year.new, region,) %>%
-  summarise(total_effort=sum(total_effort)) %>%
-  dplyr::rename(year=year.new) %>%
-  merge(temp) %>%
-  mutate(total_effort= replace_na(total_effort,0)) %>%
-  ggplot() +
-    geom_bar(aes(x=year,y=total_effort), stat="identity",alpha = 0.8) +
-    facet_wrap(~region, scales = "free") +
-    ggtitle("Winter Boat Days ( Rockfish)") + 
-    theme_classic() +
-    theme(axis.text.x = element_text(angle = 90, hjust = 1,size=7)) 
-
-```
-
-\n How does RMIS classify a rockfish trip? See last figure, RMIS recoveries and effort match better when I classify Rockfish trips using the target code rather than the management code
 
 \n Does effort generally line up with recoveries? [Using Rockfish recovery data from JW and AFSC] Shoreside looks good, what is the deal with no recoveries for CP?  This is better for trip target code than management code.... 
 ```{r CWT Check, echo=FALSE}
@@ -423,14 +213,17 @@ rockfish <- read_csv("data/AK_CWT_Rockfish/Rockfish CWT.csv") %>%
  unite("year.month",c("rec_year","rec_month"), sep = ".")  %>%
  rename(recoveries=n)
   
-full_census_rockfish %>%  
+rockfish_observed %>%  
   ungroup() %>%
-  select(year,month,region,observed_boat_days) %>%   
+  filter(!year<2010 
+         #, pscnq_processing_sector=="S"
+        ) %>%
+  select(year,month,region,obs_boat_days) %>%   
   mutate(month = str_pad(month, "left", pad=0, width = 2) ) %>%
   unite("year.month",c("year","month"), sep = ".") %>% 
   full_join(rockfish, by= c("year.month","region")) %>%
   gather(3:4, key = "category", value = "number") %>%
-  mutate(number= replace_na(number,0), category=factor(category, levels=c("recoveries", "observed_boat_days"))) %>%
+  mutate(number= replace_na(number,0), category=factor(category, levels=c("recoveries", "obs_boat_days"))) %>%
   filter(!is.na(region), !region %in% c("NE.GOA NW.GOA W.APEN E.APEN BER", "NSEAK")) %>%
     ggplot() +
       geom_bar(aes(x=year.month,y=number, fill = category),position="stack", stat="identity",alpha = 0.8) +
@@ -438,14 +231,61 @@ full_census_rockfish %>%
       ggtitle("Compare Observed Data and RMIS Recoveries") +  
       theme_classic() +
       theme(axis.text.x = element_text(angle = 90, hjust = 1,size=7))  +
-      scale_x_discrete(breaks = every_nth(n = 20)) 
+      scale_x_discrete(breaks = every_nth(n = 20)) +
+  ggtitle("When I use rockfish target code K")
  
 ```
  
+```{r use rockfish management code}
+readRDS(here("data","AK_Effort_Trawl","Gasper_data","Unique_trips_Observed.RDS")) %>%
+  rename_all(tolower) %>% 
+  mutate(month=as.numeric(format(haul_date,"%m")),
+           region = case_when(reporting_area_code == "610" ~ "E.APEN", 
+                            reporting_area_code == "620" ~ "W.APEN",
+                            reporting_area_code %in% c("630") ~ "NW.GOA",
+                            reporting_area_code %in% c("640", "640 ") ~ "NE.GOA",
+                            TRUE ~ "MISSING_LOCATION_INFO")) %>% 
+  group_by(year,management_program_code, catcher_boat_adfg,pscnq_processing_sector,trip_target_code, month,akr_gear_code,region, reporting_area_code) %>%
+  summarise(haul_days=length(unique(haul_date[!is.na(haul_date)])),
+            vlength=ves_cfec_length[1],
+            gf_catch=sum(official_total_catch,na.rm=TRUE)) %>%
+  filter(management_program_code =="RPP",!reporting_area_code == "650" #only 4 entries with 650 in mid 1990s
+         ) %>% #Filter for rockfish 
+  ungroup() %>%
+  mutate(season = case_when(month %in% c(1,2,3,11,12) ~ "winter",
+                                month %in% c(4, 5) ~ "spring",
+                                month %in% c(6,7) ~ "summer",
+                                month %in% c(8,9,10) ~ "fall",
+                                TRUE~"SEASON_NA"),
+         year = as.numeric(year)) %>%  
+  group_by(year,pscnq_processing_sector,trip_target_code,season, month,region
+           #,length_category, #can add this in later if fish ticket data for obs and unobs has v length?
+           ) %>%
+  summarise(obs_boat_days = sum(haul_days),
+             obs_catch_MT=sum(gf_catch)) %>% #THIS IS IN MT--CONVERT TO LBS OR FISH TICKET CONVERT TO MT
+ungroup() %>%
+  # filter(!year<2010 
+  #        #, pscnq_processing_sector=="S"
+  #        ) %>%
+  select(year,month,region,obs_boat_days) %>%   
+  mutate(month = str_pad(month, "left", pad=0, width = 2) ) %>%
+  unite("year.month",c("year","month"), sep = ".") %>% 
+  full_join(rockfish, by= c("year.month","region")) %>%
+  gather(3:4, key = "category", value = "number") %>%
+  mutate(number= replace_na(number,0), category=factor(category, levels=c("recoveries", "obs_boat_days"))) %>%
+  filter(!is.na(region), !region %in% c("NE.GOA NW.GOA W.APEN E.APEN BER", "NSEAK")) %>%
+    ggplot() +
+      geom_bar(aes(x=year.month,y=number, fill = category),position="stack", stat="identity",alpha = 0.8) +
+      facet_wrap(~region, scales="free_y") +
+      ggtitle("Compare Observed Data and RMIS Recoveries") +  
+      theme_classic() +
+      theme(axis.text.x = element_text(angle = 90, hjust = 1,size=7))  +
+      scale_x_discrete(breaks = every_nth(n = 20)) +
+      ggtitle("When I use RPP management code")
+```
 ```{r save data}
 
-saveRDS(rockfish_fish_ticket, "data/AK_CWT_Rockfish/rockfish_2007_2012_summarized.RDS")
+saveRDS(rockfish_observed, "data/AK_CWT_Rockfish/rockfish_summarized.RDS")
 
-saveRDS(full_census_rockfish, "data/AK_CWT_Rockfish/rockfish_2013_2017_summarized.RDS")
 ```
 
