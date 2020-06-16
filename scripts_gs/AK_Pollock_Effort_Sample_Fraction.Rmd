@@ -5,7 +5,6 @@ output:
 ---
 
 \n JW pulled this data from AKFIN see "data/AK_Effort_Trawl/Gasper Data/Chinook_Bycatch_Data_Description (2).html"for more specific query info. 
-
 ### General methods:
 
 \n First half of sample fraction- How many boat days are observed? 
@@ -80,6 +79,7 @@ fish_ticket<-readRDS(here("data","AK_Effort_Trawl","Gasper_data","fishtix_snippe
                             reporting_area_code %in% c("630") ~ "NW.GOA",
                             reporting_area_code %in% c("640", "640 ") ~ "NE.GOA",
                             TRUE ~ "MISSING_LOCATION_INFO")) %>% 
+  filter(!adfg_h_mgt_program_id == "RPP") %>% #remove fish tickets from the rockfish program. 
   group_by(vessel_id,adfg_number,date_landed,year,region) %>% # group by vessel-date_landed-year,reporting_area_code
   summarise(ft_observers_onboard=ft_observers_onboard[1], # this observers_onboard field seems pretty useless.
               observed=observed[1], #  this flag for whether a vessel is observed seems somewhat more useful. Maybe you'll find it helpful?
@@ -107,7 +107,7 @@ shoreside_observed <- observed %>%
   filter(pscnq_processing_sector == "S")
 
 #merge data and get the fraction of obs and unobserved. 
-join_data_shoreside <- left_join(fish_ticket, shoreside_observed, by=c("year", "month", "region")) %>%
+join_data_shoreside <- full_join(fish_ticket, shoreside_observed, by=c("year", "month", "region")) %>%
   dplyr::mutate(observed_boat_days = as.numeric(replace_na(observed_boat_days,0)),
                 total_effort = replace_na(total_effort,0),
                 unobs_boat_days = total_effort - observed_boat_days)  %>%

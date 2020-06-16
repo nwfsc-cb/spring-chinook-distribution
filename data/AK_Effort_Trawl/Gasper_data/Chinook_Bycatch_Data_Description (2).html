@@ -1983,6 +1983,7 @@ dbFetch(dbSendQuery(con,paste(&quot;select distinct vessel_id,
                                                adfg_h_date_landed as ft_date_landed,
                                                adfg_b_batch_year as year,
                                                adfg_h_adfg_number as adfg_number,
+                                               adfg_h_mgt_program_id,
                                                adfg_h_observed as observed,
                                                adfg_h_trip_number as ft_trip,
                                                adfg_i_pounds as pounds,
@@ -2002,7 +2003,8 @@ dbFetch(dbSendQuery(con,paste(&quot;select distinct vessel_id,
 ft &lt;- readRDS(&quot;fishtix_snippet.RDS&quot;) %&gt;% 
   mutate(fishing_start_date=as.Date(ft_date_fishing_began,format=&quot;%Y%m%d&quot;), # the dates are wonky - convert to acutal dates
          date_landed=as.Date(ft_date_landed,format=&quot;%Y%m%d&quot;)) %&gt;% 
-  group_by(vessel_id,adfg_number,date_landed,year,reporting_area_code) %&gt;% #  group by vessel-date_landed-year,reporting_area_code
+  rename(mgmt_id=adfg_h_mgt_program_id) %&gt;% 
+  group_by(vessel_id,adfg_number,date_landed,year,reporting_area_code,mgmt_id) %&gt;% #  group by vessel-date_landed-year,reporting_area_code
     summarise(ft_observers_onboard=ft_observers_onboard[1], # this observers_onboard field seems pretty useless.
               observed=observed[1], #  this flag for whether a vessel is observed seems somewhat more useful. Maybe you&#39;ll find it helpful?
               fishing_start_date=min(fishing_start_date), # for a particular landed date there may be multiple start dates. Pick the earliest one.
