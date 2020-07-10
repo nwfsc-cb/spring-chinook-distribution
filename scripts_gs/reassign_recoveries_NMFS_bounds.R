@@ -1,6 +1,7 @@
 library(tidyverse)
 library(here)
-#this file creates a new column in our lookup code file that has Alaska assignments for the NMFS stat areas and then saves it at the end. 
+#this file creates a new column in our lookup code file that has Alaska assignments for the NMFS stat areas and then saves it at the end--this only needs to be run one time and then the Weitkamp file is updated.
+## was last run to update the NMFS stat area names in Alaska and should not need to be called again! 
 
 #write.csv(dat_recovery, "dat_recovery.csv")
 #reassigning spatial bounds 

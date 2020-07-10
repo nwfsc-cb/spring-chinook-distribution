@@ -1,7 +1,6 @@
 library(tidyverse)
 library(here)
-#this script joins releases and recoveries
-#Creates a file that has all release/recovery and locations when applicable
+#this script joins releases and recoveries for ALL STOCKS not just focal stocks. this was created because JW and folks at AFSC were asking for bycatch plots from all stocks. 
 
 #################################################################################################################################################################
 # STEP 1: Join Release, Recoveries, and Location information. 
@@ -144,7 +143,6 @@ dat_everything <- everything1
 # SAVE TIDY DATA FILES 
 ################################################################################################################################################################
 
-#
 saveRDS(df_recovery, "data/rmis_allstocks_June2020.RDS" )
-#getwd()
+ 
  
