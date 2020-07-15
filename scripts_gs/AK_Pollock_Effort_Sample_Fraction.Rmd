@@ -36,6 +36,7 @@ every_nth = function(n) {
 
 ```{r data prep}
 #observed trips 1996- 2017
+
 observed<-readRDS(here("data","AK_Effort_Trawl","Gasper_data","Unique_trips_Observed.RDS")) %>%
   rename_all(tolower) %>% 
   mutate(month=as.numeric(format(haul_date,"%m")),
