@@ -73,14 +73,14 @@ observed<-readRDS(here("data","AK_Effort_Trawl","Gasper_data","Unique_trips_Obse
 
 #all, observed and unobserved trips ***shoreside only
 fish_ticket<-readRDS(here("data","AK_Effort_Trawl","Gasper_data","fishtix_snippet.RDS")) %>% 
-  mutate(fishing_start_date=as.Date(ft_date_fishing_began,format="%Y%m%d"), # the dates are wonky - convert to acutal dates
+   dplyr::mutate(fishing_start_date=as.Date(ft_date_fishing_began,format="%Y%m%d"), # the dates are wonky - convert to acutal dates
          date_landed=as.Date(ft_date_landed,format="%Y%m%d"),
          region = case_when(reporting_area_code == "610" ~ "W.APEN", 
                             reporting_area_code == "620" ~ "E.APEN",
                             reporting_area_code %in% c("630") ~ "NW.GOA",
                             reporting_area_code %in% c("640", "640 ") ~ "NE.GOA",
                             TRUE ~ "MISSING_LOCATION_INFO")) %>% 
-  filter(!adfg_h_mgt_program_id == "RPP") %>% #remove fish tickets from the rockfish program. 
+  dplyr::filter(!adfg_h_mgt_program_id %in% c("RPP")) %>% #remove fish tickets from the rockfish program.
   group_by(vessel_id,adfg_number,date_landed,year,region) %>% # group by vessel-date_landed-year,reporting_area_code
   summarise(ft_observers_onboard=ft_observers_onboard[1], # this observers_onboard field seems pretty useless.
               observed=observed[1], #  this flag for whether a vessel is observed seems somewhat more useful. Maybe you'll find it helpful?
@@ -119,10 +119,7 @@ join_data_shoreside <- full_join(fish_ticket, shoreside_observed, by=c("year", "
           unobs_boat_days = case_when(year<1996 ~ unobs_boat_days-observed_boat_days, TRUE ~ unobs_boat_days),
           frac_boat_days_obs = observed_boat_days/total_effort,
           frac_boat_days_obs = replace_na(frac_boat_days_obs, 0))
-
-test <- join_data_shoreside %>% filter(unobs_boat_days<1) 
-
-unique(test$year)
+ 
 
 ```
 
