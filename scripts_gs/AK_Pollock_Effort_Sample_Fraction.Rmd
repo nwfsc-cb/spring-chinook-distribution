@@ -4,7 +4,8 @@ output:
   html_document: default
 ---
 
-\n JW pulled this data from AKFIN see "data/AK_Effort_Trawl/Gasper Data/Chinook_Bycatch_Data_Description (2).html"for more specific query info. 
+\n JW pulled this data from AKFIN see "data/AK_Effort_Trawl/Gasper Data/Chinook_Bycatch_Data_Description (2).html"for more specific query info.
+
 ### General methods:
 
 \n First half of sample fraction- How many boat days are observed? 

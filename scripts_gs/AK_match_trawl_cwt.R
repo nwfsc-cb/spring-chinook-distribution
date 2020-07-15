@@ -1,9 +1,11 @@
 library(here)
 library(tidyverse)
 library(zoo)
+#this script uses data from afsc (akfin data) to try to add trip targets (pollock or non-pollock) to RMIS trawl recoveries. 
+
 #if you need data for the script and it is not on your computer you need to download it from the shared site SFTP (if you are not Genoa then ask Genoa)
 #######################################################################################################
-# LOAD BYCATCH AND OBSERVER DATA FROM AFSC - MATCH SO MAX INFO CAN BE MATCHED WITH CWT AND MINIMIZE DUPES. 
+# LOAD BYCATCH AND OBSERVER DATA FROM AFSC  
 #######################################################################################################
 # RUN THIS TO GET THE POLLOCK FISHING DATES THAT ARE MATCHED IN LATER source(tidy_pollock_fishing_dates.R)
 dates<-readRDS("data/pollock_fishing_dates/pollock_fishing_dates.RDS") #%>%
