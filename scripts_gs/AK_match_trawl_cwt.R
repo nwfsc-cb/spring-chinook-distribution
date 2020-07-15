@@ -1,6 +1,7 @@
 library(here)
 library(tidyverse)
 library(zoo)
+#if you need data for the script and it is not on your computer you need to download it from the shared site SFTP (if you are not Genoa then ask Genoa)
 #######################################################################################################
 # LOAD BYCATCH AND OBSERVER DATA FROM AFSC - MATCH SO MAX INFO CAN BE MATCHED WITH CWT AND MINIMIZE DUPES. 
 #######################################################################################################

@@ -13,12 +13,9 @@ library(tidyverse)
 library(here)
 library(PNWColors)
 
- rmis <- here::here("data", "RMIS.csv")
- rmis <- read_csv(rmis) 
-
+rmis <- read_csv("~/Documents/GitHub/rmis/data/final_data/rmis_release_recovery.csv")
+ 
 color1<- rev(pnw_palette(name="Starfish",n=7,type="discrete"))
-
-#rmis = read_csv("data/RMIS.csv")
 
 df <- here::here("Maps_and_Charts_of_Regions", "spatial_bounds_gs_new.csv")
 df <- read_csv(df) 
