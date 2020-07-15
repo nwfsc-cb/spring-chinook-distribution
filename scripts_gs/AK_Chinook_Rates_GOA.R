@@ -13,8 +13,8 @@ df <- readRDS("data/AK_Effort_Trawl/Gasper_data/Chinooky_Rates_merged.RDS") %>%
                                          ves_akr_length > 59 & year > 2012 ~ "Large",
                                          ves_akr_length < 60 & year > 2012 ~ "Small",
                                          TRUE ~ as.character(ves_akr_length)),
-              region = case_when(reporting_area_code == "610" ~ "E.APEN", 
-                                reporting_area_code == "620" ~ "W.APEN",  
+              region = case_when(reporting_area_code == "610" ~ "W.APEN", 
+                                reporting_area_code == "620" ~ "E.APEN",  
                                 reporting_area_code %in% c("630") ~ "NW.GOA", 
                                 reporting_area_code %in% c("640", "640 ") ~ "NE.GOA", 
                                 reporting_area_code %in% c("649") ~ "NE.NW.GOA", #there are about 600 records from this stat area- need to divide them in half between NE and NW GOA, can do this based on ADFG numbers. check w ole before doing this.  
@@ -80,8 +80,8 @@ df <- readRDS("data/AK_Effort_Trawl/Gasper_data/Chinooky_Rates_merged.RDS") %>%
                                       ves_akr_length > 59 & year > 2012 ~ "Large",
                                       ves_akr_length < 60 & year > 2012 ~ "Small",
                                       TRUE ~ as.character(ves_akr_length)),
-          region = case_when(reporting_area_code == "610" ~ "E.APEN", 
-                             reporting_area_code == "620" ~ "W.APEN",  
+          region = case_when(reporting_area_code == "610" ~ "W.APEN", 
+                             reporting_area_code == "620" ~ "E.APEN",  
                              reporting_area_code %in% c("630") ~ "NW.GOA", 
                              reporting_area_code %in% c("640", "640 ") ~ "NE.GOA", 
                              reporting_area_code %in% c("649") ~ "NE.NW.GOA", #there are about 600 records from this stat area- need to divide them in half between NE and NW GOA, can do this based on ADFG numbers. check w ole before doing this.  

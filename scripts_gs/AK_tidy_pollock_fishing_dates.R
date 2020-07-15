@@ -13,8 +13,8 @@ dates <- read_csv("data/pollock_fishing_dates/POLLOCK_USE.csv") %>%
   filter(year>1995) %>%
   rename(ocean_region = region) %>%
   #assign to regions for cwt matching. 
-  mutate(region = case_when(ocean_region == "GOA" & stat_area == "610" ~ "E.APEN",#"X610",
-                            ocean_region == "GOA" & stat_area == "620" ~ "W.APEN", #"X620",
+  mutate(region = case_when(ocean_region == "GOA" & stat_area == "610" ~ "W.APEN",#"X610",
+                            ocean_region == "GOA" & stat_area == "620" ~ "E.APEN", #"X620",
                             ocean_region == "GOA" & stat_area %in% c("630", "Shelikof") ~ "NW.GOA", #"X630", 
                             ocean_region == "GOA" & is.na(stat_area) & sector == "Shelikof" ~ "NW.GOA", #"X630", 
                             ocean_region == "GOA" & stat_area %in% c("640", "640 ") ~ "NE.GOA", #"X630",  

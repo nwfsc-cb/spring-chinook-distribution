@@ -41,8 +41,8 @@ observed<-readRDS(here("data","AK_Effort_Trawl","Gasper_data","Unique_trips_Obse
   rename_all(tolower) %>% 
   mutate(month=as.numeric(format(haul_date,"%m")),
          trip_target_code2=ifelse(akr_gear_code=="NPT","Not-P",trip_target_code),
-           region = case_when(reporting_area_code == "610" ~ "E.APEN", 
-                            reporting_area_code == "620" ~ "W.APEN",
+           region = case_when(reporting_area_code == "610" ~ "W.APEN", 
+                            reporting_area_code == "620" ~ "E.APEN",
                             reporting_area_code %in% c("630") ~ "NW.GOA",
                             reporting_area_code %in% c("640", "640 ") ~ "NE.GOA",
                             TRUE ~ "MISSING_LOCATION_INFO")) %>% 
@@ -75,8 +75,8 @@ observed<-readRDS(here("data","AK_Effort_Trawl","Gasper_data","Unique_trips_Obse
 fish_ticket<-readRDS(here("data","AK_Effort_Trawl","Gasper_data","fishtix_snippet.RDS")) %>% 
   mutate(fishing_start_date=as.Date(ft_date_fishing_began,format="%Y%m%d"), # the dates are wonky - convert to acutal dates
          date_landed=as.Date(ft_date_landed,format="%Y%m%d"),
-         region = case_when(reporting_area_code == "610" ~ "E.APEN", 
-                            reporting_area_code == "620" ~ "W.APEN",
+         region = case_when(reporting_area_code == "610" ~ "W.APEN", 
+                            reporting_area_code == "620" ~ "E.APEN",
                             reporting_area_code %in% c("630") ~ "NW.GOA",
                             reporting_area_code %in% c("640", "640 ") ~ "NE.GOA",
                             TRUE ~ "MISSING_LOCATION_INFO")) %>% 
@@ -119,6 +119,11 @@ join_data_shoreside <- full_join(fish_ticket, shoreside_observed, by=c("year", "
           unobs_boat_days = case_when(year<1996 ~ unobs_boat_days-observed_boat_days, TRUE ~ unobs_boat_days),
           frac_boat_days_obs = observed_boat_days/total_effort,
           frac_boat_days_obs = replace_na(frac_boat_days_obs, 0))
+
+test <- join_data_shoreside %>% filter(unobs_boat_days<1) 
+
+unique(test$year)
+
 ```
 
 \n Stacked bar for observed vs unobserved effort all years and months- x axis is year.month
@@ -265,8 +270,8 @@ join_data_shoreside %>%
 all_data_trip_length<-readRDS(here("data","AK_Effort_Trawl","Gasper_data","fishtix_snippet.RDS")) %>% 
   mutate(fishing_start_date=as.Date(ft_date_fishing_began,format="%Y%m%d"), # the dates are wonky - convert to acutal dates
          date_landed=as.Date(ft_date_landed,format="%Y%m%d"),
-         region = case_when(reporting_area_code == "610" ~ "E.APEN", 
-                            reporting_area_code == "620" ~ "W.APEN",
+         region = case_when(reporting_area_code == "610" ~ "W.APEN", 
+                            reporting_area_code == "620" ~ "E.APEN",
                             reporting_area_code %in% c("630") ~ "NW.GOA",
                             reporting_area_code %in% c("640", "640 ") ~ "NE.GOA",
                             TRUE ~ "MISSING_LOCATION_INFO")) %>% 
@@ -367,8 +372,8 @@ heatmap.2(matrix, Rowv=FALSE, Colv=FALSE,
 ```{r sample frac 2}
 chinooky_rates<- readRDS(here("data","AK_Effort_Trawl","Gasper_data","Chinooky_Rates_merged.RDS")) %>%
 filter(fmp_sub_area_code == "GOA", target =="pollock") %>%
-        mutate(region = case_when(reporting_area_code == "610" ~ "E.APEN",
-                            reporting_area_code == "620" ~ "W.APEN",
+        mutate(region = case_when(reporting_area_code == "610" ~ "W.APEN",
+                            reporting_area_code == "620" ~ "E.APEN",
                             reporting_area_code %in% c("630") ~ "NW.GOA",
                             reporting_area_code %in% c("640", "640 ") ~ "NE.GOA",
                             reporting_area_code == "649" & adfg_stat_area_code %in% c("466032","466033","466003") ~ "NE.GOA",
@@ -504,8 +509,8 @@ observed<-readRDS(here("data","AK_Effort_Trawl","Gasper_data","Unique_trips_Obse
   rename_all(tolower) %>% 
   mutate(month=as.numeric(format(haul_date,"%m")),
          trip_target_code2=ifelse(akr_gear_code=="NPT","Not-P",trip_target_code),
-           region = case_when(reporting_area_code == "610" ~ "E.APEN", 
-                            reporting_area_code == "620" ~ "W.APEN",
+           region = case_when(reporting_area_code == "610" ~ "W.APEN", 
+                            reporting_area_code == "620" ~ "E.APEN",
                             reporting_area_code %in% c("630") ~ "NW.GOA",
                             reporting_area_code %in% c("640", "640 ") ~ "NE.GOA",
                             TRUE ~ "MISSING_LOCATION_INFO")) %>% 
