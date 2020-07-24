@@ -120,7 +120,7 @@ join_data_shoreside <- full_join(fish_ticket, shoreside_observed, by=c("year", "
           frac_boat_days_obs = observed_boat_days/total_effort,
           frac_boat_days_obs = replace_na(frac_boat_days_obs, 0))
  
-
+#saveRDS(join_data_shoreside, "data/shoreside_pollock_effort.RDS")
 ```
 
 \n Stacked bar for observed vs unobserved effort all years and months- x axis is year.month

@@ -7,7 +7,7 @@ library(data.table)
 #basically just ignoring sector here because most fishing is in the "inshore sector" 
   #and the variability comes from regions (which I can match on) not sector 
 
-dates <- read_csv("data/pollock_fishing_dates/POLLOCK_USE.csv") %>%
+dates <- read_csv("data/AK_CWT_Trawl/pollock_fishing_dates/POLLOCK_USE.csv") %>%
   select(c(1:7)) %>%
   filter(!open_date == "Closed") %>%
   filter(year>1995) %>%
@@ -47,4 +47,4 @@ dates<- dates %>%
   #                           sector == "Offshore" ~ "Catcher Processor",
   #                           TRUE ~ sector))
   # 
-saveRDS(dates, "data/pollock_fishing_dates/pollock_fishing_dates.RDS")
+saveRDS(dates, "data/AK_CWT_Trawl/pollock_fishing_dates/pollock_fishing_dates.RDS")
