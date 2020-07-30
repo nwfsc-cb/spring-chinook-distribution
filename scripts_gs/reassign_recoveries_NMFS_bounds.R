@@ -3,7 +3,17 @@ library(here)
 #this file creates a new column in our lookup code file that has Alaska assignments for the NMFS stat areas and then saves it at the end--this only needs to be run one time and then the Weitkamp file is updated.
 ## was last run to update the NMFS stat area names in Alaska and should not need to be called again! 
 
-#write.csv(dat_recovery, "dat_recovery.csv")
+#plot and check to see if assignment worked
+base <- world <- map_data("world") %>%  subset(region %in% c("USA", "Canada")) %>%
+  filter(!group== 1511, !group== 1518, !group==1515, !group==1508, !group==1502, !group==1509) %>%
+  filter(!long > -115) %>%
+  filter(!lat < 34) %>%
+  filter(!lat > 62) %>%
+  filter(!long < -173) %>% 
+  ggplot( ) +
+  geom_polygon(aes(x = long, y = lat, group = group), fill = "white", color = "black") +
+  coord_fixed(1.3)
+
 #reassigning spatial bounds 
 codes = read_csv("data/recovery codes-wietkamp+shelton 12-2018 two PUSO.csv") %>%
  # select(c(1:10, 17)) %>%
@@ -18,7 +28,6 @@ location = read.csv("data/locations.txt") %>%
                 latitude=rmis_latitude, longitude = rmis_longitude) %>%
  distinct(recovery_location_code, .keep_all = TRUE)   #took out duplicate recovery codes, keep.all = keeps the first row of values for each recovery code
  
-
 #easier to assign codes that have lat/longs - start with those. Join on the location file to the codes to get the descriptions and lat/longs when applicable. 
 temp_lat_long <- left_join(codes, location, by=c("recovery_location_code")) %>%
   filter(`state/prov` %in% c(1,7)) %>%
@@ -38,10 +47,10 @@ temp_lat_long <- left_join(codes, location, by=c("recovery_location_code")) %>%
     longitude > -140 & latitude > 55.5   ~  "NSEAK", #"X650",
     longitude < -140 & longitude > -147 | longitude == -140 ~ "NE.GOA", #"X640",
     longitude < -147 & longitude > -154 | longitude == -147 ~ "NW.GOA", #"X630",
-    longitude < -154 & longitude > -159 | longitude == -154 ~ "W.APEN", #"X620",
+    longitude < -154 & longitude > -159 | longitude == -154 ~ "E.APEN", #"X620",
     latitude > 59 & longitude < -160 ~ "BER",
-    longitude < -159 & longitude > -170 | longitude == -159 & latitude < 55 ~ "E.APEN",  #"X610",
-    longitude == -172 & latitude < 55 ~ "E.APEN", #an odd ball on the south side of aluetian islands in sector 3
+    longitude < -159 & longitude > -170 | longitude == -159 & latitude < 55 ~ "W.APEN",  #"X610",
+    longitude == -172 & latitude < 55 ~ "W.APEN", #an odd ball on the south side of aluetian islands in sector 3
     Rec.area.Sullaway.Shelton.YAK_SOR_NCA == "ALEUT" ~ "ALEUT",
     latitude < 55.5 & longitude > -140 ~ Rec.area.Sullaway.Shelton.YAK_SOR_NCA,
          TRUE ~ Rec.area.Sullaway.Shelton.YAK_SOR_NCA)) %>%
@@ -51,9 +60,9 @@ temp_lat_long <- left_join(codes, location, by=c("recovery_location_code")) %>%
                                                         Rec.area.Sullaway.Shelton.NMFSstat %in% c("APEN", "HSEA") & latitude < 52 & longitude < -170 ~ "ALEUT",
                                                         Rec.area.Sullaway.Shelton.NMFSstat == "APEN" & latitude > 57 ~ "BER",
                                                         Rec.area.Sullaway.Shelton.NMFSstat == "BER" & latitude < 54 & longitude < -170 ~ "ALEUT",
-                                                        Rec.area.Sullaway.Shelton.NMFSstat == "BER" & latitude < 55 ~ "E.APEN",
+                                                        Rec.area.Sullaway.Shelton.NMFSstat == "BER" & latitude < 55 ~ "W.APEN",
                                                         Rec.area.Sullaway.Shelton.NMFSstat == "HSEA" & latitude == 55 ~ "SSEAK",
-                                                        Rec.area.Sullaway.Shelton.NMFSstat == "HSEA" & longitude > -160 & longitude < -155 ~ "W.APEN",
+                                                        Rec.area.Sullaway.Shelton.NMFSstat == "HSEA" & longitude > -160 & longitude < -155 ~ "E.APEN",
                                                         Rec.area.Sullaway.Shelton.NMFSstat == "NSEAK" & latitude == 56 ~ "SSEAK",
                                                         Rec.area.Sullaway.Shelton.NMFSstat == "YAK" & longitude > - 136.5 ~ "NSEAK",
                                                         Rec.area.Sullaway.Shelton.NMFSstat == "BER" & longitude > -140 ~ "NE.GOA",
@@ -65,16 +74,6 @@ temp_lat_long <- left_join(codes, location, by=c("recovery_location_code")) %>%
 
 test <- temp_lat_long %>%
      filter(Rec.area.Sullaway.Shelton.NMFSstat == "NE.GOA")
-#plot and check to see if assignment worked
-base <- world <- map_data("world") %>%  subset(region %in% c("USA", "Canada")) %>%
-    filter(!group== 1511, !group== 1518, !group==1515, !group==1508, !group==1502, !group==1509) %>%
-    filter(!long > -115) %>%
-    filter(!lat < 34) %>%
-    filter(!lat > 62) %>%
-    filter(!long < -173) %>% 
-    ggplot( ) +
-    geom_polygon(aes(x = long, y = lat, group = group), fill = "white", color = "black") +
-    coord_fixed(1.3)
 
 base +  geom_point(data = temp_lat_long, mapping = aes(x = longitude, y = latitude, color = Rec.area.Sullaway.Shelton.NMFSstat)) +
     theme_bw()
@@ -92,9 +91,9 @@ temp_NA <- left_join(codes, location, by=c("recovery_location_code")) %>%
     name == "HIGH SEAS 3 N" ~ "NE.GOA NW.GOA W.APEN E.APEN BER",  
     name == "HIGH SEAS 3 N W" ~ "NE.GOA NW.GOA W.APEN E.APEN BER",
     sector== " SECTOR 4"~ "BER",
-    stat_area == "610" ~ "E.APEN",#"X610",
-    stat_area == "620" ~ "W.APEN", #"X620",
-    stat_area == "621" ~ "W.APEN", #621 = typo? put it into KOD bc that is 620 
+    stat_area == "610" ~ "W.APEN",#"X610",
+    stat_area == "620" ~ "E.APEN", #"X620",
+    stat_area == "621" ~ "E.APEN", #621 = typo? put it into KOD bc that is 620 
     stat_area == "630" ~ "NW.GOA", #"X630", 
     stat_area == "640" ~ "NE.GOA", #"X640",
     stat_area == "649" ~ "NE.GOA", #north part of PWS on the YAK side. 
@@ -104,7 +103,7 @@ temp_NA <- left_join(codes, location, by=c("recovery_location_code")) %>%
     Rec.area.Sullaway.Shelton.YAK_SOR_NCA == "CISS" ~ "NW.GOA", #CISS = Cook Inlet
     Rec.area.Sullaway.Shelton.YAK_SOR_NCA == "BER" ~ "BER", #These assignments didnt change 
     Rec.area.Sullaway.Shelton.YAK_SOR_NCA == "NSEAK SSEAK" ~ "NSEAK SSEAK",
-    Rec.area.Sullaway.Shelton.YAK_SOR_NCA == "APEN" ~ "E.APEN",
+    Rec.area.Sullaway.Shelton.YAK_SOR_NCA == "APEN" ~ "W.APEN",
     Rec.area.Sullaway.Shelton.YAK_SOR_NCA == "PWS CISS KOD AKPEN BER" ~ "NW.GOA W.APEN E.APEN BER",
       #PWS/YAK AREA
     Bearing %in% c(" District 225" , " District 222",  " District 223", " District 224", " District 226", " District 227", " District 229") ~ "NW.GOA", #"X630",
@@ -170,7 +169,7 @@ ak_na<-na %>%
   mutate(Rec.area.Sullaway.Shelton.NMFSstat = case_when(
     longitude > -155 & longitude < -145 ~ "NW.GOA",
     longitude < -170 ~ "ALEUT", 
-    hemi == " HOMER" ~ "W.APEN",
+    hemi == " HOMER" ~ "NW.GOA",
     hemi %in% c(" GUSTAVUS"," ELFIN COVE", " JUNEAU", " SITKA" ) ~ "NSEAK",    
     hemi %in% c(" PETERSBURG", " WRANGELL" ) ~ "SSEAK",  
     TRUE ~ "FIX_ME")) 

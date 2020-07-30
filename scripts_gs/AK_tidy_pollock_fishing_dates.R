@@ -7,14 +7,14 @@ library(data.table)
 #basically just ignoring sector here because most fishing is in the "inshore sector" 
   #and the variability comes from regions (which I can match on) not sector 
 
-dates <- read_csv("data/pollock_fishing_dates/POLLOCK_USE.csv") %>%
+dates <- read_csv("data/AK_CWT_Trawl/pollock_fishing_dates/POLLOCK_USE.csv") %>%
   select(c(1:7)) %>%
   filter(!open_date == "Closed") %>%
   filter(year>1995) %>%
   rename(ocean_region = region) %>%
   #assign to regions for cwt matching. 
-  mutate(region = case_when(ocean_region == "GOA" & stat_area == "610" ~ "E.APEN",#"X610",
-                            ocean_region == "GOA" & stat_area == "620" ~ "W.APEN", #"X620",
+  mutate(region = case_when(ocean_region == "GOA" & stat_area == "610" ~ "W.APEN",#"X610",
+                            ocean_region == "GOA" & stat_area == "620" ~ "E.APEN", #"X620",
                             ocean_region == "GOA" & stat_area %in% c("630", "Shelikof") ~ "NW.GOA", #"X630", 
                             ocean_region == "GOA" & is.na(stat_area) & sector == "Shelikof" ~ "NW.GOA", #"X630", 
                             ocean_region == "GOA" & stat_area %in% c("640", "640 ") ~ "NE.GOA", #"X630",  
@@ -47,4 +47,4 @@ dates<- dates %>%
   #                           sector == "Offshore" ~ "Catcher Processor",
   #                           TRUE ~ sector))
   # 
-saveRDS(dates, "data/pollock_fishing_dates/pollock_fishing_dates.RDS")
+saveRDS(dates, "data/AK_CWT_Trawl/pollock_fishing_dates/pollock_fishing_dates.RDS")
