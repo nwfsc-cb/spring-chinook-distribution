@@ -1,0 +1,40 @@
+﻿region,category,order,label,south.border.name,state,line.start.lat,line.start.lon,line.end.lat,line.end.lon,line.end.lon.backup,label_lat1,label_long1,label_lat2,label_long2,comments
+MONT,MONT,1,label,Point Sur,ca,36.3,-122,36.3,-152,-136,36.3,-125,,,
+SFB,SFB,1,label,Pigeon Pt,ca,37.1833,-122.5,37.1833,-152,-136,37.8,-125,,,
+MEN,MEN,1,label,Point Arena,ca,38.958333,-123.5,38.958333,-152,-136,40.5,-124.9,,,
+NCA,NCA,1,label,Horse Mountain,ca,40.08333,-124.5,40.08333,-152,-136,39.2,-125,,,
+SOR,SOR,1,label,CA-OR Border,or,42,-124.5,42,-152,-136,43,-126,,,
+NOR,NOR,1,label,Florence South Jetty,or,44.015,-124,44.015,-152,-136,44.5,-126.5,,,
+COL,COL,1,label,Cape Falcon,or,45.76666,-124,45.76666,-152,-136,46,-126.5,,,
+WAC,WAC,1,label,Leadbetter Pt,wa,46.63611,-124,46.63611,-152,-136,47.5,-127,,,
+WAC.1,WAC,2,,,wa,48.42,-123.109,48.23,-123.54,-123.54,,,,,
+WAC.2,WAC,3,,,wa,48.23,-123.54,48.48,-124.78,-124.78,,,,,
+WAC.3,WAC,4,,,wa,48.28,-124.78,48.28,-152,-136,,,,,
+PUSO_out,PUSO_out,1,label,,,,,,,,48.264956,-123.935555,,,
+PUSO,PUSO,1,label,,bc,,,,,,47.862975,-122.433175,,,
+SGEO,SGEO,1,label,US.CAN Border,bc,50.8608,-128.2543103,51.196109,-127.773167,-127.773167,49.691398,-124.635008,,,
+SWVI,SWVI,1,label,US.CAN Border,bc,49.282966,-126.544033,49.282966,-152,-136,48.6,-127,,,line is at area 125 and is northern border
+NWVI,NWVI,1,label,Estevan Point,bc,50.8608,-128.2543103,50.8608,-152,-136,49.6,-129,,,"line is at area 125 and is southern border, east.west is north east corner of box"
+CBC,CBC,1,label,Cape Scott plus,bc,51.9358833,-131,51.9358833,-152,-136,51.5,-130,,,lines are complex areas inside of Haida G'wai
+CBC.1,CBC,2,,Cape Scott plus,bc,53.16666,-131,52.28333,-130.108333,-130.108333,,,,,north boundary
+CBC.2,CBC,3,,,bc,52.28333,-130.108333,51.8,-130,-130,,,,,north boundary
+CBC.3,CBC,4,,,bc,51.8,-130,51.6555,-130.508333,-130.508333,,,,,north boundary
+CBC.4,CBC,5,,,bc,51.6555,-130.508333,51.9358833,-131.015,-131.015,,,,,north boundary
+CBC.5,CBC,6,,,bc,53.16666,-131,53.16666,-130,-130,,,,,
+NBC,NBC,1,label,,bc,,,,,,53.5,-130.8,,,south boundary
+NBC.1,NBC,2,,,bc,53.16666,-131,52.28333,-130.108333,-130.108333,,,,,south boundary
+NBC.2,NBC,3,,,bc,52.28333,-130.108333,51.8,-130,-130,,,,,south boundary
+NBC.3,NBC,4,,,bc,51.8,-130,51.6555,-130.508333,-130.508333,,,,,south boundary
+NBC.4,NBC,5,,,bc,51.6555,-130.508333,51.9358833,-131.015,-131.015,,,,,south boundary
+NBC.5,NBC,6,,,bc,54.66255,-132.68255,54.66255,-131.3,-131.3,,,,,north boundary
+NBC.6,NBC,7,,,bc,54.66255,-132.68255,54.412241,-134.048796,-134.048796,,,,,north boundary
+NBC.7,NBC,8,,,bc,54.312241,-134.048796,54.312241,-152,-136,,,,,new extension
+SSEAK,SSEAK,1,label,,ak,,,,,,,,55,-135,
+SSEAK.1,SSEAK,2,,,ak,54.66255,-132.68255,54.66255,-131.3,-131.3,,,,,south boundary
+SSEAK.2,SSEAK,3,,,ak,54.66255,-132.68255,54.412241,-134.048796,-134.048796,,,,,south boundary
+SSEAK.3,SSEAK,4,,,ak,55.81666,-134.5,57.022754,-134.512624,-134.512624,,,,,north boundary
+SSEAK.4,SSEAK,5,,,ak,57.022754,-134.512624,57.185955,-133.561056,-133.561056,,,,,north boundary
+NSEAK,NSEAK,1,label,,ak,,,,,,,,57,-137.5,
+NSEAK.1,NSEAK,2,,,ak,55.81666,-134.5,57.022754,-134.512624,-134.512624,,,,,south boundary
+NSEAK.2,NSEAK,3,,,ak,57.022754,-134.512624,57.185955,-133.561056,-133.561056,,,,,south boundary
+NSEAK.3,NSEAK,4,,,ak,55.81666,-134.5,55.81666,-152,-136,,,,,

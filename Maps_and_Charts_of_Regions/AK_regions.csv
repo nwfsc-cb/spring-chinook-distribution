@@ -1,0 +1,13 @@
+﻿Region,line.start.lat,line.start.lon,line.end.lat,line.end.lon,boundary,groundfish fishing area
+SSEAK.1,54.66255,-132.68255,54.66255,-131.3,south boundary,"US/CAN Border, NMFS Area 650, Area A"
+SSEAK.2,54.66255,-132.68255,54.412241,-134.048796,south boundary,
+SSEAK.3,55.81666,-134.5,57.022754,-134.512624,north boundary,"NMFS Area 650, Area A"
+SSEAK.4,57.022754,-134.512624,57.185955,-133.561056,north boundary,
+NSEAK,58.8055556,-137.9441667,58.8055556,-140,Northwest boundary,Cuts in at Cape Fairweather
+NSEAK,58.8055556,-140,55,-140,Northwest boundary,NMFS Area 640 (144-140) 
+YAK,60,-144,55,-144,West Boundary,"Area A (140-144), Cut at Fairweather with Salmon management "
+PWS,60,-149,55,-149,West Boundary,Area E (149-144)
+KOD,57,-156.4,52.5,-156.4,West Boundary,Area K (149 - 156.4) 
+APEN,54,-167,52.5,-167,West Boundary,This boundary is based on location of recoveries and selected so that Dutch was in the APEN side of the divide. 
+ALEUT,,,,,,
+BER,54,-167,54,-180,,North of 54 and islands along APEN border
