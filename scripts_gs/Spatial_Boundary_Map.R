@@ -19,7 +19,7 @@ map<-north_america %>%
     filter(!lat > 62) %>%
     filter(!long < -173) %>%
     ggplot( ) +
-    geom_polygon(aes(x = long, y = lat, group = group), fill = "white", color = "black") +
+    geom_polygon(aes(x = long, y = lat, group = group), fill = "lightgray") +
     coord_fixed(1.3) +
     geom_segment(data = df, colour="gray", aes(x = as.numeric(line.start.lon), 
                                                y = as.numeric(line.start.lat), 

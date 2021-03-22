@@ -24,10 +24,10 @@ rockfish <- read_csv("data/Rockfish CWT.csv") %>%
   mutate(source="rockfish") %>%
   select(-c(fishery, detection_method)) %>%
   ## assign recoveries to our spatial boxes. Some latitudes dont have associated longitudes, but they do have an associated stat area 
-  mutate(rockfish_recovery_region = case_when(Area == 620 ~ "W.APEN",   
+  mutate(rockfish_recovery_region = case_when(Area == 620 ~ "E.APEN",   
                                               Area == 630 ~ "NW.GOA",
-                                              Long < -147 & Long > -154 | Long == -147 ~ "NW.GOA", #"X630",
-                                              Long < -154 & Long > -159 | Long == -154 ~ "W.APEN", #"X620",
+                                              Long <= -147 & Long > -154  ~ "NW.GOA", #"X630",
+                                              Long <= -154 & Long > -159  ~ "E.APEN", #"X620",
                                               TRUE~ "FIX" )) %>%  # 5 fish from 2013 from ship Cape Kiwanda that do not have any location info. 
     filter(!Missing_Fins %in% c("None", "none")) #filter out recoveries where the adipose fin wasn't clipped 
 

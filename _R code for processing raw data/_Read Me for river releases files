@@ -1,0 +1,68 @@
+### Read Me for parsing release GROUPS
+
+OK.  This is the partial documentation for choosing and parsing CWT releases.
+
+Roughly, Ole looks through the CWT release database and finds hatchery & stock location codes that have a reasonably large numbers of releases over a reasonably large number of years.  Because the what is large varies a lot by region, run, and time, there is no hard and fast limit on which are included.  It is an iterative procedure that tries to find representative releases for most regions, years, and run type.
+
+With the help of
+⁨Github⁩/⁨Salmon-Climate/⁨_R code for processing raw data⁩/CWT identify spring Chinook hatcheries and releases.R
+I make a file that defines the release groups by hatchery, stock location, run type, and (sometimes) release location. This file is here:
+⁨Github⁩ ▸ ⁨Orca_Salmon_DATA⁩ ▸ ⁨Releases⁩ ▸ ⁨CLIMATE⁩
+and takes the form:
+"river releases ", RUN_TYPE," chinook ",GROUP," CLIMATE.csv"
+with RUN_TYPE == "fall" or "spring-summer"
+GROUP is a name of the runs that are included... this is usually a description of the inspiration for the groups used.
+E.g "river releases spring-summer chinook FRAM_v2 CLIMATE.csv"
+
+For the "river releases..." files, there are these columns
+ID_name       = Name of release grouping.
+State         = Release State
+Ocean.region  = Name of broader Chinook group.  When these are the same, they will have the same estimated ocean distribution.
+River         = Which river do these fish come from.
+Run           = RMIS run codes( 1=spring, 2=summer,3=fall,4=winter,7=late fall, 8=upriver bright)
+month.start   = field for defining which release groups are included by thier month of release.
+month.stop    = field for defining when by release groups are  included by thier month of release.
+Hatchery      = common name for hatchery
+release_location_name = text string for release location.  May be present or absent.
+stock_location_code   = text string code for origin of the brood stock.  Must be present.
+hatchery_location_code = text string code for hatchery where fish were raised.  Must be present or "" (mostly for tagged wild fish)
+hatchery_location_name = Short Name for hatchery Must be present or ""
+stock_location_name = Short Name for hatchery Must be present
+notes
+
+The river releases file is used to go in and query all of the release tag codes and pull out tag codes that match these fields:
+Run           = RMIS run codes( 1=spring, 2=summer,3=fall,4=winter,7=late fall, 8=upriver bright)
+month.start   = field for defining which release groups are included by thier month of release.
+month.stop    = field for defining when by release groups are  included by thier month of release.
+release_location_name = text string for release location.  May be present or absent.
+stock_location_code   = text string code for origin of the brood stock.  Must be present.
+hatchery_location_code = text string code for hatchery where fish were raised.  Must be present or "" (mostly for tagged wild fish)
+hatchery_location_name = Short Name for hatchery Must be present or ""
+stock_location_name = Short Name for hatchery Must be present
+
+script that does this is:
+Github⁩/⁨Salmon-Climate/⁨_R code for processing raw data⁩/CWT identify, fetch releases, match to recover.R
+It writes a file with all of the tag codes to:
+GitHub/Orca_Salmon_DATA/Releases/Climate/Tag codes ",RUN.TYPE," chinook ",GROUP," CLIMATE",loc_18,".csv"
+
+This should have a line for each tag code that will be potentially included in the model runs.
+
+GENOA'S TASK:
+Starting with these "Tag code..." files,
+1) dig through the tag codes and figure out if we need to add month start and stop dates for each releases.  For example, are there releases from a single ID_name code that are released brood_year +1 and others at brood_year +2? If so we may need to split the releases into _small and _large release groups so as not to mix them.  See "river releases fall FRAM_v1.csv" for some examples on how Ole has done this before.
+
+2) Are there reasonable numbers of releases and years from each "Ocean.Region"? Or do we need to go back and find and include additional releases from particular location and years.  It may be that they don't exist.  But we can add to the river releases file.
+
+3) Are there some releases that are actually very very small and need to be excluded for some reason?
+
+4) Do the groupings of ID_name and ocean.region seem ok?  Or are there some mistakes?
+
+5) Ensure each tag code only occurs once in the "Tag codes" file.
+
+NEXT TASKS:
+After we feel good about the releases, we can use the rest of the
+Github⁩/⁨Salmon-Climate/⁨_R code for processing raw data⁩/CWT identify, fetch releases, match to recover.R
+file to match targeted releases to recoveries.
+
+
+Naming conventions for ID_name.  Generally, I use the name of the hatchery first, then the name of the river (if there are multiple river releases from a hatchery) and followed by _spr, _wint, or _sum for the run type (fall is the default if there is no label at the end).
