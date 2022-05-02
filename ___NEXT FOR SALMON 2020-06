@@ -1,0 +1,82 @@
+Long list of things to be added to the Salmon Model
+
+Update circa 04-19-2022
+Fix chinook recovery database. (done)
+Query spring Chinook recoveries, make basic plots of where and when each is recovered.
+Incorporate Alex's edits to fix the spawning calendar.
+Add to recovery database.
+
+
+4-19-2022 Notes
+working out of spring-chinook-distribution GitRepo.
+Adjusted all_chinook.RData to avoid leading zeros problem.
+adjusted releases from 2020_07 to avoid read-in error
+Made CWT control files folder.
+
+
+
+
+
+
+
+
+
+
+
+
+
+Fisheries and Effort:
+New AK troll effot data
+BC hake data
+Alaska Pollock
+Alaska Rockfish
+AK troll- separate inside vs. outside troll
+What to do about net fisheries.
+
+Recoveries:
+Split out Alaska areas
+APEN
+KODIAK
+CISS
+PWS
+PWS - inside
+YAK
+
+Catchability:
+Allow for distinct, run-type Catchability
+
+Spatial boxes:
+Add Yakutat and GOA areas.
+
+Vulnerability
+Splines and/or Quadratic for rec and troll.
+
+Genetic information
+GSI sources
+Defining discrete origins in the Model
+
+Maturity
+Force all remaining fish to enter the river at age 6 (would likely get rid of need for old age penalty.)---- DONE.
+Let Maturity vary from year to year.
+Add spring life-history option for spawn timing
+
+Environment
+PDO & NPGO as covariates.
+
+OTHER:
+TRY OUT ESTIMATING ADULT M with the different mortality schedule.
+
+
+
+
+
+SHORT TERM TO DO FOR PAPER
+DIC
+UPDATE ALL PLOTS IN MAIN TEXT, S5
+ABSTRACT
+RE-READ S1, S3.
+
+S5:
+WIDE FORM DISTRIBUTION USING ALL OF REGIONS
+INCLUDE DISTRIBUTION ESTIMATES FOR PUSO AND SUCH?
+DIFFERENT HARVEST FRACTIONS FOR SUPPLEMENTAL FIGURES FIG.5

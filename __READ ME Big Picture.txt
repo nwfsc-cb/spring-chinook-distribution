@@ -1,0 +1,28 @@
+Big Picture, here's what's going on:
+
+Workhorse files are in the “Mixed Model” directory and are:
+
+Prep raw data for CPUE analysis Climate.R
+and
+Mixed bin+pos SS + PROC logit prob_age CLIMATE ts-q FIN.r
+STAN files are there too with a couple of different but very similar versions.
+
+"Prep ..." compiles all of the RMIS release and recovery data and creates piles of indicies that get used during estimation. It calls a bunch of other scripts, most of which have obvious interpretations. All of the called scripts are in the folder "_R code for...".  However, you do need to run some other scripts before you run "Prep..." and have all of the paths right for everything to work out.  
+
+Notably, you need to have queried all of the data from RMIS before hand and have it in a separate folder and identified the tag codes you want to use. then run:
+CWT identify, fetch releases, match to recover.R
+to compile the data into a smaller number of release groups.  There is some guidance on what the is going on in the file "Data processing ... READ ME.txt" 
+
+Importantly, if you want to use different areas or different seasons you are going to have to go through and change the indexing and aggregating functions.  I tried to set it up so that both changed relatively easily, but will not guarantee it is not buggy. Also note that this calls a file that maps weird recovery codes to discrete named areas. You will likely need to change and modify the file that maps recoveries to areas as well.  It's a pain. 
+
+The files that contain the data I use are not in this git repo because they are very big.  I have sent you a google folder with data that I use for effort, releases, and recoveries.  I think that should allow you to follow what is going on.
+
+"Mixed bin+pos SS...." is the file that sets up the data to be read into stan and calls the program.  This is where the data manipulations for each gear type show up. Also here are the prior definitions for some of the parameters, assumptions about shaker mortality, assumptions about the cohort spawning distributions, and other things.  I find that for big datasets, the parallel function doesn't work for STAN... so I run one chain per instance of R and combine them at the end.  I can write more about that code if you want.
+
+I have also written a bunch of post-processing scripts.  They are in the "Mixed Model post processing folder".  The control file is "Diagnostics and descriptive plots..." It calls the other scripts that plot particular parts of the model.
+
+There are a lot of hidden files and stuff in other directories (i.e. all of the RMIS data, model output files that are >100mb or >1gb) that are not directly available.  I need to figure out a better way to share them with others.
+
+Lemme know if you need some more info.
+
+O

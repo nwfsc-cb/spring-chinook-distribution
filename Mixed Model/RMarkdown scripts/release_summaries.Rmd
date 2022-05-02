@@ -1,0 +1,123 @@
+---
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r include=FALSE}
+library(xtable)
+chin.releases.a <-  REL %>% group_by(ocean.region)%>% 
+  summarize(N.release.groups = length(ID),N.year= length(unique(brood_year)),avg.release =mean(N.released),tot.released=sum(N.released)) %>% 
+  rename(ocean_region=ocean.region) %>%
+  left_join(move_id %>% dplyr::select(move_id_idx,ocean_region),.) %>% dplyr::select(-move_id_idx) %>%
+  rename(origin.region = ocean_region) %>% as.data.frame() 
+ 
+chin.releases.hatcheries <- REL %>% group_by(ID,ocean.region) %>% 
+                            summarize(first_brood=min(brood_year),last_brood=max(brood_year), n_brood=length(brood_year)) %>%
+                            rename(ocean_region=ocean.region) %>%
+                            left_join(move_id %>% dplyr::select(move_id_idx,ocean_region),.) %>% arrange(move_id_idx,ID) %>% 
+                            dplyr::select(-move_id_idx) %>%rename(origin.region = ocean_region) %>% as.data.frame()
+
+chin.releases.hatcheries <- rbind(chin.releases.hatcheries, c("TOTAL",NA,NA,NA,sum(chin.releases.hatcheries$n_brood)))
+
+
+```
+
+# Description of stocks included in the fall Chinook salmon ocean distribution model.  It has these characteristics: 
+
+Attribute | Value
+----------|--------
+Run date | `r date()`
+Hatchery Run code | `r GROUP` 
+Spatial grouping code | `r loc_18`
+Month structure code | `r MONTH.STRUCTURE`
+Brood years (first,last) | `r paste0("(",min(YEARS.BROOD),",",max(YEARS.BROOD),")") `
+Release years (first,last) | `r paste0("(",min(YEARS.RELEASE),",",max(YEARS.RELEASE),")") `
+CWT Recovery years (first,last) | `r paste0("(",min(YEARS.RECOVER),",",max(YEARS.RECOVER),")") `
+
+### Here is a table of the ocean location code and location number from south (MONT = Monterey) to North (NSEAK = Northern Southeast Alaska)
+```{r  results="asis",echo=F}
+library(knitr)
+kable(LOCATIONS %>% rename(Code=location.name,Number=location.number))
+```
+
+\newpage
+
+### Here is a table of the timing in terms of calendar year, calendar months, season, model year, model month, and model age. The 18 seasonal steps of model age is the primary time accounting structure. As a reminder the model starts tracking fish in May of brood year + 2 so if fish are from the 2000 brood year and released in 2001 the model tracks that release starting in May 2002. 
+```{r  results="asis",echo=F}
+library(knitr)
+
+if(MONTH.STRUCTURE=="FRAM"){
+kable(CALENDAR %>% mutate(Season = substr(CALENDAR$lab,7,20)) %>% rename(Calendar_Month=cal.month,Model_Year=model.year,Model_Age=model.age,Model_Month=ocean.age) %>%
+mutate(Calendar_Year=c(rep(1,8),rep(2,12),rep(3,12),rep(4,12),rep(5,9))) %>% dplyr::select(Calendar_Year,Calendar_Month,Season,Model_Year,Model_Month,Model_Age))
+}
+if(MONTH.STRUCTURE=="FOUR"){
+kable(CALENDAR %>% mutate(Season = substr(CALENDAR$lab,7,20)) %>% rename(Calendar_Month=cal.month,Model_Year=model.year,Model_Age=model.age,Model_Month=ocean.age) %>%
+mutate(Calendar_Year=c(rep(1,9),rep(2,12),rep(3,12),rep(4,12),rep(5,10))) %>% dplyr::select(Calendar_Year,Calendar_Month,Season,Model_Year,Model_Month,Model_Age))
+}
+```
+
+\newpage
+
+### Here is a tabular summary of the hatcheries included in this model run ordered from south to north.  Codes as the previous tables.  The suffix "_small" or "_large" on some of the stock refers to hatchery that release fish at two sizes (or, equivalently, at two times of year).  "large" refers to yearlings and "small" to fingerlings in many but not all cases.  The "_late" designation separates out fish designated as Upriver Bright from other stock types when there are multiple run types from a single hatchery.  These releases only include fall fish (run=3 from RMIS) or run=8 (Columbia Upriver Brights).  Summer and spring run fish are not included. ``Origin.region" is the relevent grouping variable - generally these correspond to the ocean region the fish are released into but the Columbia stocks are subdivided into multiple groups (LCOL, MCOL, UCOL, SNAK, URB) as at the Strait of Georgia and Puget Sound (SGEO_S, SGEO_N and PUSO_N, PUSO_S, respectively).  ID generally corresponds to the river and/or the hatchery of origin.
+```{r  results="asis",echo=F}
+library(knitr)
+kable(chin.releases.hatcheries)
+```
+
+### Here is a tabular summary of the releases from each region.  Total CWT released = `r format(sum(REL$N.released),big.mark=",")`
+```{r  results="asis",echo=F}
+library(knitr)
+kable(chin.releases.a,digits=0,format.args = list( big.mark = ","))
+```
+
+\newpage
+
+### Here are some plots of fishing effort from the available fleets. x-axis in model seasons, y-axis is spatial boxes. Color is on the log-scale. Black can indicate either a true zero (most troll data) or no data (generally rec fisheries, generally in Canada and Alaska) in these plots.
+```{r, echo=F}
+  plot.heatmap( temp=log(t(as.matrix(K_troll_flat))+1e-15,10),"Troll Effort (Boat Days)")
+  plot.heatmap( log(t(as.matrix(K_treaty_flat))+1e-15,10),"Treaty Troll Effort (Deliveries)")
+  plot.heatmap( log(t(as.matrix(K_rec_flat + K_rec_PUSO_flat))+1e-15,10),"Rec Effort, US (Angler-Days)")
+  plot.heatmap( log(t(as.matrix(K_rec_can_flat))+1e-15,10),"Rec Effort, Canada (Boat Trips)")
+  plot.heatmap( log(t(as.matrix(K_rec_can_irec_flat))+1e-15,10),"Rec Effort, iRec, Canada (license holder trips)")
+  plot.heatmap( log(t(as.matrix(K_hake_ashop_flat))+1e-15,10),"Trawl hake ASHOP Effort (Boat Days)")
+  plot.heatmap( log(t(as.matrix(K_hake_shoreside_flat))+1e-15,10),"Trawl hake Shoreside (Boat Days)")
+```
+
+\newpage
+
+### Here are some plots of the median sampling effort associated with each fleet.  This is the raw data.  There is some additional interpolation that occurs for some of the black boxes. Units are in the title.
+```{r, echo=F}
+  A <- Lambda_troll_flat;  A[is.na(A)] <- -99
+  B <- Lambda_troll_flat_int;  B[is.na(B)] <- -99
+  plot.heatmap.samp.frac( temp=t(as.matrix(A)),"Troll sampling fraction ")
+
+  A <- Lambda_rec_flat;  A[is.na(A)] <- -99
+  B <- Lambda_rec_flat_int;  B[is.na(B)] <- -99
+  plot.heatmap.samp.frac( temp=t(as.matrix(A)),"Rec sampling fraction ")
+
+  A <- Lambda_treaty_flat;  A[is.na(A)] <- -99
+  B <- Lambda_treaty_flat_int;  B[is.na(B)] <- -99
+  plot.heatmap.samp.frac( temp=t(as.matrix(A)),"Treaty sampling fraction ")
+```
+
+
+\newpage
+
+<!--
+=======
+
+>>>>>>> 506a158e83d5ccbe7debebdc854f58d56257c8dd
+=======
+
+>>>>>>> 506a158e83d5ccbe7debebdc854f58d56257c8dd
+### Here are few representative plots of CPUE from the troll fleet for individual releases. Grey means no observed effort. Black means no observed catch but non-zero effort. White means observed catch but no known effort (rare). Colors are non-zero CPUE.  Not that the color scale varies among panels. Each y-axis starts in summer (May-June) and procedes through the 18 steps of the model.
+```{r, echo=F}
+  for(i in c(282,642,395,1176,16,1278,997,112,628,530,1191,70,232)){
+    plot.CPUE.heatmap( temp.all=C_troll_true,effort.all= K_troll_flat,id=i,MONTH.STRUCTURE=MONTH.STRUCTURE)
+  }
+```
+<<<<<<< HEAD
+<<<<<<< HEAD
+-->
+

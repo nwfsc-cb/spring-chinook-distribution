@@ -1,0 +1,429 @@
+\documentclass[]{article}
+\usepackage{lmodern}
+\usepackage{amssymb,amsmath}
+\usepackage{ifxetex,ifluatex}
+\usepackage{fixltx2e} % provides \textsubscript
+\ifnum 0\ifxetex 1\fi\ifluatex 1\fi=0 % if pdftex
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+\else % if luatex or xelatex
+  \ifxetex
+    \usepackage{mathspec}
+  \else
+    \usepackage{fontspec}
+  \fi
+  \defaultfontfeatures{Ligatures=TeX,Scale=MatchLowercase}
+\fi
+% use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+% use microtype if available
+\IfFileExists{microtype.sty}{%
+\usepackage{microtype}
+\UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\usepackage[margin=1in]{geometry}
+\usepackage{hyperref}
+\hypersetup{unicode=true,
+            pdfborder={0 0 0},
+            breaklinks=true}
+\urlstyle{same}  % don't use monospace font for urls
+\usepackage{longtable,booktabs}
+\usepackage{graphicx}
+% grffile has become a legacy package: https://ctan.org/pkg/grffile
+\IfFileExists{grffile.sty}{%
+\usepackage{grffile}
+}{}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+\IfFileExists{parskip.sty}{%
+\usepackage{parskip}
+}{% else
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{6pt plus 2pt minus 1pt}
+}
+\setlength{\emergencystretch}{3em}  % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{0}
+% Redefines (sub)paragraphs to behave more like sections
+\ifx\paragraph\undefined\else
+\let\oldparagraph\paragraph
+\renewcommand{\paragraph}[1]{\oldparagraph{#1}\mbox{}}
+\fi
+\ifx\subparagraph\undefined\else
+\let\oldsubparagraph\subparagraph
+\renewcommand{\subparagraph}[1]{\oldsubparagraph{#1}\mbox{}}
+\fi
+
+%%% Use protect on footnotes to avoid problems with footnotes in titles
+\let\rmarkdownfootnote\footnote%
+\def\footnote{\protect\rmarkdownfootnote}
+
+%%% Change title format to be more compact
+\usepackage{titling}
+
+% Create subtitle command for use in maketitle
+\providecommand{\subtitle}[1]{
+  \posttitle{
+    \begin{center}\large#1\end{center}
+    }
+}
+
+\setlength{\droptitle}{-2em}
+
+  \title{}
+    \pretitle{\vspace{\droptitle}}
+  \posttitle{}
+    \author{}
+    \preauthor{}\postauthor{}
+    \date{}
+    \predate{}\postdate{}
+  
+
+\begin{document}
+
+\hypertarget{description-of-stocks-included-in-the-fall-chinook-salmon-ocean-distribution-model.-it-has-these-characteristics}{%
+\section{Description of stocks included in the fall Chinook salmon ocean
+distribution model. It has these
+characteristics:}\label{description-of-stocks-included-in-the-fall-chinook-salmon-ocean-distribution-model.-it-has-these-characteristics}}
+
+\begin{longtable}[]{@{}ll@{}}
+\toprule
+Attribute & Value\tabularnewline
+\midrule
+\endhead
+Run date & Thu Dec 5 10:39:57 2019\tabularnewline
+Hatchery Run code & FRAM\_v1\tabularnewline
+Spatial grouping code & TWO\_OR\tabularnewline
+Month structure code & FOUR\tabularnewline
+Brood years (first,last) & (1977,2009)\tabularnewline
+Release years (first,last) & (1978,2010)\tabularnewline
+CWT Recovery years (first,last) & (1979,2015)\tabularnewline
+\bottomrule
+\end{longtable}
+
+\hypertarget{here-is-a-table-of-the-ocean-location-code-and-location-number-from-south-mont-monterey-to-north-nseak-northern-southeast-alaska}{%
+\subsubsection{Here is a table of the ocean location code and location
+number from south (MONT = Monterey) to North (NSEAK = Northern Southeast
+Alaska)}\label{here-is-a-table-of-the-ocean-location-code-and-location-number-from-south-mont-monterey-to-north-nseak-northern-southeast-alaska}}
+
+\begin{longtable}[]{@{}lr@{}}
+\toprule
+Code & Number\tabularnewline
+\midrule
+\endhead
+MONT & 1\tabularnewline
+SFB & 2\tabularnewline
+MEN & 3\tabularnewline
+NCA & 4\tabularnewline
+SOR & 5\tabularnewline
+NOR & 6\tabularnewline
+COL & 7\tabularnewline
+WAC & 8\tabularnewline
+PUSO & 9\tabularnewline
+PUSO\_out & 10\tabularnewline
+SGEO & 11\tabularnewline
+SWVI & 12\tabularnewline
+NWVI & 13\tabularnewline
+CBC & 14\tabularnewline
+NBC & 15\tabularnewline
+SSEAK & 16\tabularnewline
+NSEAK & 17\tabularnewline
+\bottomrule
+\end{longtable}
+
+\newpage
+
+\hypertarget{here-is-a-table-of-the-timing-in-terms-of-calendar-year-calendar-months-season-model-year-model-month-and-model-age.-the-18-seasonal-steps-of-model-age-is-the-primary-time-accounting-structure.-as-a-reminder-the-model-starts-tracking-fish-in-may-of-brood-year-2-so-if-fish-are-from-the-2000-brood-year-and-released-in-2001-the-model-tracks-that-release-starting-in-may-2002.}{%
+\subsubsection{Here is a table of the timing in terms of calendar year,
+calendar months, season, model year, model month, and model age. The 18
+seasonal steps of model age is the primary time accounting structure. As
+a reminder the model starts tracking fish in May of brood year + 2 so if
+fish are from the 2000 brood year and released in 2001 the model tracks
+that release starting in May
+2002.}\label{here-is-a-table-of-the-timing-in-terms-of-calendar-year-calendar-months-season-model-year-model-month-and-model-age.-the-18-seasonal-steps-of-model-age-is-the-primary-time-accounting-structure.-as-a-reminder-the-model-starts-tracking-fish-in-may-of-brood-year-2-so-if-fish-are-from-the-2000-brood-year-and-released-in-2001-the-model-tracks-that-release-starting-in-may-2002.}}
+
+\begin{longtable}[]{@{}rrlrrr@{}}
+\toprule
+Calendar\_Year & Calendar\_Month & Season & Model\_Year & Model\_Month &
+Model\_Age\tabularnewline
+\midrule
+\endhead
+1 & 4 & spring & 1 & 1 & 1\tabularnewline
+1 & 5 & spring & 1 & 2 & 1\tabularnewline
+1 & 6 & summer & 1 & 3 & 2\tabularnewline
+1 & 7 & summer & 1 & 4 & 2\tabularnewline
+1 & 8 & fall & 1 & 5 & 3\tabularnewline
+1 & 9 & fall & 1 & 6 & 3\tabularnewline
+1 & 10 & fall & 1 & 7 & 3\tabularnewline
+1 & 11 & winter & 1 & 8 & 4\tabularnewline
+1 & 12 & winter & 1 & 9 & 4\tabularnewline
+2 & 1 & winter & 1 & 10 & 4\tabularnewline
+2 & 2 & winter & 1 & 11 & 4\tabularnewline
+2 & 3 & winter & 1 & 12 & 4\tabularnewline
+2 & 4 & spring & 2 & 13 & 5\tabularnewline
+2 & 5 & spring & 2 & 14 & 5\tabularnewline
+2 & 6 & summer & 2 & 15 & 6\tabularnewline
+2 & 7 & summer & 2 & 16 & 6\tabularnewline
+2 & 8 & fall & 2 & 17 & 7\tabularnewline
+2 & 9 & fall & 2 & 18 & 7\tabularnewline
+2 & 10 & fall & 2 & 19 & 7\tabularnewline
+2 & 11 & winter & 2 & 20 & 8\tabularnewline
+2 & 12 & winter & 2 & 21 & 8\tabularnewline
+3 & 1 & winter & 2 & 22 & 8\tabularnewline
+3 & 2 & winter & 2 & 23 & 8\tabularnewline
+3 & 3 & winter & 2 & 24 & 8\tabularnewline
+3 & 4 & spring & 3 & 25 & 9\tabularnewline
+3 & 5 & spring & 3 & 26 & 9\tabularnewline
+3 & 6 & summer & 3 & 27 & 10\tabularnewline
+3 & 7 & summer & 3 & 28 & 10\tabularnewline
+3 & 8 & fall & 3 & 29 & 11\tabularnewline
+3 & 9 & fall & 3 & 30 & 11\tabularnewline
+3 & 10 & fall & 3 & 31 & 11\tabularnewline
+3 & 11 & winter & 3 & 32 & 12\tabularnewline
+3 & 12 & winter & 3 & 33 & 12\tabularnewline
+4 & 1 & winter & 3 & 34 & 12\tabularnewline
+4 & 2 & winter & 3 & 35 & 12\tabularnewline
+4 & 3 & winter & 3 & 36 & 12\tabularnewline
+4 & 4 & spring & 4 & 37 & 13\tabularnewline
+4 & 5 & spring & 4 & 38 & 13\tabularnewline
+4 & 6 & summer & 4 & 39 & 14\tabularnewline
+4 & 7 & summer & 4 & 40 & 14\tabularnewline
+4 & 8 & fall & 4 & 41 & 15\tabularnewline
+4 & 9 & fall & 4 & 42 & 15\tabularnewline
+4 & 10 & fall & 4 & 43 & 15\tabularnewline
+4 & 11 & winter & 4 & 44 & 16\tabularnewline
+4 & 12 & winter & 4 & 45 & 16\tabularnewline
+5 & 1 & winter & 4 & 46 & 16\tabularnewline
+5 & 2 & winter & 4 & 47 & 16\tabularnewline
+5 & 3 & winter & 4 & 48 & 16\tabularnewline
+5 & 4 & spring & 5 & 49 & 17\tabularnewline
+5 & 5 & spring & 5 & 50 & 17\tabularnewline
+5 & 6 & summer & 5 & 51 & 18\tabularnewline
+5 & 7 & summer & 5 & 52 & 18\tabularnewline
+5 & 8 & fall & 5 & 53 & 19\tabularnewline
+5 & 9 & fall & 5 & 54 & 19\tabularnewline
+5 & 10 & fall & 5 & 55 & 19\tabularnewline
+\bottomrule
+\end{longtable}
+
+\newpage
+
+\hypertarget{here-is-a-tabular-summary-of-the-hatcheries-included-in-this-model-run-ordered-from-south-to-north.-codes-as-the-previous-tables.-the-suffix-_small-or-_large-on-some-of-the-stock-refers-to-hatchery-that-release-fish-at-two-sizes-or-equivalently-at-two-times-of-year.-large-refers-to-yearlings-and-small-to-fingerlings-in-many-but-not-all-cases.-the-_late-designation-separates-out-fish-designated-as-upriver-bright-from-other-stock-types-when-there-are-multiple-run-types-from-a-single-hatchery.-these-releases-only-include-fall-fish-run3-from-rmis-or-run8-columbia-upriver-brights.-summer-and-spring-run-fish-are-not-included.-origin.region-is-the-relevent-grouping-variable---generally-these-correspond-to-the-ocean-region-the-fish-are-released-into-but-the-columbia-stocks-are-subdivided-into-multiple-groups-lcol-mcol-ucol-snak-urb-as-at-the-strait-of-georgia-and-puget-sound-sgeo_s-sgeo_n-and-puso_n-puso_s-respectively.-id-generally-corresponds-to-the-river-andor-the-hatchery-of-origin.}{%
+\subsubsection{Here is a tabular summary of the hatcheries included in
+this model run ordered from south to north. Codes as the previous
+tables. The suffix "\_small" or "\_large" on some of the stock refers to
+hatchery that release fish at two sizes (or, equivalently, at two times
+of year). ``large'' refers to yearlings and ``small'' to fingerlings in
+many but not all cases. The "\_late" designation separates out fish
+designated as Upriver Bright from other stock types when there are
+multiple run types from a single hatchery. These releases only include
+fall fish (run=3 from RMIS) or run=8 (Columbia Upriver Brights). Summer
+and spring run fish are not included. ``Origin.region" is the relevent
+grouping variable - generally these correspond to the ocean region the
+fish are released into but the Columbia stocks are subdivided into
+multiple groups (LCOL, MCOL, UCOL, SNAK, URB) as at the Strait of
+Georgia and Puget Sound (SGEO\_S, SGEO\_N and PUSO\_N, PUSO\_S,
+respectively). ID generally corresponds to the river and/or the hatchery
+of
+origin.}\label{here-is-a-tabular-summary-of-the-hatcheries-included-in-this-model-run-ordered-from-south-to-north.-codes-as-the-previous-tables.-the-suffix-_small-or-_large-on-some-of-the-stock-refers-to-hatchery-that-release-fish-at-two-sizes-or-equivalently-at-two-times-of-year.-large-refers-to-yearlings-and-small-to-fingerlings-in-many-but-not-all-cases.-the-_late-designation-separates-out-fish-designated-as-upriver-bright-from-other-stock-types-when-there-are-multiple-run-types-from-a-single-hatchery.-these-releases-only-include-fall-fish-run3-from-rmis-or-run8-columbia-upriver-brights.-summer-and-spring-run-fish-are-not-included.-origin.region-is-the-relevent-grouping-variable---generally-these-correspond-to-the-ocean-region-the-fish-are-released-into-but-the-columbia-stocks-are-subdivided-into-multiple-groups-lcol-mcol-ucol-snak-urb-as-at-the-strait-of-georgia-and-puget-sound-sgeo_s-sgeo_n-and-puso_n-puso_s-respectively.-id-generally-corresponds-to-the-river-andor-the-hatchery-of-origin.}}
+
+\begin{longtable}[]{@{}lllll@{}}
+\toprule
+origin.region & ID & first\_brood & last\_brood &
+n\_brood\tabularnewline
+\midrule
+\endhead
+SFB & Coleman & 1980 & 2009 & 29\tabularnewline
+SFB & Feather & 1977 & 2009 & 32\tabularnewline
+SFB & Merced & 1987 & 2009 & 16\tabularnewline
+SFB & Mokelumne & 1990 & 2009 & 16\tabularnewline
+SFB & Nimbus & 1982 & 2009 & 15\tabularnewline
+SFB & San\_Joaquin & 1981 & 1999 & 6\tabularnewline
+SFB & Tehama & 1977 & 1984 & 5\tabularnewline
+SFB & Yuba & 1983 & 1986 & 2\tabularnewline
+NCA & Irongate & 1979 & 2009 & 29\tabularnewline
+NCA & Irongate\_large & 1978 & 2007 & 26\tabularnewline
+NCA & Mad & 1980 & 1982 & 2\tabularnewline
+NCA & Mad\_large & 2001 & 2001 & 1\tabularnewline
+NCA & Smith & 1999 & 2008 & 3\tabularnewline
+NCA & Smith\_large & 1978 & 1978 & 1\tabularnewline
+NCA & Trinity & 1977 & 2009 & 29\tabularnewline
+NCA & Trinity\_large & 1977 & 2009 & 36\tabularnewline
+SOR & Chetco & 1978 & 2006 & 25\tabularnewline
+COR & Elk & 1977 & 2009 & 33\tabularnewline
+NOR & Salmon(OR) & 1977 & 2009 & 31\tabularnewline
+LCOL & Abernathy & 1977 & 1995 & 11\tabularnewline
+LCOL & Big Creek\_large & 1982 & 2004 & 18\tabularnewline
+LCOL & Big Creek\_small & 1977 & 2009 & 32\tabularnewline
+LCOL & Bonneville\_large & 1986 & 1992 & 4\tabularnewline
+LCOL & Bonneville\_small & 1977 & 2009 & 23\tabularnewline
+LCOL & Cowlitz\_large & 1981 & 1984 & 4\tabularnewline
+LCOL & Cowlitz\_small & 1977 & 2009 & 24\tabularnewline
+LCOL & Elochoman\_small & 1977 & 2007 & 22\tabularnewline
+LCOL & Fallert & 1979 & 2009 & 19\tabularnewline
+LCOL & Grays\_large & 1984 & 1996 & 6\tabularnewline
+LCOL & Grays\_small & 1977 & 1995 & 14\tabularnewline
+LCOL & Kalama & 1977 & 2009 & 24\tabularnewline
+LCOL & Klaskanine\_large & 1984 & 2009 & 12\tabularnewline
+LCOL & Klaskanine\_small & 1978 & 2009 & 13\tabularnewline
+LCOL & Spring Creek\_LCOL & 1983 & 1999 & 3\tabularnewline
+LCOL & Stayton & 1978 & 1994 & 14\tabularnewline
+LCOL & Toutle & 1977 & 2009 & 19\tabularnewline
+LCOL & Washougal & 1977 & 2009 & 26\tabularnewline
+LCOL & Youngs Bay & 1989 & 2009 & 15\tabularnewline
+MCOL & Klickitat\_small & 1997 & 2000 & 4\tabularnewline
+MCOL & Spring Creek & 1977 & 2009 & 31\tabularnewline
+MCOL & Spring Creek\_? & 1984 & 1987 & 3\tabularnewline
+MCOL & White\_salmon\_small & 1977 & 2009 & 15\tabularnewline
+UCOL & Bright\_Yakima & 1987 & 1994 & 4\tabularnewline
+UCOL & Bright\_Yakima2 & 1983 & 1985 & 3\tabularnewline
+UCOL & Klickitat\_small\_Priest & 1994 & 2004 & 10\tabularnewline
+UCOL & Priest & 1977 & 2009 & 33\tabularnewline
+UCOL & Prosser & 2003 & 2009 & 7\tabularnewline
+UCOL & Ringold & 1977 & 2009 & 16\tabularnewline
+UCOL & Turtle\_large & 1982 & 1993 & 11\tabularnewline
+UCOL & Turtle\_small & 1992 & 1993 & 2\tabularnewline
+SNAK & Hagerman & 1978 & 1984 & 6\tabularnewline
+SNAK & Lyons\_large & 1993 & 2008 & 19\tabularnewline
+SNAK & Lyons\_small & 1998 & 2009 & 9\tabularnewline
+SNAK & Oxbow & 2003 & 2009 & 7\tabularnewline
+URB & Bonneville\_late & 1979 & 2009 & 28\tabularnewline
+URB & Bonneville\_late\_large & 1977 & 1987 & 9\tabularnewline
+URB & Clearwater\_late\_large & 1995 & 2008 & 10\tabularnewline
+URB & Clearwater\_late\_small & 1995 & 2009 & 7\tabularnewline
+URB & Irrigon\_large & 1988 & 1989 & 2\tabularnewline
+URB & Irrigon\_small & 1985 & 1990 & 6\tabularnewline
+URB & Klickitat\_late\_small & 2008 & 2009 & 2\tabularnewline
+URB & Lyons\_late\_large & 1983 & 1992 & 9\tabularnewline
+URB & Lyons\_late\_small & 1984 & 1992 & 8\tabularnewline
+URB & NPT & 2005 & 2009 & 5\tabularnewline
+URB & Umatilla\_large & 1995 & 2008 & 5\tabularnewline
+URB & Umatilla\_small & 1993 & 2009 & 16\tabularnewline
+URB & Upper\_Snake\_late\_large & 1994 & 2008 & 12\tabularnewline
+URB & Upper\_Snake\_late\_small & 2005 & 2009 & 5\tabularnewline
+URB & White\_salmon\_late & 1990 & 2009 & 16\tabularnewline
+WAC & Forks & 1996 & 2009 & 11\tabularnewline
+WAC & Humptulips & 1982 & 2006 & 12\tabularnewline
+WAC & Makah & 1985 & 2009 & 23\tabularnewline
+WAC & Quinault & 1978 & 1990 & 8\tabularnewline
+WAC & Salmon\_WA & 1977 & 1983 & 6\tabularnewline
+PUSO\_S & Garrison-Chambers & 1987 & 2009 & 12\tabularnewline
+PUSO\_S & Grovers & 1982 & 2009 & 27\tabularnewline
+PUSO\_S & HoodCanal & 1978 & 2009 & 28\tabularnewline
+PUSO\_S & Issaquah & 1979 & 2006 & 10\tabularnewline
+PUSO\_S & Nisqually\_Clear\_Ck & 1997 & 2009 & 12\tabularnewline
+PUSO\_S & Nisqually\_Kalama\_Ck & 1984 & 2009 & 18\tabularnewline
+PUSO\_S & Soos & 1978 & 2009 & 25\tabularnewline
+PUSO\_N & Elwha & 1978 & 1994 & 15\tabularnewline
+PUSO\_N & Samish & 1979 & 2009 & 25\tabularnewline
+PUSO\_N & Skagit & 2000 & 2008 & 9\tabularnewline
+PUSO\_N & Snohomish-Bernie & 1986 & 2003 & 11\tabularnewline
+SGEO\_S & Chehalis & 1982 & 2009 & 27\tabularnewline
+SGEO\_S & Chilliwack & 1981 & 2009 & 28\tabularnewline
+SGEO\_S & Cowichan & 1979 & 2009 & 28\tabularnewline
+SGEO\_S & Nanaimo & 1980 & 2004 & 16\tabularnewline
+SGEO\_S & Puntledge & 1977 & 2009 & 29\tabularnewline
+SGEO\_N & Big Qualicum & 1977 & 2009 & 33\tabularnewline
+SGEO\_N & Quinsam & 1977 & 2009 & 33\tabularnewline
+SWVI & Conuma & 1979 & 2002 & 21\tabularnewline
+SWVI & Nitinat & 1980 & 2002 & 23\tabularnewline
+SWVI & Robertson & 1977 & 2009 & 33\tabularnewline
+TOTAL & NA & NA & NA & 1483\tabularnewline
+\bottomrule
+\end{longtable}
+
+\hypertarget{here-is-a-tabular-summary-of-the-releases-from-each-region.-total-cwt-released-361197267}{%
+\subsubsection{Here is a tabular summary of the releases from each
+region. Total CWT released =
+361,197,267}\label{here-is-a-tabular-summary-of-the-releases-from-each-region.-total-cwt-released-361197267}}
+
+\begin{longtable}[]{@{}lrrrr@{}}
+\toprule
+origin.region & N.release.groups & N.year & avg.release &
+tot.released\tabularnewline
+\midrule
+\endhead
+SFB & 121 & 33 & 785,008 & 94,986,019\tabularnewline
+NCA & 127 & 33 & 219,250 & 27,844,688\tabularnewline
+SOR & 25 & 25 & 49,248 & 1,231,194\tabularnewline
+COR & 33 & 33 & 152,380 & 5,028,556\tabularnewline
+NOR & 31 & 31 & 154,725 & 4,796,471\tabularnewline
+LCOL & 303 & 33 & 171,626 & 52,002,751\tabularnewline
+MCOL & 53 & 33 & 409,419 & 21,699,205\tabularnewline
+UCOL & 86 & 33 & 259,493 & 22,316,375\tabularnewline
+SNAK & 41 & 23 & 257,925 & 10,574,942\tabularnewline
+URB & 140 & 33 & 239,376 & 33,512,608\tabularnewline
+WAC & 60 & 32 & 180,095 & 10,805,697\tabularnewline
+PUSO\_S & 132 & 32 & 180,669 & 23,848,326\tabularnewline
+PUSO\_N & 60 & 32 & 176,845 & 10,610,709\tabularnewline
+SGEO\_S & 128 & 33 & 118,685 & 15,191,733\tabularnewline
+SGEO\_N & 66 & 33 & 223,111 & 14,725,308\tabularnewline
+SWVI & 77 & 33 & 156,139 & 12,022,685\tabularnewline
+\bottomrule
+\end{longtable}
+
+\newpage
+
+\hypertarget{here-are-some-plots-of-fishing-effort-from-the-available-fleets.-x-axis-in-model-seasons-y-axis-is-spatial-boxes.-color-is-on-the-log-scale.-black-can-indicate-either-a-true-zero-most-troll-data-or-no-data-generally-rec-fisheries-generally-in-canada-and-alaska-in-these-plots.}{%
+\subsubsection{Here are some plots of fishing effort from the available
+fleets. x-axis in model seasons, y-axis is spatial boxes. Color is on
+the log-scale. Black can indicate either a true zero (most troll data)
+or no data (generally rec fisheries, generally in Canada and Alaska) in
+these
+plots.}\label{here-are-some-plots-of-fishing-effort-from-the-available-fleets.-x-axis-in-model-seasons-y-axis-is-spatial-boxes.-color-is-on-the-log-scale.-black-can-indicate-either-a-true-zero-most-troll-data-or-no-data-generally-rec-fisheries-generally-in-canada-and-alaska-in-these-plots.}}
+
+\includegraphics{release_summaries_files/figure-latex/unnamed-chunk-6-1.pdf}
+\includegraphics{release_summaries_files/figure-latex/unnamed-chunk-6-2.pdf}
+\includegraphics{release_summaries_files/figure-latex/unnamed-chunk-6-3.pdf}
+\includegraphics{release_summaries_files/figure-latex/unnamed-chunk-6-4.pdf}
+\includegraphics{release_summaries_files/figure-latex/unnamed-chunk-6-5.pdf}
+\includegraphics{release_summaries_files/figure-latex/unnamed-chunk-6-6.pdf}
+\includegraphics{release_summaries_files/figure-latex/unnamed-chunk-6-7.pdf}
+
+\newpage
+
+\hypertarget{here-are-some-plots-of-the-median-sampling-effort-associated-with-each-fleet.-this-is-the-raw-data.-there-is-some-additional-interpolation-that-occurs-for-some-of-the-black-boxes.-units-are-in-the-title.}{%
+\subsubsection{Here are some plots of the median sampling effort
+associated with each fleet. This is the raw data. There is some
+additional interpolation that occurs for some of the black boxes. Units
+are in the
+title.}\label{here-are-some-plots-of-the-median-sampling-effort-associated-with-each-fleet.-this-is-the-raw-data.-there-is-some-additional-interpolation-that-occurs-for-some-of-the-black-boxes.-units-are-in-the-title.}}
+
+\includegraphics{release_summaries_files/figure-latex/unnamed-chunk-7-1.pdf}
+\includegraphics{release_summaries_files/figure-latex/unnamed-chunk-7-2.pdf}
+\includegraphics{release_summaries_files/figure-latex/unnamed-chunk-7-3.pdf}
+
+\newpage
+
+\hypertarget{here-are-few-representative-plots-of-cpue-from-the-troll-fleet-for-individual-releases.-grey-means-no-observed-effort.-black-means-no-observed-catch-but-non-zero-effort.-white-means-observed-catch-but-no-known-effort-rare.-colors-are-non-zero-cpue.-not-that-the-color-scale-varies-among-panels.-each-y-axis-starts-in-summer-may-june-and-procedes-through-the-18-steps-of-the-model.}{%
+\subsubsection{Here are few representative plots of CPUE from the troll
+fleet for individual releases. Grey means no observed effort. Black
+means no observed catch but non-zero effort. White means observed catch
+but no known effort (rare). Colors are non-zero CPUE. Not that the color
+scale varies among panels. Each y-axis starts in summer (May-June) and
+procedes through the 18 steps of the
+model.}\label{here-are-few-representative-plots-of-cpue-from-the-troll-fleet-for-individual-releases.-grey-means-no-observed-effort.-black-means-no-observed-catch-but-non-zero-effort.-white-means-observed-catch-but-no-known-effort-rare.-colors-are-non-zero-cpue.-not-that-the-color-scale-varies-among-panels.-each-y-axis-starts-in-summer-may-june-and-procedes-through-the-18-steps-of-the-model.}}
+
+\includegraphics{release_summaries_files/figure-latex/unnamed-chunk-8-1.pdf}
+\includegraphics{release_summaries_files/figure-latex/unnamed-chunk-8-2.pdf}
+\includegraphics{release_summaries_files/figure-latex/unnamed-chunk-8-3.pdf}
+\includegraphics{release_summaries_files/figure-latex/unnamed-chunk-8-4.pdf}
+\includegraphics{release_summaries_files/figure-latex/unnamed-chunk-8-5.pdf}
+\includegraphics{release_summaries_files/figure-latex/unnamed-chunk-8-6.pdf}
+\includegraphics{release_summaries_files/figure-latex/unnamed-chunk-8-7.pdf}
+\includegraphics{release_summaries_files/figure-latex/unnamed-chunk-8-8.pdf}
+\includegraphics{release_summaries_files/figure-latex/unnamed-chunk-8-9.pdf}
+\includegraphics{release_summaries_files/figure-latex/unnamed-chunk-8-10.pdf}
+\includegraphics{release_summaries_files/figure-latex/unnamed-chunk-8-11.pdf}
+\includegraphics{release_summaries_files/figure-latex/unnamed-chunk-8-12.pdf}
+\includegraphics{release_summaries_files/figure-latex/unnamed-chunk-8-13.pdf}
+
+
+\end{document}
