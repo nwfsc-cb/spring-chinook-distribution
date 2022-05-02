@@ -1,0 +1,344 @@
+---
+title: "Observer troubles"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## 
+
+To make this thing run, you need these files:
+"Ole_Squash.RDS"
+"Chinooky_Rates_merged.RDS"
+"Unique_trips_Observed.RDS"
+
+I keep things in different directories for my own sanity.  Change the first chunk to match your directories to make things work.
+
+```{r echo=F,warning=FALSE,include=F}
+library(tidyverse)
+library(here)
+library(gmodels)
+library(gplots)
+library(readr)
+```
+
+```{r }
+base.dir <- "/Users/ole.shelton/Github"
+# this is where Unique_trips, Chinooky live.
+data.dir <- paste0(base.dir,"/Orca_Salmon_DATA/Effort info/Trawl-ALASKA/") 
+# This is where Squash lives.
+data.rec.dir <- paste0(base.dir,"/Orca_Salmon_DATA/Recoveries/Alaska Trawl/")
+write.dir <- paste0(base.dir,"/spring-chinook-distribution/Processed Data/Effort Data/")
+```
+
+
+```{r warning=FALSE, echo=F,include=F }
+##########################################################
+####################################################################
+####################################################################
+####################################################################
+####################################################################
+
+# If there is an observer on board- how much of the catch are they surveying? 
+
+options(digits = 21)
+setwd(data.dir)
+observed.raw <- readRDS("Unique_trips_Observed.RDS") %>% mutate(haul_date2 =haul_date) %>%
+  separate(haul_date2, into = c("year", "month", "day"), sep = "-")
+observed.summary<- observed.raw  %>% 
+  mutate(year=as.numeric(substr(haul_date,1,4))) %>%
+  mutate(trip_target_code2=ifelse(akr_gear_code=="NPT","Not-P",trip_target_code)) %>%
+  dplyr::select(year,
+                haul_join,
+                cruise,
+                #haul_date,
+                obs_vessel_id,
+                nmfs_area=reporting_area_code,
+                akr_gear_code,
+                trip_target_code2,
+                pscnq_processing_sector) %>%
+  mutate(nmfs_area=as.numeric(nmfs_area)) %>% 
+  # only keep observations targeting pollock
+  #filter(trip_target_code %in% c("B","P")|akr_gear_code=="PTR") %>%
+  mutate(trip_target_code2 = ifelse(trip_target_code2 == "B","P",trip_target_code2)) %>%
+  group_by(year,
+           haul_join,
+           cruise,
+           #haul_date,
+           obs_vessel_id,
+           nmfs_area,
+           #akr_gear_code,
+           #trip_target_code,
+           trip_target_code2,
+           pscnq_processing_sector) %>%
+  dplyr::summarise(n=length(year)) %>% dplyr::select(-n)
+  # get rid of catcher processors right off the bat.
+  
+
+##### SUMMARY Here is a table for Pollock in the GOA.  The vast, vast majority of fishing is
+#####  from Shoreside in the Gulf of Alaska.  CP and motherships are ignorable.
+observed.raw %>% 
+  group_by(reporting_area_code,pscnq_processing_sector, trip_target_code) %>% 
+  tally() %>% filter(trip_target_code %in% c("P","B")) %>% as.data.frame()
+
+
+# how many observations are we looking for  
+observed.S.P <- observed.summary %>% filter(trip_target_code2=="P",pscnq_processing_sector=="S")  
+count.ob.S.P <- observed.S.P %>% group_by(cruise,year,haul_join) %>% summarise(N=length(year)) 
+
+dups <- count.ob.S.P %>% filter(N>1) # these are are the observations that are duplicates.
+A <- observed.S.P %>% filter(cruise %in% dups$cruise, haul_join %in% dups$haul_join)
+
+dim(A); sum(dups$N) # got em
+
+# why are they duplicated?
+# because the observers had multiple regions associated with each trip
+head(A %>% as.data.frame())
+
+# dat.squash is a list of all of the chinook sampled in the observer program.
+# we need to merge in the observed data from above to assign target and managment group to this
+# unfortunately, dat.squash includes all of the Bering and lots of fleets, so we need to filter those out.
+
+# here is a table of where and when they have samples from:
+options(digits = 21)
+setwd(data.rec.dir)
+dat.squash.raw <- readRDS("Ole_Squash.RDS") %>%
+    mutate(haul_date_sq =HAUL_OFFLOAD_DATE) %>%
+    separate(HAUL_OFFLOAD_DATE, into = c("year", "month", "day"), sep = "-")
+
+dat.squash.raw %>% arrange(NMFS_AREA) %>% group_by(year,NMFS_AREA) %>% summarise(N=length(year)) %>%
+  pivot_wider(.,values_from = "N",names_from = c("NMFS_AREA")) %>% as.data.frame()
+
+# We assume that if they made in into this database they were checked for an adipose
+# fin and therefore for CWT.
+# We are going to use this database to figure out what fraction of the total Chinook
+# captured during the fishery.
+
+# First we have to pull out the trips that can be ascribed to the shoreside pollock fleet
+# in the Gulf of Alaska.
+dat.squash.goa <- dat.squash.raw %>%
+    dplyr::select(year,month,day,haul_date_sq,
+                    cdq_code=CDQ_CODE,gear=GEAR,permit=PERMIT,
+                    cruise=CRUISE,
+                    port_join =PORT_JOIN,
+                    haul_join=HAUL_JOIN,
+                    vessel_code =VESSEL_CODE,
+                    lat_end=LATDD_END,lat_start=LATDD_START,
+                    lon_end=LONDD_END,lon_start=LONDD_START,
+                    nmfs_area=NMFS_AREA,
+                    TYPE_1_OTOLITH, TYPE_2_SCALE, TYPE_3_SEX_LENGTH_WEIGHT,
+                    TYPE_4_FIN_CLIPS, TYPE_5_VERTEBRAE, TYPE_6_SPINES,
+                    TYPE_7_MATURITY_SCAN, TYPE_8_MATURITY, TYPE_9_STOMACHS,
+                    TYPE_10_ISOTOPES,TYPE_11_OTHER_TISSUE,  TYPE_12_SNOUT,
+                    TYPE_13_ADIPOSE_PRESENT,
+                    weight=WEIGHT,
+                    sex=SEX,
+                    ad_pres = ADIPOSE_PRESENT,
+                    SAMPLE_SYSTEM) %>% 
+    filter(nmfs_area>600,nmfs_area<670) %>% # include only GOA
+    mutate(year=as.numeric(year))
+
+
+dat.squash.goa.obs.shore.early <- left_join(dat.squash.goa,observed.S.P %>% filter(year<=2007,year>=1996),
+                                            by = c("haul_join"= "haul_join",
+                                                   "cruise"="cruise",
+                                                   "nmfs_area"="nmfs_area",
+                                                   "year"="year")) %>% 
+                                      filter(pscnq_processing_sector=="S")
+
+dim(dat.squash.goa %>% filter(year<=2007,year>=1996)) # 4724
+dim(dat.squash.goa.obs.shore.early) # 3706
+# 78.4% from the trawl shoreside.
+
+# join based on two different fields for 2008 and on.
+dat.squash.goa.obs.shore.late1  <- left_join(dat.squash.goa,observed.S.P %>% filter(year>2007),
+                                            by = c("port_join"= "haul_join",
+                                                    "cruise"="cruise",
+                                                    "nmfs_area"="nmfs_area",
+                                                    "year"="year")) %>% 
+                                    filter(pscnq_processing_sector=="S")
+dat.squash.goa.obs.shore.late2  <- left_join(dat.squash.goa,observed.S.P %>% filter(year>2007)) %>%
+                                    filter(pscnq_processing_sector=="S")
+
+dat.squash.goa.obs.shore.late <- bind_rows(dat.squash.goa.obs.shore.late1,dat.squash.goa.obs.shore.late2)
+
+dim(dat.squash.goa %>% filter(year>2007)) # 24979
+dim(dat.squash.goa.obs.shore.late) # 19616
+# 78.5% from the trawl shoreside.
+
+dat.squash.goa.obs.shore <- bind_rows(dat.squash.goa.obs.shore.early,dat.squash.goa.obs.shore.late)
+
+dat.squash.goa.obs.shore %>% distinct() %>% dim()
+
+# Let's do a little checking.  First are there a bunch of rows with duplicates?
+dat.squash.goa.obs.shore %>% distinct() %>% dim()
+# 19272.... so there are about 4000 potential duplicates.
+# Let's find them.
+A <- dat.squash.goa.obs.shore %>% group_by(year,cruise,haul_join,weight,sex) %>% tally() %>% filter(n>1) %>% as.data.frame()
+# Let's just see if there are multiple entries that are identical in dat.squash.goa first
+dat.squash.goa %>% filter(cruise%in%A$cruise,
+                          year%in%A$year,
+                          haul_join%in%A$haul_join,
+                          weight%in%A$weight,
+                          sex%in%A$sex) %>% as.data.frame()
+# It sure looks like it worked ok.
+  # and it sure looks like those are just fish multiple fish that happen to be the same size and sex in a single observer trip.
+  # So we're done.
+  # Let's assign our regions to this data file.
+  dat.squash.goa.obs.shore <- dat.squash.goa.obs.shore %>%
+    mutate(region = case_when(nmfs_area == "610" ~ "W.APEN",
+                              nmfs_area == "620" ~ "E.APEN",
+                              nmfs_area %in% c("630") ~ "NW.GOA",
+                              nmfs_area %in% c("640", "640 ") ~ "NE.GOA",
+                              nmfs_area == "649" ~ "PWS",
+                              #reporting_area_code == "649" & adfg_stat_area_code %in% c("466032","466033","466003") ~ "NE.GOA",
+                              #reporting_area_code == "649" & adfg_stat_area_code %in% c("476006","486001","476035","476005","476007","476003","476004","476034", "475933","476031","476008","485932") ~ "NW.GOA", #there are about 600 records from NMFS AREA 649, which is the most northern part of PWS stat area- going to divide these based on in the 630/640 line continued into PWS and assign via ADFG #'s
+                              TRUE ~ "MISSING_LOCATION_INFO")) 
+```
+
+```{r echo=F,include=F }
+### OK.  toy example
+############### OK. NOW LET'S CONNECT THESE TO THE CHINOOKY DATA FRAME which contains all of the 
+############### information that allows you to expand to total bycatch.
+############### 
+
+#options(digits=15)
+setwd(data.dir)
+chinooky_rates <- readRDS("Chinooky_Rates_merged.RDS") %>%
+  filter(fmp_sub_area_code == "GOA", target =="pollock") %>% #  23438 observations
+  mutate(region = case_when(reporting_area_code == "610" ~ "W.APEN",
+                            reporting_area_code == "620" ~ "E.APEN",
+                            reporting_area_code %in% c("630") ~ "NW.GOA",
+                            reporting_area_code %in% c("640", "640 ") ~ "NE.GOA",
+                            reporting_area_code == "649" ~ "PWS",
+                            #reporting_area_code == "649" & adfg_stat_area_code %in% c("466032","466033","466003") ~ "NE.GOA",
+                            #reporting_area_code == "649" & adfg_stat_area_code %in% c("476006","486001","476035","476005","476007","476003","476004","476034", "475933","476031","476008","485932") ~ "NW.GOA", #there are about 600 records from NMFS AREA 649, which is the most northern part of PWS stat area- going to divide these based on in the 630/640 line continued into PWS and assign via ADFG #'s
+                            TRUE ~ "MISSING_LOCATION_INFO")) %>% #there are 14 of these because they are in area 649 but have missing ADFG #'s, all from a few days  in 2003
+  separate(trip_target_date, into = c("year", "month", "day"), sep = "-") %>%
+  rename(nmfs_area = reporting_area_code) %>% #  23438 observations
+  filter(processing_sector=="S") %>% #23363 observations
+  filter(!management_program_code %in% c("SMO"),!nmfs_area==649)
+  # this gets the data down to about 22940 observations. 
+  # includes a small number of RPP and AFA management codes.
+
+
+```
+
+
+## Here are the nuts and bolts
+
+There is a bunch of code above.  Here is the short version. I think I have most things sorted.
+
+I used "Unique_trips_Observed.RDS" to determine which trips had observer aboard and to include only shoreside pollock in the GOA (nmfs areas 610, 620, 630, 640).
+
+I used "Ole_Squash.RDS" as the list of Chinook salmon ever examined by the observer program.  It does not have info about fleet or target species, though.  So I've been trying to merge the unique trips and squash so I can ID the fish sampled from the pollock shoreside trawl in the GOA. 
+
+It turns out this is complicated, but I got it to largely to work.  I joined using "cruise" and "haul_join" for 2007 and earlier.  For 2008 on, I performed two joins using: First using "port_join" from Squash and "haul_join" from Unique_trips (gets 90+% of the values), second using "haul_join" from both (gets a few stragglers).  But misses some values that I can't seem to find.
+
+
+```{r }
+    # summary tables of the merge for Squash and Unique_trips
+  dat.squash.goa.obs.shore %>% group_by(year,nmfs_area) %>% tally() %>% 
+        pivot_wider(.,values_from = n,names_from = nmfs_area) %>% as.data.frame()
+
+  #Something is wrong from 2008-2013.
+    # Try and figure out if it is in the observed trips or in the squash data.
+    
+  dat.squash.goa.obs.shore %>% group_by(year,nmfs_area) %>% tally() %>% 
+        pivot_wider(.,values_from = n,names_from = nmfs_area) %>% filter(year>=2007,year<=2014) %>%
+         as.data.frame()
+
+    #Pull out dat.squash from GOA in 2009
+    this <- dat.squash.goa %>% filter(year==2009)
+    obs.trips <- unique(this$port_join)
+    nrow(this); length(obs.trips)
+    # there are 369 observed fish in 2009 in the squash data from 34 unique trips
+    
+    temp <- observed.raw %>% filter(year==2009, haul_join %in% obs.trips)
+    length(unique(temp$haul_join))
+    # but only exactly one of the observed trips shows up in the observer data (all fleets).
+    # That is awful strange.  There are fish observed and sampled, but they come from trips that were not observed... according to the Unique Trips database.
+
+    
+    #Repeat for 2011 Pull out dat.squash from GOA in 2011
+    this <- dat.squash.goa %>% filter(year==2011)
+    obs.trips <- unique(this$port_join)
+    nrow(this); length(obs.trips)
+    # there are 286 observed fish in 2011 in the squash data from 59 unique trips
+    
+    temp <- observed.raw %>% filter(year==2011, haul_join %in% obs.trips)
+    length(unique(temp$haul_join))
+    # but there are only of the observed trips shows up in the observer data (all fleets).
+    
+    
+```
+
+Let's check this against the chinooky database to see if that suggests there were observers on boats in the pollock fleet during 2008-2013
+
+```{r }
+  chinooky_rates %>% filter(year%in%c(2008:2013),nmfs_area>600,nmfs_area<670,
+                            observers_onboard>0,
+                            target=="pollock",
+                            psc_fishery_code=="S") %>% 
+                            group_by(year) %>%
+                            tally %>% as.data.frame()
+  
+  # looks like there were a bunch.
+
+```  
+So the question is why aren't they in the Unique_Trips data. I went rooting around for specific trips that have observed fish e.g. (you'll have to uncomment and run locally to make these work).
+  
+```{r }    
+    # If I run these two lines,
+  # dat.squash.goa %>% filter(year==2009,month=="02",day==28,nmfs_area==620)
+  # observed.raw   %>% filter(year==2009,month=="02",day==28,reporting_area_code==620)
+````    
+  I get a single boat and cruise numbers but different haul_join codes. Ugh.
+    
+```{r }
+  # Same thing here.
+  # dat.squash.goa %>% filter(year==2011,month=="03",day=11,nmfs_area==630)
+  # observed.raw   %>% filter(year==2011,month=="03",reporting_area_code==630,trip_target_code=="P",day==11)
+```
+
+So I think the haul_joins and port_joins are f*ed for those years for some reason. So my question is if there is a extra field in AKFIN that might play this role to join things (e.g. is there a "port_join" field or something else in AKFIN that could be queried and used?).  If not, I can run through the other fields and make my own join that correctly identifies these records.
+
+Here is the query you wrote to pull from AKFIN to make Unique Trips if that helps: 
+```{r }    
+    
+# con <- dbConnect(odbc::odbc(), "akfin", UID="jwatson", PWD= rstudioapi::askForPassword("Enter AKFIN Password"))
+# 
+# dbFetch(dbSendQuery(con,"select distinct a.cruise,
+#                                 a.obs_vessel_id,
+#                                 a.performance,
+#                                 a.haul_date,
+#                                 a.haul_join,
+#                                 a.catcher_boat_adfg,
+#                                 a.official_total_catch,
+#                                 a.fishing_start_date,
+#                                 a.akr_gear_code,
+#                                 a.reporting_area_code,
+#                                 a.retained_groundfish_weight,
+#                                 a.year,
+#                                 a.trip_target_code,
+#                                 a.pscnq_processing_sector,
+#                                 a.ves_cfec_length,
+#                                 a.duration_in_min,
+#                                 b.management_program_code
+#                                 from council.comprehensive_obs a
+#                                 left join council.comprehensive_blend_ca b
+#                                 on to_char(a.catch_report_source_pk)=to_char(b.catch_report_source_pk)
+#                                 where a.year<=2017
+#                                 and a.akr_gear_code IN ('PTR','NPT','TRW') 
+#                                 and a.FMP_AREA='GOA'
+#                                 order by a.cruise,a.haul_join")) %>% 
+#   rename_all(tolower) %>% 
+#   saveRDS("Unique_trips_Observed.RDS")
+
+```
+
+
+
+
