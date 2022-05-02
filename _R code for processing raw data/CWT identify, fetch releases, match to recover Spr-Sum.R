@@ -595,6 +595,16 @@ trawl.hake.all <- dat.trawl.hake.target %>%
 
 # This script is for determining effort and sampling fraction.
 source(paste0(base.dir,"/spring-chinook-distribution/_R code for processing raw data/Process ALASKA pollock effort.R"))
+# Important files stemming from this script are (both in spring-chinook-distribution/Processed Data/Effort Data)
+# "Shoreside_Pollock_GOA_Effort_Summarized.RDS"
+# "Sample_Fraction_Pollock_GOA_Summarized.RDS" 
+
+# This is the data from CWT recoveries in the Alaska Pollock fleet.
+    # This reads in the dates of pollock fisheries (important for identifying when pollock bycatch could have occurred)
+source(paste0(base.dir,"/spring-chinook-distribution/_R code for processing raw data/Process_Alaska_Trawl_tidy_pollock_fishing_dates.R"))
+
+# This assigns CWT recoveries to regions.
+Process_Alaska_Trawl_Assign_RMIS_TripTarget_CWT.R
 
 pdf("Pollock effort and sampling")
 
