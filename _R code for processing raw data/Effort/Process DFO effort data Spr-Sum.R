@@ -4,7 +4,7 @@ library(reshape2)
 library(dplyr)
 #base.dir <- getwd()
 data.dir <- "/Users/ole.shelton/GitHub/Orca_Salmon_DATA/Effort info/BC"
-output.dir <- paste("/Users/ole.shelton/GitHub/Salmon-Climate/Processed Data/Effort Data",sep="")
+output.dir <- paste("/Users/ole.shelton/GitHub/spring-chinook-distribution/Processed Data/Effort Data",sep="")
 
 effort.dat	<-	read.csv(paste(data.dir,"/DFO Effort Chinook 1982-1995.csv",sep=""))
 stat.week.dat	<- read.csv(paste(data.dir,"/DFO stat weeks 1970-1995.csv",sep=""))
@@ -117,6 +117,43 @@ all.effort	<-	all.effort[order(all.effort$Area,all.effort$Year),]
   recent.effort <- recent.effort %>% group_by(Area,year,month) %>% summarize(tot.effort=sum(effort))
   recent.effort <- dcast(recent.effort, year + Area ~ month,value.var = "tot.effort")
   recent.effort$effort.type <- "boat.day"
+  
+### Read in 2016-2018 data, modify,   
+  
+  y16.18.effort <- read.csv(paste0(data.dir,"/Commercial Chinook Salmon Troll Fishery In-season Catch Estimates by Month from 2016-2018.csv"))
+  
+  y16.18.effort <- y16.18.effort %>% dplyr::select(-FISHERY) %>% 
+                  mutate(month.numb = case_when(
+                    MONTH == "JANUARY" ~ 1,
+                    MONTH == "FEBRUARY" ~ 2,
+                    MONTH == "MARCH" ~ 3,
+                    MONTH == "APRIL" ~ 4,
+                    MONTH == "MAY" ~ 5,
+                    MONTH == "JUNE" ~ 6,
+                    MONTH == "JULY" ~ 7,
+                    MONTH == "AUGUST" ~ 8,
+                    MONTH == "SEPTEMBER" ~ 9,
+                    MONTH == "OCTOBER" ~ 10,
+                    MONTH == "NOVEMBER" ~ 11,
+                    MONTH == "DECEMBER" ~ 12)) %>%
+                  mutate(Area = paste("AREA",MGMT_AREA))
+  
+  y16.18.effort <- y16.18.effort %>% mutate(month.numb = as.character(month.numb))
+  y16.18.effort$month.numb <- factor(y16.18.effort$month.numb,
+                                     levels = as.character(1:12))
+  
+  temp <- y16.18.effort %>% group_by(YEAR,Area,MONTH,month.numb) %>% 
+            summarise(boat.days=sum(BOAT_DAYS)) %>%
+            arrange(month.numb)
+  
+  
+  y16.18.effort.wide <- pivot_wider(temp ,id_cols = c("YEAR","Area"),
+                            names_from = "month.numb",
+                            values_from = "boat.days",
+                            values_fill =0) %>%
+                        # add a month '12' with zeros
+                        mutate('12' = 0, effort.type="boat.day" )
+  
 ######################################################################################  
 ######################################################################################
 ######################################################################################
@@ -126,14 +163,15 @@ all.effort	<-	all.effort[order(all.effort$Area,all.effort$Year),]
   
   colnames(early.effort)  <- colnames(mid.effort)
   colnames(recent.effort) <- colnames(mid.effort)
+  colnames(y16.18.effort.wide)<-  colnames(mid.effort)
   
   bc.effort <- rbind(early.effort,mid.effort)
   bc.effort <- rbind(bc.effort,recent.effort)
+  bc.effort <- rbind(bc.effort,y16.18.effort.wide)
   
-  bc.effort <- bc.effort[order(bc.effort$year,bc.effort$AREA.NAME),]
+  bc.effort <- bc.effort %>% arrange(year,AREA.NAME)
   bc.effort[is.na(bc.effort)==T] <- 0
   
-  
-  write.csv(bc.effort,paste(output.dir,"/effort.data.bc.1978-2015.csv",sep=""),row.names = F)  
+  write.csv(bc.effort,paste(output.dir,"/effort.data.bc.1978-2018.csv",sep=""),row.names = F)  
   
   

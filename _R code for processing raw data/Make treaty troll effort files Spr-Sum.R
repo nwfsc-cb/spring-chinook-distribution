@@ -3,11 +3,11 @@
 # 
 #base.dir<-getwd()
 
-ak.eff <- read.csv(paste(base.dir,"/Salmon-Climate/Processed Data/Effort Data/effort.data.ak.csv",sep=""))
-treaty.eff.old <- read.csv(paste(base.dir,"/Salmon-Climate/Processed Data/Effort Data/effort.indian.wa.csv",sep=""))
-treaty.eff <- read.csv(paste(base.dir,"/Salmon-Climate/Processed Data/Effort Data/effort.treaty.us.csv",sep=""))
+ak.eff <- read.csv(paste(base.dir,"/spring-chinook-distribution/Processed Data/Effort Data/effort.data.ak.csv",sep=""))
+treaty.eff.old <- read.csv(paste(base.dir,"/spring-chinook-distribution/Processed Data/Effort Data/effort.indian.wa.csv",sep=""))
+treaty.eff <- read.csv(paste(base.dir,"/spring-chinook-distribution/Processed Data/Effort Data/effort.treaty.us.csv",sep=""))
 
-if(loc_18 == "NCA_SOR_PUSO" | loc_18 =="TWO_OR"){
+if(loc_18 == "NCA_SOR_PUSO" | loc_18 =="TWO_OR"| loc_18=="_two_OR_PUSO_AK"){
   treaty.eff <- treaty.eff %>% mutate(area.code=region.puso.out)
   treaty.eff$area.code <- as.character(treaty.eff$area.code)
   treaty.eff <- treaty.eff %>% mutate(area.code=replace(area.code,area.code=="PUSO.out","PUSO_out"))
@@ -17,11 +17,9 @@ treaty.eff <- left_join(treaty.eff,data.frame(month.name=names(ak.eff)[grep("mon
 treaty.eff.by.area <- full_join(treaty.eff,expand.grid(year=YEARS.RECOVER,month.name=sort(unique(treaty.eff$month.name))))
 treaty.eff.by.area <- treaty.eff %>% group_by(year,month.name,area.code) %>% summarise(count = sum(unique.tickets))
 
-
 treaty.eff.trim <- dcast(treaty.eff.by.area, year+area.code~month.name,value.var = "count")
 treaty.eff.trim[is.na(treaty.eff.trim)==T] <- 0
 
- 
 # Old way of doing it... (pre-August 2019) 
 # 
 treaty.eff.old$area.code[treaty.eff.old$Area =="4B"] <- "PUSO_out"
@@ -75,6 +73,14 @@ if(MONTH.STRUCTURE == "FRAM"){
   treaty.eff.trim$month.summer   <- rowSums(treaty.eff.trim[,SUMMER.MONTH],na.rm = T)
   treaty.eff.trim$month.fall     <- rowSums(treaty.eff.trim[,FALL.MONTH],na.rm = T)
 }
+if(MONTH.STRUCTURE == "SPRING"){
+  treaty.eff.trim$month.winter.2 <- rowSums(treaty.eff.trim[,WINTER.MONTH[1:2]],na.rm=T)
+  treaty.eff.trim$month.winter.1 <- rowSums(treaty.eff.trim[,WINTER.MONTH[3:4]],na.rm = T)
+  treaty.eff.trim$month.spring   <- rowSums(treaty.eff.trim[,SPRING.MONTH],na.rm = T)
+  treaty.eff.trim$month.summer   <- rowSums(treaty.eff.trim[,SUMMER.MONTH],na.rm = T)
+  treaty.eff.trim$month.fall     <- rowSums(treaty.eff.trim[,FALL.MONTH],na.rm = T)
+}
+
 
   treaty.eff.trim$year.wint.2  <- treaty.eff.trim$year-1
   

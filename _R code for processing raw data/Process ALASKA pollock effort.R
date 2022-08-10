@@ -11,7 +11,6 @@ every_nth = function(n) {
   return(function(x) {x[c(TRUE, rep(FALSE, n - 1))]})
 }
 
-base.dir <- "/Users/ole.shelton/Github"
 data.dir <- paste0(base.dir,"/Orca_Salmon_DATA/Effort info/Trawl-ALASKA/")
 data.rec.dir <- paste0(base.dir,"/Orca_Salmon_DATA/Recoveries/Alaska Trawl/")
 write.dir <- paste0(base.dir,"/spring-chinook-distribution/Processed Data/Effort Data/")
@@ -22,15 +21,15 @@ observed <- readRDS(paste0(data.dir,"Unique_trips_Observed.RDS"))  %>% mutate(ha
   rename_all(tolower) %>% 
   mutate(month =as.numeric(month),
          trip_target_code2=ifelse(akr_gear_code=="NPT","Not-P",trip_target_code),
-         region = case_when(reporting_area_code == "610" ~ "W.APEN", 
-                            reporting_area_code == "620" ~ "E.APEN",
-                            reporting_area_code %in% c("630") ~ "NW.GOA",
-                            reporting_area_code %in% c("640", "640 ") ~ "NE.GOA",
+         rec.area.code = case_when(reporting_area_code == "610" ~ "WAPEN", 
+                            reporting_area_code == "620" ~ "EAPEN",
+                            reporting_area_code %in% c("630") ~ "NWGOA",
+                            reporting_area_code %in% c("640", "640 ") ~ "NEGOA",
                             TRUE ~ "MISSING_LOCATION_INFO")) %>% 
   group_by(year,catcher_boat_adfg,pscnq_processing_sector,
            trip_target_code,trip_target_code2,
-           month, day, haul_date, cruise, region,
-           akr_gear_code,region, reporting_area_code,obs_vessel_id,haul_join) %>%
+           month, day, haul_date, cruise, 
+           akr_gear_code,rec.area.code, reporting_area_code,obs_vessel_id,haul_join) %>%
   dplyr::summarise(haul_days=length(unique(haul_date[!is.na(haul_date)])),
                    vlength=ves_cfec_length[1],
                    gf_catch=sum(official_total_catch,na.rm=TRUE)) %>%
@@ -49,7 +48,7 @@ observed <- readRDS(paste0(data.dir,"Unique_trips_Observed.RDS"))  %>% mutate(ha
     #                       month %in% c(8,9,10) ~ "fall",
     #                       TRUE~"SEASON_NA"),
     year = as.numeric(year)) %>%  #add season for plotting purposes- season structure = what ole uses in 2020 paper
-  group_by(year,pscnq_processing_sector,trip_target_code, month,region
+  group_by(year,pscnq_processing_sector,trip_target_code, month,rec.area.code
            #,length_category, #can add this in later if fish ticket data for obs and unobs has v length?
   ) %>%
   dplyr::summarise(observed_boat_days = sum(haul_days),
@@ -59,13 +58,13 @@ observed <- readRDS(paste0(data.dir,"Unique_trips_Observed.RDS"))  %>% mutate(ha
 fish_ticket<-readRDS(paste0(data.dir,"fishtix_snippet.RDS")) %>% 
   mutate(fishing_start_date=as.Date(ft_date_fishing_began,format="%Y%m%d"), # the dates are wonky - convert to acutal dates
          date_landed=as.Date(ft_date_landed,format="%Y%m%d"),
-         region = case_when(reporting_area_code == "610" ~ "W.APEN", 
-                            reporting_area_code == "620" ~ "E.APEN",
-                            reporting_area_code %in% c("630") ~ "NW.GOA",
-                            reporting_area_code %in% c("640", "640 ") ~ "NE.GOA",
+         rec.area.code = case_when(reporting_area_code == "610" ~ "WAPEN", 
+                            reporting_area_code == "620" ~ "EAPEN",
+                            reporting_area_code %in% c("630") ~ "NWGOA",
+                            reporting_area_code %in% c("640", "640 ") ~ "NEGOA",
                             TRUE ~ "MISSING_LOCATION_INFO")) %>% 
   filter(!adfg_h_mgt_program_id %in% c("RPP")) %>% #remove fish tickets from the rockfish program. 
-  group_by(vessel_id,adfg_number,date_landed,year,region) %>% # group by vessel-date_landed-year,reporting_area_code
+  group_by(vessel_id,adfg_number,date_landed,year,rec.area.code) %>% # group by vessel-date_landed-year,reporting_area_code
   dplyr::summarise(ft_observers_onboard=ft_observers_onboard[1], # this observers_onboard field seems pretty useless.
             observed=observed[1], #  this flag for whether a vessel is observed seems somewhat more useful. Maybe you'll find it helpful?
             fishing_start_date=min(fishing_start_date), # for a particular landed date there may be multiple start dates. Pick the earliest one.
@@ -86,23 +85,24 @@ fish_ticket<-readRDS(paste0(data.dir,"fishtix_snippet.RDS")) %>%
          #                        month %in% c(8,9,10) ~ "fall",
          #                        TRUE~"SEASON_NA")
    # extract a month and year field
-  group_by(year,month,region) %>% #  group by vessel-date_landed-year,reporting_area_code
+  group_by(year,month,rec.area.code) %>% #  group by vessel-date_landed-year,reporting_area_code
   dplyr::summarise(total_effort = sum(fish_days,na.rm=T),
             all_catch_MT=sum(pounds*0.000453592)) %>% #convert to MT, 0.000453592 MT = 1 LB 
-  filter(!region == "MISSING_LOCATION_INFO") 
+  filter(!rec.area.code == "MISSING_LOCATION_INFO") 
 
 shoreside_observed <- observed %>%
-  filter(pscnq_processing_sector == "S")
+  filter(pscnq_processing_sector == "S") %>% 
+  mutate(year=as.numeric(year))
 
 #merge data and get the fraction of obs and unobserved. 
-join_data_shoreside <- full_join(fish_ticket, shoreside_observed, by=c("year", "month", "region")) %>%
+join_data_shoreside <- full_join(fish_ticket, shoreside_observed, by=c("year", "month", "rec.area.code")) %>%
   dplyr::mutate(observed_boat_days = as.numeric(replace_na(observed_boat_days,0)),
                 total_effort = replace_na(total_effort,0),
                 total_effort = ifelse(total_effort < observed_boat_days,observed_boat_days,total_effort),
                 unobs_boat_days = total_effort - observed_boat_days)  %>%
   # This gets rid of the rare times when observed effort > total effort (almost always within one or two)
   #mutate(total_effort = ifelse(total_effort < observed_boat_days,observed_boat_days,total_effort)) %>%
-  filter(!region == "MISSING_LOCATION_INFO")  %>%
+  filter(!rec.area.code == "MISSING_LOCATION_INFO")  %>%
   ungroup() %>%
    mutate(#observed_boat_days = case_when(year<1996 ~ total_effort*0.3, #0.3 based on oberver coverage chart when we dont have data for 1991-1996.
   #                                       TRUE ~observed_boat_days),
@@ -115,16 +115,16 @@ join_data_shoreside <- full_join(fish_ticket, shoreside_observed, by=c("year", "
 
 temp.year <- as.character(c(1991:2020))
 temp.month <- as.character(c(01:12))
-temp.region <-  as.character(c("W.APEN", "E.APEN",  "NW.GOA", "NE.GOA"))
+temp.rec.area.code <-  as.character(c("WAPEN", "EAPEN",  "NWGOA", "NEGOA"))
 category <-  as.character(c("unobs_boat_days", "observed_boat_days"))
-year.month<- expand.grid(temp.year, temp.month,category=category,region=temp.region) #fully factorial match between all categories 
+year.month<- expand.grid(temp.year, temp.month,category=category,rec.area.code=temp.rec.area.code) #fully factorial match between all categories 
 year.month$Var2<- str_pad(year.month$Var2, width= 2, pad = "0", side="left") #add a zero before month 1-9 so that I can keep months in order
 year.month <- unite(year.month, "year.month", c("Var1", "Var2"), sep = ".", remove= TRUE) #join month and year in its own dataframe 
 
 #general plot of all effort. 
 join_data_shoreside %>%  
   ungroup() %>%
-  select(year,month,region,pscnq_processing_sector,unobs_boat_days,observed_boat_days,frac_boat_days_obs) %>%   
+  dplyr::select(year,month,rec.area.code,pscnq_processing_sector,unobs_boat_days,observed_boat_days,frac_boat_days_obs) %>%   
   mutate(month = str_pad(month, "left", pad=0, width = 2)) %>%
   unite("year.month",c("year","month"), sep = ".") %>%
   gather(4:5, key = "category", value = "boat_days") %>%
@@ -133,7 +133,7 @@ join_data_shoreside %>%
   filter(!boat_days<0) %>%
   ggplot() +
   geom_bar(aes(x=year.month,y=boat_days, fill = category), position="stack", stat="identity",alpha = 0.8) +
-  facet_wrap(~region, scales = "free", ncol=1) +
+  facet_wrap(~rec.area.code, scales = "free", ncol=1) +
   ggtitle("Boat Days (Shoreside Pollock)") + # no small CP's
   theme_classic() +
   theme(axis.text.x = element_text(angle = 90, hjust = 1,size=7))  +
@@ -143,11 +143,11 @@ join_data_shoreside %>%
 ### Stacked bar plots summarized by season
 
 #make specific x-axes
-temp.region <-  as.character(c("W.APEN", "E.APEN",  "NW.GOA", "NE.GOA"))
+temp.rec.area.code <-  as.character(c("WAPEN", "EAPEN",  "NWGOA", "NEGOA"))
 category <-  as.character(c("unobs_boat_days", "observed_boat_days"))
 
-temp<- expand.grid(year=temp.year, category=category,region=temp.region) #fully factorial match between all categories 
-  #rename(year="Var1",category="Var2", region="Var3") #%>%
+temp<- expand.grid(year=temp.year, category=category,rec.area.code=temp.rec.area.code) #fully factorial match between all categories 
+  #rename(year="Var1",category="Var2", rec.area.code="Var3") #%>%
 #mutate(Var2= str_pad(Var2, width= 2, pad = "0", side="left")) #%>%
 #  unite("year.month", c("Var1", "Var2"), sep = ".", remove= TRUE) #join month and year in its own dataframe 
 
@@ -155,17 +155,17 @@ temp<- expand.grid(year=temp.year, category=category,region=temp.region) #fully 
 #SPRING
 join_data_shoreside %>%  
   ungroup() %>%
-  filter(month %in% c(4,5)) %>%
+  filter(month %in% c(3,4,5)) %>%
   dplyr::select(1:3,8,10) %>%
   gather(4:5, key = "category", value = "boat_days") %>%
-  group_by(year,region,category) %>%
+  group_by(year,rec.area.code,category) %>%
   dplyr::summarise(boat_days=sum(boat_days))%>%
   ungroup() %>%
   merge(temp, all = TRUE) %>%
   mutate(boat_days= replace_na(boat_days,0)) %>%
   ggplot() +
   geom_bar(aes(x=year,y=boat_days, fill = category), position="stack", stat="identity",alpha = 0.8) +
-  facet_grid(~region, scales = "free") +
+  facet_grid(~rec.area.code, scales = "free") +
   ggtitle("Spring Boat Days (Shoreside Pollock)") + 
   theme_classic() +
   theme(axis.text.x = element_text(angle = 90, hjust = 1,size=7))  +
@@ -177,14 +177,14 @@ join_data_shoreside %>%
   filter(month %in% c(6,7)) %>%
   dplyr::select(1:3,8,10) %>%
   gather(4:5, key = "category", value = "boat_days") %>%
-  group_by(year,region,category) %>%
+  group_by(year,rec.area.code,category) %>%
   dplyr::summarise(boat_days=sum(boat_days))%>%
   ungroup() %>%
   merge(temp, all = TRUE) %>%
   mutate(boat_days= replace_na(boat_days,0)) %>%
   ggplot() +
   geom_bar(aes(x=year,y=boat_days, fill = category), position="stack", stat="identity",alpha = 0.8) +
-  facet_grid(~region, scales = "free") +
+  facet_grid(~rec.area.code, scales = "free") +
   ggtitle("Summer Boat Days (Shoreside Pollock)") + 
   theme_classic() +
   theme(axis.text.x = element_text(angle = 90, hjust = 1,size=7))  +
@@ -196,14 +196,14 @@ join_data_shoreside %>%
   filter(month %in% c(8,9,10)) %>%
   dplyr::select(1:3,8,10) %>%
   gather(4:5, key = "category", value = "boat_days") %>%
-  group_by(year,region,category) %>%
+  group_by(year,rec.area.code,category) %>%
   dplyr::summarise(boat_days=sum(boat_days))%>%
   ungroup() %>%
   merge(temp, all = TRUE) %>%
   mutate(boat_days= replace_na(boat_days,0)) %>%
   ggplot() +
   geom_bar(aes(x=year,y=boat_days, fill = category), position="stack", stat="identity",alpha = 0.8) +
-  facet_grid(~region, scales = "free") +
+  facet_grid(~rec.area.code, scales = "free") +
   ggtitle("Fall Boat Days (Shoreside Pollock)") + 
   theme_classic() +
   theme(axis.text.x = element_text(angle = 90, hjust = 1,size=7))  +
@@ -213,24 +213,24 @@ join_data_shoreside %>%
 join_data_shoreside %>%  
   ungroup() %>%
   dplyr::select(1:3,8,10) %>%
-  filter(month %in% c(1,2,3,11,12)) %>%
+  filter(month %in% c(1,2,11,12)) %>%
   mutate(season.temp = case_when(month %in% c(11,12) ~ "winter.1",
-                                 month %in% c(1:3) ~ "winter.2",
+                                 month %in% c(1:2) ~ "winter.2",
                                  TRUE ~ "NA")) %>%
   gather(4:5, key = "category", value = "boat_days") %>%
-  group_by(year, season.temp,region,category) %>%
+  group_by(year, season.temp,rec.area.code,category) %>%
   dplyr::summarise(boat_days=sum(boat_days)) %>%
   ungroup() %>%
   mutate(year=as.numeric(year), year.new = case_when(season.temp == "winter.2" ~ year -1,
                                                      TRUE ~ year)) %>%
-  group_by(year.new, region, category) %>%
+  group_by(year.new, rec.area.code, category) %>%
   dplyr::summarise(boat_days=sum(boat_days)) %>%
   dplyr::rename(year=year.new) %>%
   merge(temp) %>%
   mutate(boat_days= replace_na(boat_days,0)) %>%
   ggplot() +
   geom_bar(aes(x=year,y=boat_days, fill = category), position="stack", stat="identity",alpha = 0.8) +
-  facet_grid(~region, scales = "free") +
+  facet_grid(~rec.area.code, scales = "free") +
   ggtitle("Winter Boat Days ( Shoreside Pollock)") + # no small CP's
   theme_classic() +
   theme(axis.text.x = element_text(angle = 90, hjust = 1,size=7)) 
@@ -241,12 +241,12 @@ join_data_shoreside %>%
 all_data_trip_length<-readRDS(paste0(data.dir,"fishtix_snippet.RDS")) %>% 
   mutate(fishing_start_date=as.Date(ft_date_fishing_began,format="%Y%m%d"), # the dates are wonky - convert to acutal dates
          date_landed=as.Date(ft_date_landed,format="%Y%m%d"),
-         region = case_when(reporting_area_code == "610" ~ "W.APEN", 
-                            reporting_area_code == "620" ~ "E.APEN",
-                            reporting_area_code %in% c("630") ~ "NW.GOA",
-                            reporting_area_code %in% c("640", "640 ") ~ "NE.GOA",
+         rec.area.code = case_when(reporting_area_code == "610" ~ "WAPEN", 
+                            reporting_area_code == "620" ~ "EAPEN",
+                            reporting_area_code %in% c("630") ~ "NWGOA",
+                            reporting_area_code %in% c("640", "640 ") ~ "NEGOA",
                             TRUE ~ "MISSING_LOCATION_INFO")) %>% 
-  group_by(vessel_id,adfg_number,date_landed,year,region) %>% #  group by vessel-date_landed-year,reporting_area_code
+  group_by(vessel_id,adfg_number,date_landed,year,rec.area.code) %>% #  group by vessel-date_landed-year,reporting_area_code
   dplyr::summarise(ft_observers_onboard=ft_observers_onboard[1], # this observers_onboard field seems pretty useless.
             observed=observed[1], #  this flag for whether a vessel is observed seems somewhat more useful. Maybe you'll find it helpful?
             fishing_start_date=min(fishing_start_date), # for a particular landed date there may be multiple start dates. Pick the earliest one.
@@ -258,15 +258,15 @@ all_data_trip_length<-readRDS(paste0(data.dir,"fishtix_snippet.RDS")) %>%
                                TRUE ~ fish_days),
          month=as.numeric(format(date_landed,"%m")),
          year=as.numeric(format(date_landed,"%Y")),
-         season = case_when(month %in% c(1,2,3,11,12) ~ "winter",
-                            month %in% c(4, 5) ~ "spring",
+         season = case_when(month %in% c(1,2,11,12) ~ "winter",
+                            month %in% c(3,4,5) ~ "spring",
                             month %in% c(6,7) ~ "summer",
                             month %in% c(8,9,10) ~ "fall",
                             TRUE~"SEASON_NA")) %>%
-  group_by(year, region) %>%
+  group_by(year, rec.area.code) %>%
   dplyr::summarise(mean_trip_length = mean(fish_days),
             sd_fish_days=sd(fish_days)) %>%
-  filter(!region == "MISSING_LOCATION_INFO")
+  filter(!rec.area.code == "MISSING_LOCATION_INFO")
 
 all_data_trip_length %>% 
   ungroup() %>%
@@ -276,7 +276,7 @@ all_data_trip_length %>%
   geom_line()+ 
   geom_point(alpha = 0.8) +
   #geom_errorbar(aes(ymin=mean_trip_length-sd_fish_days, ymax=mean_trip_length+sd_fish_days))+
-  facet_wrap(~region, scales = "free", ncol=1) +
+  facet_wrap(~rec.area.code, scales = "free", ncol=1) +
   ggtitle("Spring Boat Days (Shoreside Pollock)") + 
   theme_classic() +
   theme(axis.text.x = element_text(angle = 90#, hjust = 1,size=7
@@ -296,23 +296,23 @@ all_data_trip_length %>%
 
 spread.total <- join_data_shoreside %>%
   ungroup() %>%
-  select(c(1:3,11)) %>%
+  dplyr::select(c(1:3,11)) %>%
   mutate(month = str_pad(month, "left", pad=0, width = 2)) %>%
   unite("year.month",1:2, remove=TRUE, sep = ".") %>%
-  # group_by(year.month, region) %>%
+  # group_by(year.month, rec.area.code) %>%
   # summarise(total_effort = sum(total_effort),
   #           observed_boat_days = sum(observed_boat_days)) %>%  
-  merge(year.month %>% dplyr::select(-c(category)) %>% group_by(year.month) %>% dplyr::count(region) %>% dplyr::select(-c(n)), all = TRUE) %>%
+  merge(year.month %>% dplyr::select(-c(category)) %>% group_by(year.month) %>% dplyr::count(rec.area.code) %>% dplyr::select(-c(n)), all = TRUE) %>%
   # mutate(obs_frac= observed_boat_days/total_effort) %>%
   filter(!frac_boat_days_obs >1) %>% #handful of errors as JW about. 
-  dplyr::select(year.month,region, frac_boat_days_obs) %>%
+  dplyr::select(year.month,rec.area.code, frac_boat_days_obs) %>%
   tidyr::spread(year.month, frac_boat_days_obs) 
 
 #set up matrix for heatmap 
 #spread.total<- spread.total[1:5,] 
-region<- spread.total$region
+rec.area.code<- spread.total$rec.area.code
 spread.total<- spread.total[,2:237]
-row.names(spread.total) <- region
+row.names(spread.total) <- rec.area.code
 matrix= as.matrix(spread.total)
 #matrix[matrix < 0.1] <- NA #turn 0 to NA so that it doesnt get messed up in log function
 
@@ -333,7 +333,7 @@ heatmap.2(matrix, Rowv=FALSE, Colv=FALSE,
           key.title = "log scale",
           adjCol = c(0.5,1.1),
           labCol = temp$label, #tell it to use dummy variable for X axis years
-          labRow = region, #use dummy variable for Y axis regions so they can be north to south 
+          labRow = rec.area.code, #use dummy variable for Y axis rec.area.codes so they can be north to south 
           cexCol = 0.6,
           sepcolor = "black",
           main = "Fraction of Observed Boat Days", 
@@ -374,8 +374,6 @@ heatmap.2(matrix, Rowv=FALSE, Colv=FALSE,
 #   For 1996-2002, we have observed trips. 2003-2007 had the same protocol as 1996-2002.
 #   Make a guess at sampling fraction, from just observed fraction.
 #     - only reason to do this is 1997,98,99 have lots of recoveries.
-
-
 
 
 options(digits = 21)
@@ -429,7 +427,7 @@ A <- observed.S.P %>% filter(cruise %in% dups$cruise, haul_join %in% dups$haul_j
 dim(A); sum(dups$N) # got em
 
 # why are they duplicated?
-# because the observers had multiple regions associated with each trip
+# because the observers had multiple rec.area.codes associated with each trip
 head(A %>% as.data.frame())
 
 # dat.squash is a list of all of the chinook sampled in the observer program.
@@ -688,18 +686,19 @@ TWO <-left_join(dat.squash.goa %>% group_by(year) %>% tally ,
 fish.sampled.tot.v.in.pollock <-  ggplot(TWO) +
     geom_point(aes(x=year,y=n),color="blue") +
     geom_line(aes(x=year,y=n),color="blue") +
-  geom_point(aes(x=year,y=n.samp),color="red") +
-    geom_line(aes(x=year,y=n.samp), color= "red")
+    geom_point(aes(x=year,y=n.samp),color="red") +
+    geom_line(aes(x=year,y=n.samp), color= "red") +
+    ggtitle("Blue is total fish sampled, Red are from pollock fleet")
 
 # It sure looks like it worked ok.
   # and it sure looks like those are just fish multiple fish that happen to be the same size and sex in a single observer trip.
   # So we're done.
-  # Let's assign our regions to this data file.
+  # Let's assign our rec.area.codes to this data file.
   dat.squash.goa.obs.shore <- dat.squash.goa.obs.shore %>%
-    mutate(region = case_when(nmfs_area == "610" ~ "W.APEN",
-                              nmfs_area == "620" ~ "E.APEN",
-                              nmfs_area %in% c("630") ~ "NW.GOA",
-                              nmfs_area %in% c("640", "640 ") ~ "NE.GOA",
+    mutate(rec.area.code = case_when(nmfs_area == "610" ~ "WAPEN",
+                              nmfs_area == "620" ~ "EAPEN",
+                              nmfs_area %in% c("630") ~ "NWGOA",
+                              nmfs_area %in% c("640", "640 ") ~ "NEGOA",
                               nmfs_area == "649" ~ "PWS",
                               #reporting_area_code == "649" & adfg_stat_area_code %in% c("466032","466033","466003") ~ "NE.GOA",
                               #reporting_area_code == "649" & adfg_stat_area_code %in% c("476006","486001","476035","476005","476007","476003","476004","476034", "475933","476031","476008","485932") ~ "NW.GOA", #there are about 600 records from NMFS AREA 649, which is the most northern part of PWS stat area- going to divide these based on in the 630/640 line continued into PWS and assign via ADFG #'s
@@ -711,10 +710,10 @@ fish.sampled.tot.v.in.pollock <-  ggplot(TWO) +
   
 # THIS IS THE DATA FRAME WHICH HAS SHORESIDE DATA FOR OBSERVED CHINOOK IN GOA, 1997 on
 dat.squash.goa.obs.shore <- dat.squash.goa.obs.shore %>%
-                    mutate(region = case_when(nmfs_area == "610" ~ "W.APEN",
-                                              nmfs_area == "620" ~ "E.APEN",
-                                              nmfs_area %in% c("630") ~ "NW.GOA",
-                                              nmfs_area %in% c("640", "640 ") ~ "NE.GOA",
+                    mutate(rec.area.code = case_when(nmfs_area == "610" ~ "WAPEN",
+                                              nmfs_area == "620" ~ "EAPEN",
+                                              nmfs_area %in% c("630") ~ "NWGOA",
+                                              nmfs_area %in% c("640", "640 ") ~ "NEGOA",
                                               nmfs_area == "649" ~ "PWS",
                           #reporting_area_code == "649" & adfg_stat_area_code %in% c("466032","466033","466003") ~ "NE.GOA",
                           #reporting_area_code == "649" & adfg_stat_area_code %in% c("476006","486001","476035","476005","476007","476003","476004","476034", "475933","476031","476008","485932") ~ "NW.GOA", #there are about 600 records from NMFS AREA 649, which is the most northern part of PWS stat area- going to divide these based on in the 630/640 line continued into PWS and assign via ADFG #'s
@@ -727,10 +726,10 @@ dat.squash.goa.obs.shore <- dat.squash.goa.obs.shore %>%
 #options(digits=15)
 chinooky_rates <- readRDS(paste0(data.dir,"Chinooky_Rates_merged.RDS")) %>%
   filter(fmp_sub_area_code == "GOA", target =="pollock") %>% #  23438 observations
-  mutate(region = case_when(reporting_area_code == "610" ~ "W.APEN",
-                            reporting_area_code == "620" ~ "E.APEN",
-                            reporting_area_code %in% c("630") ~ "NW.GOA",
-                            reporting_area_code %in% c("640", "640 ") ~ "NE.GOA",
+  mutate(rec.area.code = case_when(reporting_area_code == "610" ~ "WAPEN",
+                            reporting_area_code == "620" ~ "EAPEN",
+                            reporting_area_code %in% c("630") ~ "NWGOA",
+                            reporting_area_code %in% c("640", "640 ") ~ "NEGOA",
                             reporting_area_code == "649" ~ "PWS",
                             #reporting_area_code == "649" & adfg_stat_area_code %in% c("466032","466033","466003") ~ "NE.GOA",
                             #reporting_area_code == "649" & adfg_stat_area_code %in% c("476006","486001","476035","476005","476007","476003","476004","476034", "475933","476031","476008","485932") ~ "NW.GOA", #there are about 600 records from NMFS AREA 649, which is the most northern part of PWS stat area- going to divide these based on in the 630/640 line continued into PWS and assign via ADFG #'s
@@ -747,12 +746,12 @@ options(digits=15)
 tot.chin <- chinooky_rates %>% 
               group_by(year,
                        month,
-                       region,nmfs_area) %>% 
+                       rec.area.code,nmfs_area) %>% 
               summarise(N.deliveries=length(year),est.chinook = sum(pscnq_estimate)) %>%
               as.data.frame() %>%
               mutate(year=as.numeric(year),nmfs_area=as.numeric(nmfs_area))
 
-obs.chin <- dat.squash.goa.obs.shore %>% group_by(year,month,nmfs_area,region) %>%
+obs.chin <- dat.squash.goa.obs.shore %>% group_by(year,month,nmfs_area,rec.area.code) %>%
                         summarise(obs.chinook=length(year))
 
 all.chin <- full_join(tot.chin,obs.chin) %>% arrange(year,month) %>% 
@@ -766,7 +765,7 @@ all.chin <- all.chin %>% mutate(month.numb = as.numeric(month))
 samp.frac.raw <- ggplot(all.chin,aes(x=year,y=sampling.fraction,color=month),alpha=0.5) + 
   geom_point(alpha=0.5) +
   geom_line(alpha=0.2) +
-  facet_wrap(~region) +
+  facet_wrap(~rec.area.code) +
   #lims(y=c(0,1)) +
   theme_bw()
 
@@ -780,19 +779,19 @@ all.chin <- all.chin %>% mutate(est.chin.smooth = as.numeric(NA),
                                 samp.frac.smooth= as.numeric(NA))
 
 YR <- sort(unique(all.chin$year))
-AREA <- sort(unique(all.chin$region))
+AREA <- sort(unique(all.chin$rec.area.code))
 for (i in 1:length(YR)){
   for(j in 1:length(AREA)){
     for(k in 1:12){
-      temp <- all.chin %>% filter(year==YR[i],region==AREA[j]) %>% 
+      temp <- all.chin %>% filter(year==YR[i],rec.area.code==AREA[j]) %>% 
                       filter(month.numb %in% c((k-1):(k+1)))
       if(nrow(temp)>0){
         est.chin <- sum(temp$est.chinook)
         obs.chin <- sum(temp$obs.chinook)
         all.chin <- all.chin %>% 
-              mutate(est.chin.smooth = case_when(year==YR[i] & region==AREA[j] & month.numb==k ~ est.chin,
+              mutate(est.chin.smooth = case_when(year==YR[i] & rec.area.code==AREA[j] & month.numb==k ~ est.chin,
                                         TRUE ~ est.chin.smooth),
-                    obs.chin.smooth = case_when(year==YR[i] & region==AREA[j] & month.numb==k ~ obs.chin,
+                    obs.chin.smooth = case_when(year==YR[i] & rec.area.code==AREA[j] & month.numb==k ~ obs.chin,
                                         TRUE ~ obs.chin.smooth)
                     )
       }    
@@ -801,7 +800,7 @@ for (i in 1:length(YR)){
 }
       
 all.chin <- all.chin %>% mutate(samp.frac.smooth = ifelse(est.chin.smooth>0, obs.chin.smooth/est.chin.smooth,NA))
-all.chin$region <- factor(all.chin$region,levels=c("W.APEN","E.APEN","NW.GOA","NE.GOA"))
+all.chin$rec.area.code <- factor(all.chin$rec.area.code,levels=c("WAPEN","EAPEN","NWGOA","NEGOA"))
 
 ### Add in the values for 2012 and 2013 from AFSC tech memo 
 
@@ -823,48 +822,43 @@ all.chin <- all.chin %>%
                      year == 2013 & month %in% c(MONTH.late)~ 0.0775,
                      TRUE ~ samp.frac.smooth))
 
-# there are a small number of region-month combinations that have NA sampling fractions.
+# there are a small number of rec.area.code-month combinations that have NA sampling fractions.
 # almost all of these are incidents in 2008 and 2009 where there are very small amounts of fishing and sampling
 # for these we are just going to us the annual average for these sampling fractions
 
 temp <- all.chin %>% filter(year>=2003) %>% 
-                group_by(year,region) %>% summarise(ann.avg.frac=sum(obs.chinook)/sum(est.chinook))
+                group_by(year,rec.area.code) %>% summarise(ann.avg.frac=sum(obs.chinook)/sum(est.chinook))
 all.chin <- left_join(all.chin,temp) %>% 
             mutate(samp.frac.smooth=ifelse(is.na(samp.frac.smooth)==T,ann.avg.frac,samp.frac.smooth))
-
-
-
 
 samp.frac.smooth <- ggplot(all.chin,aes(x=year,y=samp.frac.smooth,color=month),alpha=0.5) + 
   geom_point(alpha=0.5) +
   geom_line(alpha=0.2) +
-  facet_wrap(~region) +
+  facet_wrap(~rec.area.code) +
   #lims(y=c(0,1)) +
   theme_bw()
 
 ### OK. Plot of Boat Days observed from the very top of this document
-join_data_shoreside$region <- factor(join_data_shoreside$region,levels=c("W.APEN","E.APEN","NW.GOA","NE.GOA"))
-
-
+join_data_shoreside$rec.area.code <- factor(join_data_shoreside$rec.area.code,levels=c("WAPEN","EAPEN","NWGOA","NEGOA"))
 
 # just like for the observed sampling fraction, smooth out the observed boat days fraction 
 join_data_shoreside <- join_data_shoreside %>% mutate(total_effort_smooth = as.numeric(NA),
                                 observed_boat_days_smooth = as.numeric(NA))
 
 YR <- sort(unique(join_data_shoreside$year))
-AREA <- sort(unique(join_data_shoreside$region))
+AREA <- sort(unique(join_data_shoreside$rec.area.code))
 for (i in 1:length(YR)){
   for(j in 1:length(AREA)){
     for(k in 1:12){
-      temp <- join_data_shoreside %>% filter(year==YR[i],region==AREA[j]) %>% 
+      temp <- join_data_shoreside %>% filter(year==YR[i],rec.area.code==AREA[j]) %>% 
         filter(month %in% c((k-1):(k+1)))
       if(nrow(temp)>0){
         tot.days <- sum(temp$total_effort)
         obs.days <- sum(temp$observed_boat_days)
         join_data_shoreside <- join_data_shoreside %>% 
-          mutate(total_effort_smooth = case_when(year==YR[i] & region==AREA[j] & month ==k ~ tot.days,
+          mutate(total_effort_smooth = case_when(year==YR[i] & rec.area.code==AREA[j] & month ==k ~ tot.days,
                                              TRUE ~ total_effort_smooth),
-                 observed_boat_days_smooth = case_when(year==YR[i] & region==AREA[j] & month ==k ~ obs.days,
+                 observed_boat_days_smooth = case_when(year==YR[i] & rec.area.code==AREA[j] & month ==k ~ obs.days,
                                              TRUE ~ observed_boat_days_smooth)
           )
       }    
@@ -880,16 +874,16 @@ YR <- c(2003:2007)
 
 temp <- left_join(join_data_shoreside %>% filter(year %in% YR),
               all.chin %>% filter(year %in% YR) %>% mutate(month=as.numeric(as.character(month)))) %>% 
-          dplyr::select(year,month,region,nmfs_area,total_effort,observed_boat_days,frac_boat_days_obs, frac_boat_days_obs_smooth,
+          dplyr::select(year,month,rec.area.code,nmfs_area,total_effort,observed_boat_days,frac_boat_days_obs, frac_boat_days_obs_smooth,
                         N.deliveries,est.chinook,obs.chinook,sampling.fraction,samp.frac.smooth)
 
-#temp %>% dplyr::select(year,month,region,nmfs_area,frac_boat_days_obs,sampling.fraction) %>% ungroup()
+#temp %>% dplyr::select(year,month,rec.area.code,nmfs_area,frac_boat_days_obs,sampling.fraction) %>% ungroup()
 
 # plot of raw, monthly data
 ggplot(join_data_shoreside %>% filter(year>=1997),aes(x=year,y=frac_boat_days_obs,color=as.factor(month)),alpha=0.5) + 
   geom_point(alpha=0.5) +
   geom_line(alpha=0.2) +
-  facet_wrap(~region) +
+  facet_wrap(~rec.area.code) +
   lims(y=c(0,1)) +
   theme_bw()
 
@@ -897,26 +891,26 @@ ggplot(join_data_shoreside %>% filter(year>=1997),aes(x=year,y=frac_boat_days_ob
 ggplot(join_data_shoreside %>% filter(year>=1997,year<2020),aes(x=year,y=frac_boat_days_obs_smooth,color=as.factor(month)),alpha=0.5) + 
   geom_point(alpha=0.5) +
   geom_line(alpha=0.2) +
-  facet_wrap(~region) +
+  facet_wrap(~rec.area.code) +
 #  lims(y=c(0,1)) +
   theme_bw()
 
 # plot of bivariate relationship, raw.
 ggplot(temp) +
-  geom_point(aes(x=frac_boat_days_obs,y=sampling.fraction,color=as.factor(region))) +
+  geom_point(aes(x=frac_boat_days_obs,y=sampling.fraction,color=as.factor(rec.area.code))) +
   lims(y=c(0,0.4))
 
 # plot of bivariate relationship, smooth
 ggplot(temp) +
-  geom_point(aes(x=frac_boat_days_obs_smooth,y=samp.frac.smooth,color=as.factor(region))) +
+  geom_point(aes(x=frac_boat_days_obs_smooth,y=samp.frac.smooth,color=as.factor(rec.area.code))) +
   lims(y=c(0,0.4))
 
 # Well that doesn't seem to work.
-# Fall back on using the month-region average from 2003-2007 for 1997-2002.  
+# Fall back on using the month-rec.area.code average from 2003-2007 for 1997-2002.  
 # Average of the smoothed data
 
 int.samp.frac <- all.chin %>% filter(year %in% c(2003:2007)) %>% 
-                      group_by(region,month) %>% 
+                      group_by(rec.area.code,month) %>% 
                       summarise(samp.frac.smooth.mean=mean(samp.frac.smooth,na.rm = T),
                                 samp.frac.smooth.median=median(samp.frac.smooth,na.rm = T))
 
@@ -928,19 +922,19 @@ all.sampling.fraction <- left_join(all.chin,int.samp.frac) %>%
 
 ### Get rid of NA from early years using annual averages just like for 2003 and later
 temp <- all.sampling.fraction %>% filter(year<=2002) %>% 
-          group_by(year,region) %>% summarise(ann.avg.frac.early=mean(samp.frac.smooth.mean,na.rm=T))
+          group_by(year,rec.area.code) %>% summarise(ann.avg.frac.early=mean(samp.frac.smooth.mean,na.rm=T))
 all.sampling.fraction <- left_join(all.sampling.fraction,temp) %>% 
   mutate(final.samp.fraction =ifelse(is.na(final.samp.fraction)==T,ann.avg.frac.early,final.samp.fraction))
 
 # simplify the data frame for later use 
 
 sampling.fraction <- all.sampling.fraction %>% 
-                            dplyr::select(year,month,month.numb,region,nmfs_area,final.samp.fraction)
+                            dplyr::select(year,month,month.numb,rec.area.code,nmfs_area,final.samp.fraction)
   
 samp.frac.final <-  ggplot(sampling.fraction,aes(x=year,y=final.samp.fraction,color=month),alpha=0.5) + 
   geom_point(alpha=0.5) +
   geom_line(alpha=0.2) +
-  facet_wrap(~region) +
+  facet_wrap(~rec.area.code) +
   #lims(y=c(0,1)) +
   theme_bw()
 
@@ -964,7 +958,7 @@ samp.frac.final
 #save effort data
  final_shoreside <- join_data_shoreside %>%
   ungroup() %>%
-  dplyr::select(year,month,region,unobs_boat_days,observed_boat_days,total_effort)  
+  dplyr::select(year,month,rec.area.code,unobs_boat_days,observed_boat_days,total_effort)  
 
 saveRDS(final_shoreside, paste0(write.dir,"Shoreside_Pollock_GOA_Effort_Summarized.RDS"))
 
@@ -985,13 +979,13 @@ plot.heatmap <- function(temp,Title,all.month=TRUE){
   z.lim	<- c(-0.01,max(temp))
   if(max(temp) < -0.01){z.lim	<- c(-0.01,0)}
   
-  lab.new <- levels(final_shoreside$region)
+  lab.new <- levels(final_shoreside$rec.area.code)
   x.lab	=	lab.new
   col.br<- colorRampPalette(c("blue", "cyan", "yellow", "red"))
   par(mfrow=c(1,1),oma=c( 0,1,0,4) )
-  image(z=temp,x=1:nrow(temp),y=1:length(lab.new),axes=F,ylab="",xlab="",
+  image(z=temp,x=1:nrow(temp),y=1:length(lab.new),axes=FALSE,ylab="",xlab="",
         col=1,zlim=c(-9999,0))
-  image(z=temp,x=1:nrow(temp),y=1:length(lab.new),axes=F,ylab="",xlab="",
+  image(z=temp,x=1:nrow(temp),y=1:length(lab.new),axes=FALSE,ylab="",xlab="",
         col=col.br(32),zlim=z.lim,add=T)
   box(bty="o",lwd=2)
   axis(2,las=2,at=1:ncol(temp),labels=x.lab)
@@ -1006,7 +1000,7 @@ plot.heatmap <- function(temp,Title,all.month=TRUE){
 YRS <- unique(final_shoreside$year) %>% sort()
 MTH <- 1:12
 temp.eff <- final_shoreside %>% 
-  pivot_wider(.,names_from=region,values_from = total_effort,id_cols = c("year","month")) %>%
+  pivot_wider(.,names_from=rec.area.code,values_from = total_effort,id_cols = c("year","month")) %>%
   full_join(.,expand_grid(year=YRS,month=MTH)) %>% arrange(year,month)
 temp.eff[is.na(temp.eff)==T] <- -99
 
@@ -1020,13 +1014,13 @@ plot.heatmap.samp.frac <- function(temp,Title){
   temp <- as.matrix(temp[,3:(ncol(temp))])
   
   z.lim	<- c(1e-6,1)
-  lab.new <- levels(final_shoreside$region)
+  lab.new <- levels(final_shoreside$rec.area.code)
   x.lab	=	lab.new
   col.br<- colorRampPalette(c("blue", "cyan", "yellow", "red"))
   par(mfrow=c(1,1),oma=c( 0,1,0,4) )
-  image(z=temp,x=1:nrow(temp),y=1:length(lab.new),axes=F,ylab="",xlab="",
+  image(z=temp,x=1:nrow(temp),y=1:length(lab.new),axes=FALSE,ylab="",xlab="",
         col=1,zlim=c(-9999,0))
-  image(z=temp,x=1:nrow(temp),y=1:length(lab.new),axes=F,ylab="",xlab="",
+  image(z=temp,x=1:nrow(temp),y=1:length(lab.new),axes=FALSE,ylab="",xlab="",
         col=col.br(32),zlim=z.lim,add=T)
   box(bty="o",lwd=2)
   axis(2,las=2,at=1:ncol(temp),labels=x.lab)
@@ -1040,7 +1034,7 @@ plot.heatmap.samp.frac <- function(temp,Title){
 # YRS <- unique(sampling.fraction$year) %>% sort()
 # MTH <- 1:12
 temp.samp <- sampling.fraction %>% 
-  pivot_wider(.,names_from=region,values_from = final.samp.fraction,id_cols = c("year","month")) %>%
+  pivot_wider(.,names_from=rec.area.code,values_from = final.samp.fraction,id_cols = c("year","month")) %>%
   mutate(month=as.numeric(month)) %>%
   full_join(.,expand_grid(year=YRS,month=MTH)) %>% arrange(year,month)
 temp.samp[is.na(temp.samp)==T] <- -99
@@ -1050,7 +1044,6 @@ temp.samp[is.na(temp.samp)==T] <- -99
 pdf(file=paste0(plot.dir,"Shoreside Pollock GOA.pdf"),onefile=T,height=8.5,width=11)
   
   plot.heatmap( temp=temp.eff,Title="Shoreside Pollock GOA Effort (Boat Days)")
-  
   plot.heatmap.samp.frac( temp=temp.samp,Title="Shoreside Pollock GOA Sample Fraction")
   print(fish.sampled.tot.v.in.pollock)
   #print(samp.frac.raw )

@@ -5,17 +5,17 @@ library(tidyverse)
 
 #base.dir<-getwd()
 
-ashop.eff <- read.csv(paste(base.dir,"/Salmon-Climate/Processed Data/Effort Data/ashop_total_effort.csv",sep=""))
-ashop.sample.frac <- read.csv(paste(base.dir,"/Salmon-Climate/Processed Data/Effort Data/ashop_sample_fraction.csv",sep=""))
+ashop.eff <- read.csv(paste(base.dir,"/spring-chinook-distribution/Processed Data/Effort Data/ashop_total_effort.csv",sep=""))
+ashop.sample.frac <- read.csv(paste(base.dir,"/spring-chinook-distribution/Processed Data/Effort Data/ashop_sample_fraction.csv",sep=""))
 
 #make my own locations file with options to combine SOR and COR, and SOR and NCA  
-locations_gs <- read.csv(paste(base.dir,"/Salmon-Climate/Processed Data/locations_gs.csv",sep=""))
+locations_gs <- read.csv(paste(base.dir,"/spring-chinook-distribution/Processed Data/locations_gs.csv",sep=""))
 
 if(loc_18 == "NCA_SOR_PUSO"){
   ashop.eff$region <- locations_gs$area.code.NCA_COR_NOR[match(ashop.eff$region,locations_gs$area.code)]### INSERT CATEGORY ###)]
 }
 
-if(loc_18 == "TWO_OR"){
+if(loc_18 == "TWO_OR" | loc_18 =="_two_OR_PUSO_AK" ){
   ashop.eff$region <- locations_gs$area.code.SOR.NOR[match(ashop.eff$region,locations_gs$area.code)]### INSERT CATEGORY ###)]
 }
 
@@ -65,6 +65,13 @@ if(MONTH.STRUCTURE=="FRAM"){
   ashop.eff$month.summer <- rowSums(ashop.eff[,SUMMER.MONTH])
   ashop.eff$month.fall   <- rowSums(ashop.eff[,FALL.MONTH])
 }
+if(MONTH.STRUCTURE=="SPRING"){
+  ashop.eff$month.winter.2 <- rowSums(ashop.eff[,WINTER.MONTH[1:2]],na.rm=T)
+  ashop.eff$month.winter.1 <- rowSums(ashop.eff[,WINTER.MONTH[3:4]]) 
+  ashop.eff$month.spring <- rowSums(ashop.eff[,SPRING.MONTH])
+  ashop.eff$month.summer <- rowSums(ashop.eff[,SUMMER.MONTH])
+  ashop.eff$month.fall   <- rowSums(ashop.eff[,FALL.MONTH])
+}
 
 ashop.eff$year.wint.2  <- ashop.eff$year-1
 
@@ -107,7 +114,7 @@ effort.ashop <- ashop.eff2 %>% arrange(year,area.numb)
 if(loc_18 == "NCA_SOR_PUSO"){
   ashop.sample.frac$region2 <- locations_gs$area.code.NCA_COR_NOR[match(ashop.sample.frac$region,locations_gs$area.code)]### INSERT CATEGORY ###)]
 }
-if(loc_18 == "TWO_OR"){
+if(loc_18 == "TWO_OR" | loc_18 =="_two_OR_PUSO_AK" ){
   ashop.sample.frac$region2 <- locations_gs$area.code.SOR.NOR[match(ashop.sample.frac$region,locations_gs$area.code)]### INSERT CATEGORY ###)]
 }
 
@@ -154,6 +161,14 @@ if(MONTH.STRUCTURE=="FRAM"){
   ashop.sample.frac$month.summer   <- apply(ashop.sample.frac[,SUMMER.MONTH],1,median,na.rm=T)
   ashop.sample.frac$month.fall     <- apply(ashop.sample.frac[,FALL.MONTH],1,median,na.rm=T)
 }
+if(MONTH.STRUCTURE=="SPRING"){
+  ashop.sample.frac$month.winter.2 <- apply(ashop.sample.frac[,WINTER.MONTH[1:2]],1,median,na.rm=T) 
+  ashop.sample.frac$month.winter.1 <- apply(ashop.sample.frac[,WINTER.MONTH[3:4]],1,median,na.rm=T) 
+  ashop.sample.frac$month.spring   <- apply(ashop.sample.frac[,SPRING.MONTH],1,median,na.rm=T)
+  ashop.sample.frac$month.summer   <- apply(ashop.sample.frac[,SUMMER.MONTH],1,median,na.rm=T)
+  ashop.sample.frac$month.fall     <- apply(ashop.sample.frac[,FALL.MONTH],1,median,na.rm=T)
+}
+
 
 ashop.sample.frac$year.wint.2  <- ashop.sample.frac$year-1
 

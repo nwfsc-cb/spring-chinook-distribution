@@ -1,18 +1,15 @@
-# Make Catch Files
+# # Make Catch Files
 
-########################################################################################################################
-########################################################################################################################
-########################################################################################################################
-
-if(MONTH.STRUCTURE == "FOUR") {
+#################################################################################3
+if(MONTH.STRUCTURE == "SPRING") {
   ### THIS IS SOME JUNK FOR COMBINING OBSERVATIONS IN THE WINTER MONTHS
-  XX <- data.frame(cal.month = c(rep(c(MONTH.START:12,1:(MONTH.START-1)),4),MONTH.START + 0:6), ocean.age = c(0:(length(c(rep(c(MONTH.START:12,1:(MONTH.START-1)),4),MONTH.START + 0:6))-1))+1 )
-  XX <- data.frame(XX,lab = c(rep(c("month.spring","month.spring","month.summer","month.summer","month.fall","month.fall","month.fall","month.winter","month.winter","month.winter","month.winter","month.winter"),4),
-                              "month.spring","month.spring","month.summer","month.summer","month.fall","month.fall","month.fall"),
-                   model.year = c(rep(1,12),rep(2,12),rep(3,12),rep(4,12),rep(5,7)))
-  YY <- data.frame(lab = c(rep(c("month.spring","month.summer","month.fall","month.winter"),4),
-                   c("month.spring","month.summer","month.fall")),
-                   model.year = c(rep(1,4),rep(2,4),rep(3,4),rep(4,4),rep(5,3)))
+  XX <- data.frame(cal.month = c(rep(c(MONTH.START:12,1:(MONTH.START-1)),5),MONTH.START:5), ocean.age = c(0:(length(c(rep(c(MONTH.START:12,1:(MONTH.START-1)),5),MONTH.START:5))-1))+1 )
+  XX <- data.frame(XX,lab = c(rep(c("month.spring","month.spring","month.spring","month.summer","month.summer","month.fall","month.fall","month.fall","month.winter","month.winter","month.winter","month.winter"),5),
+                              "month.spring","month.spring","month.spring"),
+                   model.year = c(rep(1,12),rep(2,12),rep(3,12),rep(4,12),rep(5,12),rep(6,3)))
+  YY <- data.frame(lab = c(rep(c("month.spring","month.summer","month.fall","month.winter"),5),
+                           c("month.spring")),
+                   model.year = c(rep(1,4),rep(2,4),rep(3,4),rep(4,4),rep(5,4),rep(6,1)))
   YY$model.age <- 1:nrow(YY)
   
   XX <- merge(XX,YY)
@@ -25,10 +22,15 @@ if(MONTH.STRUCTURE == "FOUR") {
   #        ocean.recover$dat$rec.month[ocean.recover$dat$brood.year == ocean.recover$dat$rel.year] - MONTH.START +1
   
   ocean.recover$dat$model.age <- XX$model.age[match(ocean.recover$dat$ocean.age, XX$ocean.age)]
+  # This produces about 66,600 recoveries.
   
-    ### Cull recoveries for very old fish and really young fish
-  ocean.recover$dat <- ocean.recover$dat[ocean.recover$dat$ocean.age <= max(XX$ocean.age),]
-  ocean.recover$dat <- ocean.recover$dat[ocean.recover$dat$ocean.age >= 1,]
+  ### Cull recoveries for very old fish and really young fish
+  cull.old <- ocean.recover$dat %>% filter(ocean.age > max(OCEAN.MODEL.AGE$ocean.age))
+      # You are cutting 151 recoveries of very old fish
+  cull.young <- ocean.recover$dat %>% filter(ocean.age <= 0)
+      # You are cutting 37 recoveries of very young fish mostly lost during juvenile sampling and a few obvious data entry errors
+      # e.g. recoveries occur before releases
+  ocean.recover$dat <- ocean.recover$dat %>% filter(ocean.age >0, ocean.age <=max(OCEAN.MODEL.AGE$ocean.age))
   
   # Lump Gear Types into main gear types.
   ocean.recover$dat$fishery.type<- ""
@@ -36,9 +38,9 @@ if(MONTH.STRUCTURE == "FOUR") {
     THESE <- which(is.na(gear.func(GEAR[i],ocean.recover$dat$fishery))==F)
     ocean.recover$dat$fishery.type[THESE] <- GEAR[i]
   }  
-   
-   #### REPEAT WITH TRAWL FISHERIES
-  ocean.recover.trawl$dat$ocean.age <- (ocean.recover.trawl$dat$rec.year - ocean.recover.trawl$dat$brood.year - 2 ) * 12 + ocean.recover.trawl$dat$rec.month - MONTH.START +1
+  
+  #### REPEAT WITH TRAWL FISHERIES (Hake)
+  ocean.recover.trawl$dat$ocean.age <- (ocean.recover.trawl$dat$rec.year - ocean.recover.trawl$dat$brood.year - 2 ) * 12 + as.numeric(ocean.recover.trawl$dat$rec.month) - MONTH.START +1
   # ocean.recover$dat$ocean.age[ocean.recover$dat$brood.year == ocean.recover$dat$rel.year] <- 
   #   (ocean.recover$dat$rec.year[ocean.recover$dat$brood.year == ocean.recover$dat$rel.year] - ocean.recover$dat$brood.year[ocean.recover$dat$brood.year == ocean.recover$dat$rel.year] - 1 ) * 12 + 
   #   ocean.recover$dat$rec.month[ocean.recover$dat$brood.year == ocean.recover$dat$rel.year] - MONTH.START +1
@@ -47,92 +49,34 @@ if(MONTH.STRUCTURE == "FOUR") {
   
   ### Cull recoveries for very old fish and really young fish
   ocean.recover.trawl$dat  <- ocean.recover.trawl$dat %>% filter(ocean.age <= max(XX$ocean.age), ocean.age >=1 )
-
-  # Lump Gear Types into main gear types.
-  ocean.recover.trawl$dat$fishery.type<- ocean.recover.trawl$dat$fishery
-  ocean.recover.trawl$dat <- ocean.recover.trawl$dat %>% as.data.frame()
-}
-
-###################################################################################################################
-if(MONTH.STRUCTURE == "FRAM"){
-  ### THIS IS SOME JUNK FOR COMBINING OBSERVATIONS IN THE WINTER MONTHS
-  XX <- data.frame(cal.month = c(rep(c(MONTH.START:12,1:(MONTH.START-1)),4),MONTH.START + 0:4), ocean.age = c(0:(length(c(rep(c(MONTH.START:12,1:(MONTH.START-1)),4),MONTH.START + 0:4))-1))+1 )
-  XX <- data.frame(XX,lab = c(rep(c("month.summer","month.summer","month.fall","month.fall","month.fall","month.winter","month.winter","month.winter","month.winter","month.spring","month.spring","month.spring"),4),
-                              "month.summer","month.summer","month.fall","month.fall","month.fall"),
-                   model.year = c(rep(1,12),rep(2,12),rep(3,12),rep(4,12),rep(5,5)))
-  YY <- data.frame(lab = c(rep(c("month.summer","month.fall","month.winter","month.spring"),4),
-                           c("month.summer","month.fall")),
-                   model.year = c(rep(1,4),rep(2,4),rep(3,4),rep(4,4),rep(5,2)))
-  YY$model.age <- 1:nrow(YY)
-  
-  XX <- merge(XX,YY)
-  OCEAN.MODEL.AGE <- XX[order(XX$model.age),]
-  model_year <- aggregate(OCEAN.MODEL.AGE$model.year,by=list(OCEAN.MODEL.AGE$model.age),max)$x
-  
-  ocean.recover$dat$ocean.age <- (ocean.recover$dat$rec.year - ocean.recover$dat$brood.year - 2 ) * 12 + ocean.recover$dat$rec.month - MONTH.START +1
-  # ocean.recover$dat$ocean.age[ocean.recover$dat$brood.year == ocean.recover$dat$rel.year] <- 
-  #   (ocean.recover$dat$rec.year[ocean.recover$dat$brood.year == ocean.recover$dat$rel.year] - ocean.recover$dat$brood.year[ocean.recover$dat$brood.year == ocean.recover$dat$rel.year] - 1 ) * 12 + 
-  #   ocean.recover$dat$rec.month[ocean.recover$dat$brood.year == ocean.recover$dat$rel.year] - MONTH.START +1
-  
-  ocean.recover$dat$model.age <- XX$model.age[match(ocean.recover$dat$ocean.age, XX$ocean.age)]
-  
-  ### Cull recoveries for very old fish and really young fish
-  ocean.recover$dat <- ocean.recover$dat[ocean.recover$dat$ocean.age <= max(XX$ocean.age),]
-  ocean.recover$dat <- ocean.recover$dat[ocean.recover$dat$ocean.age >= 1,]
-  
-  # Lump Gear Types into main gear types.
-  ocean.recover$dat$fishery.type<- ""
-  for(i in 1:N.GEAR){
-    THESE <- which(is.na(gear.func(GEAR[i],ocean.recover$dat$fishery))==F)
-    ocean.recover$dat$fishery.type[THESE] <- GEAR[i]
-  }
- #### REPEAT WITH TRAWL FISHERIES
-  ocean.recover.trawl$dat$ocean.age <- (ocean.recover.trawl$dat$rec.year - ocean.recover.trawl$dat$brood.year - 2 ) * 12 + ocean.recover.trawl$dat$rec.month - MONTH.START +1
-  # ocean.recover$dat$ocean.age[ocean.recover$dat$brood.year == ocean.recover$dat$rel.year] <- 
-  #   (ocean.recover$dat$rec.year[ocean.recover$dat$brood.year == ocean.recover$dat$rel.year] - ocean.recover$dat$brood.year[ocean.recover$dat$brood.year == ocean.recover$dat$rel.year] - 1 ) * 12 + 
-  #   ocean.recover$dat$rec.month[ocean.recover$dat$brood.year == ocean.recover$dat$rel.year] - MONTH.START +1
-  
-  ocean.recover.trawl$dat$model.age <- XX$model.age[match(ocean.recover.trawl$dat$ocean.age, XX$ocean.age)]
-  
-  ### Cull recoveries for very old fish and really young fish
-  ocean.recover.trawl$dat <- ocean.recover.trawl$dat[ocean.recover.trawl$dat$ocean.age <= max(XX$ocean.age),]
-  ocean.recover.trawl$dat <- ocean.recover.trawl$dat[ocean.recover.trawl$dat$ocean.age >= 1,]
   
   # Lump Gear Types into main gear types.
   ocean.recover.trawl$dat$fishery.type<- ocean.recover.trawl$dat$fishery
   ocean.recover.trawl$dat <- ocean.recover.trawl$dat %>% as.data.frame()
   
-  # Drop single observation with NA for recovery month
-  ocean.recover.trawl$dat <- ocean.recover.trawl$dat %>% filter(is.na(rec.month)==F)
-}# END FRAM section
+  #### REPEAT WITH TRAWL FISHERIES (Pollock and Rockfish - AK)
+  ocean.recover.pollock.trawl$dat$ocean.age <- (ocean.recover.pollock.trawl$dat$rec.year - ocean.recover.pollock.trawl$dat$brood.year - 2 ) * 12 + as.numeric(ocean.recover.pollock.trawl$dat$rec.month) - MONTH.START +1
+  ocean.recover.pollock.trawl$dat$model.age <- XX$model.age[match(ocean.recover.pollock.trawl$dat$ocean.age, XX$ocean.age)]
 
-# if using the 17 spatial locations, combine PUSO and PUSO_out into just PUSO.
-if(loc_18=="FALSE"){
-  ocean.recover$dat$rec.area.code[ocean.recover$dat$rec.area.code == "PUSO_out"] <- "PUSO"
-  ocean.recover.trawl$dat$rec.area.code[ocean.recover.trawl$dat$rec.area.code == "PUSO_out"] <- "PUSO"
+  ocean.recover.rockfish.AK.shoreside$dat$ocean.age <- (ocean.recover.rockfish.AK.shoreside$dat$rec.year - ocean.recover.rockfish.AK.shoreside$dat$brood.year - 2 ) * 12 + as.numeric(ocean.recover.rockfish.AK.shoreside$dat$rec.month) - MONTH.START +1
+  ocean.recover.rockfish.AK.shoreside$dat$model.age <- XX$model.age[match(ocean.recover.rockfish.AK.shoreside$dat$ocean.age, XX$ocean.age)]
   
-    # Aggregate 
-  temp <- ocean.recover$dat %>% group_by(ID, brood.year,rel.year,rel.month,ocean.region,fishery,rec.year,rec.month,
-                                         rec.area.code,ocean.age,model.age,fishery.type) %>%
-    summarize(Est.numb=sum(est.numb),
-              Count=sum(count),
-              median.frac.samp=sum(est.numb*median.frac.samp)/sum(est.numb)) %>%
-    rename(est.numb=Est.numb,count=Count) %>% as.data.frame()
-  ocean.recover$dat <- temp
+  ### Cull recoveries for very old fish and really young fish
+  ocean.recover.pollock.trawl$dat  <- ocean.recover.pollock.trawl$dat %>% filter(ocean.age <= max(XX$ocean.age), ocean.age >=1 )
+  ocean.recover.rockfish.AK.shoreside$dat  <- ocean.recover.rockfish.AK.shoreside$dat %>% filter(ocean.age <= max(XX$ocean.age), ocean.age >=1 )
   
-  temp <- ocean.recover.trawl$dat %>% group_by(ID, brood.year,rel.year,rel.month,ocean.region,fishery,rec.year,rec.month,
-                                         rec.area.code,ocean.age,model.age,fishery.type) %>%
-    summarize(Est.numb=sum(est.numb),
-              Count=sum(count),
-              median.frac.samp=sum(est.numb*median.frac.samp)/sum(est.numb)) %>%
-    rename(est.numb=Est.numb,count=Count) %>% as.data.frame()
-  ocean.recover.trawl$dat <- temp
+  # Lump Gear Types into main gear types.
+  ocean.recover.pollock.trawl$dat$fishery.type<- ocean.recover.pollock.trawl$dat$fishery
+  ocean.recover.pollock.trawl$dat <- ocean.recover.pollock.trawl$dat %>% as.data.frame()
+
+  ocean.recover.rockfish.AK.shoreside$dat$fishery.type<- ocean.recover.rockfish.AK.shoreside$dat$fishery
+  ocean.recover.rockfish.AK.shoreside$dat <- ocean.recover.rockfish.AK.shoreside$dat %>% as.data.frame()
 }
+
+CALENDAR <- XX %>% arrange(ocean.age)
 
 ### THIS SECTION IS TO ADD IN MEDIAN FRACTION SAMPLED FOR EACH MISSING MEDIAN FRACTION SAMPLED IN
 ### THE TRAWL FISHERIES.
-
-
 if(MONTH.STRUCTURE =="FOUR"){
   SPR <- c(4,5)
   SUM <- c(6,7)
@@ -145,8 +89,15 @@ if(MONTH.STRUCTURE =="FRAM"){
   FAL <- c(7,8,9)
   WIN <- c(10,11,12,1)
 }
+if(MONTH.STRUCTURE =="SPRING"){
+  SPR <- c(3,4,5)
+  SUM <- c(6,7)
+  FAL <- c(8,9,10)
+  WIN <- c(11,12,1,2)
+}
 
 ocean.recover.trawl$dat <- ocean.recover.trawl$dat %>% mutate(season="") %>% 
+                              mutate(rec.month =as.numeric(rec.month)) %>%
                               mutate(season, season = ifelse(rec.month %in% SPR,"month.spring",season)) %>%
                               mutate(season,season = ifelse(rec.month %in% SUM,"month.summer",season)) %>%
                               mutate(season,season = ifelse(rec.month %in% FAL,"month.fall",season)) %>%
@@ -263,11 +214,32 @@ ocean.recover.trawl$dat <- rbind(ASHOP.fin,SHORESIDE.fin) %>% dplyr::select(-est
           "rec.month","rec.area.code","N.samp","est.numb","count","median.frac.samp",
           "ocean.age","model.age","fishery.type"))  
 
-  # Combine trawl and directed fisheries
-  ocean.recover$dat <- rbind(ocean.recover$dat %>% dplyr::select(-estimation.level),
-                           ocean.recover.trawl$dat %>% dplyr::select(-N.samp))
+  # Combine trawl and directed fisheries for US west coast.
+  ocean.recover$dat <- rbind(ocean.recover$dat %>% #dplyr::select(-estimation.level) %>%
+                              mutate(fishery = as.character(fishery)),
+                           ocean.recover.trawl$dat %>% dplyr::select(-N.samp)%>% mutate(rec.month = as.numeric(rec.month)))
 
-  CALENDAR <- XX %>% arrange(ocean.age)
+  #### WORK WITH THE ALAKSA TRAWL RECOVERIES - SHORESIDE POLLOCK, ROCKFISH TRAWL.
+  ocean.recover.pollock.trawl$dat <- ocean.recover.pollock.trawl$dat %>% mutate(season="") %>% 
+    mutate(season, season = ifelse(rec.month %in% SPR,"month.spring",season)) %>%
+    mutate(season,season = ifelse(rec.month %in% SUM,"month.summer",season)) %>%
+    mutate(season,season = ifelse(rec.month %in% FAL,"month.fall",season)) %>%
+    mutate(season,season = ifelse(rec.month %in% WIN,"month.winter",season))
+   
+  ocean.recover.rockfish.AK.shoreside$dat <- ocean.recover.rockfish.AK.shoreside$dat %>% mutate(season="") %>% 
+    mutate(season, season = ifelse(rec.month %in% SPR,"month.spring",season)) %>%
+    mutate(season,season = ifelse(rec.month %in% SUM,"month.summer",season)) %>%
+    mutate(season,season = ifelse(rec.month %in% FAL,"month.fall",season)) %>%
+    mutate(season,season = ifelse(rec.month %in% WIN,"month.winter",season))
+    
+  # Merge in AK trawl recoveries into the larger set of RMIS and southern CWT recoveries
+    catch.dat <- bind_rows(ocean.recover.pollock.trawl$dat,ocean.recover.rockfish.AK.shoreside$dat) %>% dplyr::select(-season) %>%
+                mutate(estimation.level=NA) %>%              
+                dplyr::select(c("ID","brood.year","rel.year","rel.month","ocean.region","fishery","rec.year",
+                                  "rec.month","rec.area.code","estimation.level","est.numb","count","median.frac.samp",
+                                   "ocean.age","model.age","fishery.type")) %>%
+                bind_rows(ocean.recover$dat,.)
+      
   # Aggregate recoveries
   # catch.dat <- aggregate(ocean.recover$dat[,c("est.numb","count")],by=list(
   #   ID = ocean.recover$dat$ID, 
@@ -295,7 +267,6 @@ ocean.recover.trawl$dat <- rbind(ASHOP.fin,SHORESIDE.fin) %>% dplyr::select(-est
   #   model.age = ocean.recover$dat$model.age),
   #   median)
   
-  catch.dat <- ocean.recover$dat 
   catch.dat$rec.year.mod <- catch.dat$rec.year
   
   if(MONTH.STRUCTURE=="FOUR"){
@@ -303,6 +274,9 @@ ocean.recover.trawl$dat <- rbind(ASHOP.fin,SHORESIDE.fin) %>% dplyr::select(-est
   }
   if(MONTH.STRUCTURE=="FRAM"){
     catch.dat$rec.year.mod[catch.dat$rec.month == c(1)] <- catch.dat$rec.year.mod[catch.dat$rec.month== c(1)] - 1
+  }
+  if(MONTH.STRUCTURE=="SPRING"){
+    catch.dat$rec.year.mod[catch.dat$rec.month %in% c(1,2)] <- catch.dat$rec.year.mod[catch.dat$rec.month %in% c(1,2)] - 1
   }
   
   catch.dat <- catch.dat %>% 

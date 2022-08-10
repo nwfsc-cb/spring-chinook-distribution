@@ -1,6 +1,28 @@
 
 # Add in trawl fleets to gear list here.
 if(TRAWL.US == "TRUE"){GEAR <- c(GEAR,"ashop","shoreside");  N.GEAR = length(GEAR)}
+if(TRAWL.AK == "TRUE"){GEAR <- c(GEAR,"pollock","rockfish.AK");  N.GEAR = length(GEAR)}
+
+
+
+### DO SOME SERIOUS THINKING ABOUT THIS SECTION.  WHAT CAN I  / SHOULD I DO HERE.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 QQ <- ocean.recover$dat %>% filter(rec.year <= max(YEARS.RECOVER), brood.year <= max(YEARS.BROOD)) %>%
   group_by(fishery.type, rec.year, rec.month,rec.area.code,model.age) %>% summarise(NUMB=sum(est.numb))
@@ -31,6 +53,9 @@ ZZ.treaty <- merge(ZZ,RR[RR$fishery.type == "Treaty Troll",],all=T)
 ZZ.rec    <- merge(ZZ,RR[RR$fishery.type == "Sport",],all=T)
 ZZ.ashop  <- merge(ZZ,RR[RR$fishery.type == "ashop",],all=T) 
 ZZ.shoreside  <- merge(ZZ,RR[RR$fishery.type == "shoreside",],all=T) 
+ZZ.pollock <-  merge(ZZ,RR[RR$fishery.type == "pollock",],all=T) 
+ZZ.rockfish.AK <-  merge(ZZ,RR[RR$fishery.type == "rockfish.AK",],all=T) 
+
 
 ZZ.nets   <- ZZ.nets[is.na(match(ZZ.nets$rec.year,YEARS.RECOVER))==F,]
 ZZ.troll  <- ZZ.troll[is.na(match(ZZ.troll$rec.year,YEARS.RECOVER))==F,]

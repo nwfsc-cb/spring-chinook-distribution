@@ -7,17 +7,17 @@ library(tidyverse)
 
 #dont have data on this fishery until 1980 --> but when I match in dates it starts it at 1978 with 0's - is this ok? 
 
-shoreside.eff <- read.csv(paste(base.dir,"/Salmon-Climate/Processed Data/Effort Data/shoreside_hake_effort.csv",sep=""))
+shoreside.eff <- read.csv(paste(base.dir,"/spring-chinook-distribution/Processed Data/Effort Data/shoreside_hake_effort.csv",sep=""))
 # change month from number to month.01 etc
 
 #make my own locations file with options to combine SOR and COR, and SOR and NCA  
 
-locations_gs <- read.csv(paste(base.dir,"/Salmon-Climate/Processed Data/locations_gs.csv",sep=""))
+locations_gs <- read.csv(paste(base.dir,"/spring-chinook-distribution/Processed Data/locations_gs.csv",sep=""))
 
 if(loc_18 == "NCA_SOR_PUSO"){
   shoreside.eff$fishing_region <- locations_gs$area.code.NCA_COR_NOR[match(shoreside.eff$fishing_region,locations_gs$area.code)]### INSERT CATEGORY ###)]
 }
-if(loc_18 == "TWO_OR"){
+if(loc_18 == "TWO_OR" | loc_18 == "_two_OR_PUSO_AK"){
   shoreside.eff$fishing_region <- locations_gs$area.code.SOR.NOR[match(shoreside.eff$fishing_region,locations_gs$area.code)]### INSERT CATEGORY ###)]
 }
 
@@ -60,6 +60,14 @@ if(MONTH.STRUCTURE=="FOUR"){
 if(MONTH.STRUCTURE=="FRAM"){
   shoreside.eff$month.winter.2 <- shoreside.eff[,WINTER.MONTH[1]]
   shoreside.eff$month.winter.1 <- rowSums(shoreside.eff[,WINTER.MONTH[2:4]]) 
+  shoreside.eff$month.spring <- rowSums(shoreside.eff[,SPRING.MONTH])
+  shoreside.eff$month.summer <- rowSums(shoreside.eff[,SUMMER.MONTH])
+  shoreside.eff$month.fall   <- rowSums(shoreside.eff[,FALL.MONTH])
+}
+
+if(MONTH.STRUCTURE=="SPRING"){
+  shoreside.eff$month.winter.2 <- rowSums(shoreside.eff[,WINTER.MONTH[1:2]])
+  shoreside.eff$month.winter.1 <- rowSums(shoreside.eff[,WINTER.MONTH[3:4]]) 
   shoreside.eff$month.spring <- rowSums(shoreside.eff[,SPRING.MONTH])
   shoreside.eff$month.summer <- rowSums(shoreside.eff[,SUMMER.MONTH])
   shoreside.eff$month.fall   <- rowSums(shoreside.eff[,FALL.MONTH])

@@ -12,11 +12,10 @@ every_nth = function(n) {
 # Run this scipts to create pollock_fishing_dates.RDS if you need it: 
 #source("scripts_gs/AK_tidy_pollock_fishing_dates.R")
 
-
-dates<-readRDS("data/AK_CWT_Trawl/pollock_fishing_dates/pollock_fishing_dates.RDS") #%>%
+dates<-readRDS(paste0(base.dir,"/Orca_Salmon_DATA/Recoveries/Alaska Trawl/AK_CWT_Trawl/pollock_fishing_dates/pollock_fishing_dates.RDS")) #%>%
 #already did this in tidy pollock file  filter(ocean_region == "GOA") 
 
-observer.load <- readRDS("data/AK_CWT_Trawl/Observer_data_base/comp_obs_haul_v3.rds") 
+observer.load <- readRDS(paste0(base.dir,"/Orca_Salmon_DATA/Effort info/Trawl-ALASKA/comp_obs_haul_v3.rds"))
 
 #observer.first.ten <- readRDS("data/AK_CWT_Trawl/Observer_data_base/comp_obs_haul_v2_toptenrows.rds") 
 #results are the same if I match on haul date or retrieval date. 
@@ -48,35 +47,36 @@ unique_vessel_names <- unique(observer[c("OBS_VESSEL_ID", "AKR_VESSEL_ID","vesse
 
 unique_vessel_names_ID=unique_vessel_names %>% 
   mutate(REAL_vessel_name = vessel_name , vessel_name = OBS_VESSEL_ID) %>%
-  select(vessel_name,REAL_vessel_name)
+  dplyr::select(vessel_name,REAL_vessel_name)
 
 #######################################################################################################
 # LOAD AND CORRECT VESSEL NAMES IN CWT DATA 
 #######################################################################################################
-#setwd("~/Documents/GitHub/spring-chinook-distribution")
-rec_codes_lookup = read.csv("data/recovery codes-wietkamp+shelton 12-2018 two PUSO.csv", stringsAsFactors = FALSE) %>%
-  mutate(recovery_location_code =location_code) %>%
-  mutate(region = Rec.area.Sullaway.Shelton.NMFSstat) %>% 
-  select(c(recovery_location_code, region)) %>% #change so that RMIS has same column labels 
-  distinct(recovery_location_code, .keep_all = TRUE) #remove duplicates 
- 
-#ASK OLE TO UPDATE THE GIT SO I CAN PULL FINAL RMIS DATA! -- Then I wont need to match with the rec code lookup because it will already be in there. 
-#load RMIS data  
-load("/Users/genoa.sullaway/Documents/GitHub/rmis-data/data/final_data/all_chinook.Rdata")
-all_chinook<-data.frame(all_chinook) %>%
-  separate(recovery_date,c("year","rest"), sep = 4)%>%
-  separate(rest, c("month","day"), sep = 2)%>%
-  filter(year >1995) %>%
-  filter(fishery %in% c(81, 82))
-#
-match <- all_chinook %>%
-  left_join(rec_codes_lookup, by = "recovery_location_code") %>%
-  mutate(region = case_when(recovery_location_name == "HIGH SEAS 3 55N 154W" ~ "E.APEN",
-                            recovery_location_name == "HIGH SEAS 3 51N 172W" ~ "ALEUT",
-                            recovery_location_name %in% c("HIGH SEAS 4 56N 162W", "HIGH SEAS 4 57N 162W") ~ "BER",
-                                                          TRUE ~ region))
-
-  
+# 
+# #setwd("~/Documents/GitHub/spring-chinook-distribution")
+# rec_codes_lookup = read.csv(paste0(base.dir,"/Orca_Salmon_DATA/recoveries/recovery codes-wietkamp+shelton 04-2022 two PUSO.csv"), stringsAsFactors = FALSE) %>%
+#   mutate(recovery_location_code =location_code) %>%
+#   mutate(region = Rec.area.Sullaway.Shelton.NMFSstat) %>% 
+#   dplyr::select(c(recovery_location_code, region)) %>% #change so that RMIS has same column labels 
+#   distinct(recovery_location_code, .keep_all = TRUE) #remove duplicates 
+#  
+# #ASK OLE TO UPDATE THE GIT SO I CAN PULL FINAL RMIS DATA! -- Then I wont need to match with the rec code lookup because it will already be in there. 
+# #load RMIS data  
+# 
+# all_chinook_HS <-data.frame(all_chinook) %>%
+#   separate(recovery_date,c("year","rest"), sep = 4)%>%
+#   separate(rest, c("month","day"), sep = 2)%>%
+#   filter(year >1995) %>%
+#   filter(fishery %in% c(81, 82))
+# #
+# match <- all_chinook %>%
+#   left_join(rec_codes_lookup, by = "recovery_location_code") %>%
+#   mutate(region = case_when(recovery_location_name == "HIGH SEAS 3 55N 154W" ~ "E.APEN",
+#                             recovery_location_name == "HIGH SEAS 3 51N 172W" ~ "ALEUT",
+#                             recovery_location_name %in% c("HIGH SEAS 4 56N 162W", "HIGH SEAS 4 57N 162W") ~ "BER",
+#                                                           TRUE ~ region))
+# 
+#   
 #bring in the CWT recovery data that Michele Masuda sent, change vessel names so they match with norpac records, and observer database etc, match with our CWT recoveries so I can add on our ocean regions, filter out Bering and Aleutian Recoveries 
 #this data is tricky because there are a decent amount of NAs in fields that we would use to get unique trip IDs. 
 #Cruise_no has 671/1593 na's
@@ -85,16 +85,16 @@ match <- all_chinook %>%
 #haul delivery 70/1593 na's
 #vessel_name 46/1593 
 #the mis matches with the codes and vessel names and inconsistent NAs make it so I cant do a unique trip ID, so I am only able to match on dates and vessel names. 
-cwt <- read.csv("data/AK_CWT_Trawl/HighSeasCWT2006a_for_Jordan.csv") %>%
+cwt <- read.csv(paste0(base.dir,"/Orca_Salmon_DATA/Recoveries/Alaska Trawl/AK_CWT_Trawl/HighSeasCWT2006a_for_Jordan.csv")) %>%
   separate(recovery_date, into = c("year", "restofdate"), sep = 4) %>%
   separate(restofdate, into = c("month", "day"), sep = 2) %>%
   mutate(Vessel_name = as.character(Vessel_name), 
          year=as.numeric(year), 
          month = as.numeric(month), 
          day = as.numeric(day)) %>%
-  filter(!year == 2018) %>%
+  # filter(!year == 2018) %>%
   rename(vessel_name= Vessel_name) %>% #Vessel code is the equivalent to PERMIT in Norpac database. A lot of boat names in CWT are some sort of permit #, and match with permit number. Ex. A0825
-  select(recovery_id, tag_code, Observer, vessel_name,Vessel_or_Plant_code, Haul_or_Delivery_no, year, month, day, Lat, latmin, Long, Longmin) %>%
+  dplyr::select(recovery_id, tag_code, Observer, vessel_name,Vessel_or_Plant_code, Haul_or_Delivery_no, year, month, day, Lat, latmin, Long, Longmin,Area,fishery) %>%
   #filter(!is.na(Cruise_no) & !is.na(PERMIT)) %>% #remove entries that dont have any info 
   #mutate(VESSEL_CODE = as.character(PERMIT), PERMIT= as.character(PERMIT)) %>%#some CWT recoveries have the Vessel_Code classified as PERMIT #, Will use that in to match to norpac too
   #vessel_names are messed up, fix them so matching works better.
@@ -214,44 +214,89 @@ cwt <- read.csv("data/AK_CWT_Trawl/HighSeasCWT2006a_for_Jordan.csv") %>%
                                  vessel_name %in% c("Walter N","WALTER_N","WALTER_W") ~"WALTER N",
                                  vessel_name %in% c("WESTWARD_1","WESTWARD_I") ~"WESTWARD I",
                                  TRUE ~ vessel_name)) %>%
-  unite("Lat", c("Lat", "latmin"), sep =".") %>%
-  unite("Long", c("Long", "Longmin"), sep = ".") %>%
-  mutate(longitude = as.numeric(Long) * -1, latitude = as.numeric(Lat)) %>%
-  filter(year > 1995) %>%
-  mutate(recovery_id = as.character(recovery_id)) %>%
-  left_join(match, by = c("recovery_id", "tag_code")) %>%
-  select(recovery_id, tag_code, Observer, vessel_name, Vessel_or_Plant_code, PERMIT, Haul_or_Delivery_no, latitude, longitude, 
-         year.x, month.x, day.x, region) %>% #what do we get if we use RMIS dates instead of cwt dates 
-  rename(year=year.x, month=month.x, day=day.x) %>% #only 25 without ocean region, some of them have lat and long so use that to match in 
-  mutate(region = case_when(is.na(region) & longitude > -140 & latitude > 55.5   ~  "NSEAK", #"X650",
-                            is.na(region) & longitude < -140 & longitude > -147 | longitude == -140 ~ "NE.GOA", #"X640",
-                            is.na(region) & longitude < -147 & longitude > -154 | longitude == -147 ~ "NW.GOA", #"X630",
-                            is.na(region) & longitude < -154 & longitude > -159 | longitude == -154 ~ "E.APEN", #"X620",
-                            is.na(region) & latitude > 54 & longitude < -161 ~ "BER",
-                            is.na(region) & latitude < 55 & longitude > -164 ~ "W.APEN",
-                            is.na(region) & longitude < -159 & longitude > -170 | longitude == -159 & latitude < 55 ~ "W.APEN",
-                            is.na(region) & longitude < -159 & longitude > -161 & latitude < 54 ~ "W.APEN",
-                            is.na(region) & longitude < -170 & latitude < 54 ~ "ALEUT",
-                            is.na(region) & longitude > -136 ~ "SSEAK",
-                            TRUE ~ region)) %>%
-  filter(!region %in% c("ALEUT", "BER"))  %>%
-  left_join(unique_vessel_names_ID) %>% #some RMIS vessel names are actually Vessel ID's, use observer database to decode these and correct them in the RMIS so joins are easier later.
-  mutate(vessel_name = case_when(is.na(REAL_vessel_name) ~ vessel_name,
-                                 TRUE~ REAL_vessel_name)) %>%
-  select(-c(REAL_vessel_name))
+  mutate(latmin = ifelse(latmin>60,substr(latmin,1,2),latmin),
+         Longmin = ifelse(Longmin>60,substr(Longmin,1,2),Longmin),
+         latmin =ifelse(is.na(latmin),0,latmin),
+         Longmin = ifelse(is.na(Longmin),0,Longmin),
+         latmin = as.numeric(latmin)/60,
+         Longmin = as.numeric(Longmin)/60,
+         Lat = Lat +latmin, Long=Long +Longmin) %>%
+  # unite("Lat", c("Lat", "latmin"), sep =".") %>%
+  # unite("Long", c("Long", "Longmin"), sep = ".") %>%
+  mutate(longitude = as.numeric(Long) * -1, latitude = as.numeric(Lat)) 
+  
+  cwt <- cwt %>%
+  # only include some years, only GOA for now.
+  filter(year > 1995,fishery==81) %>%
+    mutate(rec.area.code = NULL, 
+           rec.area.code = case_when(Area == "650" ~  "NEGOA",
+                                     Area == "640" ~  "NEGOA",
+                                     Area == "630" ~  "NWGOA",
+                                     Area == "620" ~  "EAPEN",
+                                     Area == "621" ~  "EAPEN",
+                                     Area == "610" ~  "WAPEN",
+                                     Area == "649" ~  "PWS")) %>%
+  ## assign locations based on lat-lons
+    mutate(rec.area.code = case_when(is.na(rec.area.code) & longitude > -140 & latitude > 55.5   ~  "NSEAK", #"X650",
+                              is.na(rec.area.code) & longitude <= -140 & longitude > -147  ~ "NEGOA", #"X640",
+                              is.na(rec.area.code) & longitude <= -147 & longitude > -154  ~ "NWGOA", #"X630",
+                              is.na(rec.area.code) & longitude <= -154 & longitude > -159  ~ "EAPEN", #"X620",
+                              is.na(rec.area.code) & longitude <= -159 & longitude > -170  ~ "WAPEN",
+                              is.na(rec.area.code) & longitude < -170 & latitude < 54 ~ "ALEUT",
+                              is.na(rec.area.code) & longitude > -136 ~ "SSEAK",
+                              TRUE ~ rec.area.code)) %>%
+    # There are vanishingly few recoveries that do not have a reported fishing area or a reported lat-long (5 since 1996, 1 in 1998, 1 in 1999)
+    # I decided to simply exclude those recoveries. 
+    filter(!is.na(rec.area.code)) %>%
+    dplyr::select(recovery_id, tag_code, Observer, vessel_name, Vessel_or_Plant_code, 
+                  PERMIT, Haul_or_Delivery_no, latitude, longitude,rec.area.code,
+                  year,month,day) %>%
+    mutate(rec.year =year, rec.month=month) %>%
+      left_join(unique_vessel_names_ID) %>% #some RMIS vessel names are actually Vessel ID's, use observer database to decode these and correct them in the RMIS so joins are easier later.
+      mutate(vessel_name = case_when(is.na(REAL_vessel_name) ~ vessel_name,
+                                     TRUE~ REAL_vessel_name)) %>%
+      dplyr::select(-c(REAL_vessel_name))
+
+  CWT_from_target_releases <- cwt %>% filter(tag_code %in% tag.dat$tag_code)
+  
+  
+  
+  
+  # mutate(recovery_id = as.character(recovery_id)) %>%
+  # 
+  # right_join(., marine.GOA.HS, by = c("tag_code","rec.year","rec.month")) %>%
+  # dplyr::select(recovery_id, tag_code, Observer, vessel_name, Vessel_or_Plant_code, PERMIT, Haul_or_Delivery_no, latitude, longitude, 
+  #        year.x, month.x, day.x, region) %>% #what do we get if we use RMIS dates instead of cwt dates 
+  # rename(year=year.x, month=month.x, day=day.x) %>% #only 25 without ocean region, some of them have lat and long so use that to match in 
+  # mutate(region = case_when(is.na(region) & longitude > -140 & latitude > 55.5   ~  "NSEAK", #"X650",
+  #                           is.na(region) & longitude < -140 & longitude > -147 | longitude == -140 ~ "NE.GOA", #"X640",
+  #                           is.na(region) & longitude < -147 & longitude > -154 | longitude == -147 ~ "NW.GOA", #"X630",
+  #                           is.na(region) & longitude < -154 & longitude > -159 | longitude == -154 ~ "E.APEN", #"X620",
+  #                           is.na(region) & latitude > 54 & longitude < -161 ~ "BER",
+  #                           is.na(region) & latitude < 55 & longitude > -164 ~ "W.APEN",
+  #                           is.na(region) & longitude < -159 & longitude > -170 | longitude == -159 & latitude < 55 ~ "W.APEN",
+  #                           is.na(region) & longitude < -159 & longitude > -161 & latitude < 54 ~ "W.APEN",
+  #                           is.na(region) & longitude < -170 & latitude < 54 ~ "ALEUT",
+  #                           is.na(region) & longitude > -136 ~ "SSEAK",
+  #                           TRUE ~ region)) %>%
+  # filter(!region %in% c("ALEUT", "BER"))  %>%
+  # left_join(unique_vessel_names_ID) %>% #some RMIS vessel names are actually Vessel ID's, use observer database to decode these and correct them in the RMIS so joins are easier later.
+  # mutate(vessel_name = case_when(is.na(REAL_vessel_name) ~ vessel_name,
+  #                                TRUE~ REAL_vessel_name)) %>%
+  # dplyr::select(-c(REAL_vessel_name))
 
 cwt.temp <- cwt %>% filter(!vessel_name == "") #take these out so I can match by Vessel_or_Plant_code and then put them back in
 
 unique_vessel_names_plantcode<- unique_vessel_names %>%
   mutate(Vessel_or_Plant_code = as.character(AKR_VESSEL_ID)) %>%
-  select(Vessel_or_Plant_code, vessel_name)
+  dplyr::select(Vessel_or_Plant_code, vessel_name)
 
 cwt <- cwt %>% filter(vessel_name == "") %>%
   mutate(Vessel_or_Plant_code = as.character(Vessel_or_Plant_code))%>%
   left_join(unique_vessel_names_plantcode, by = c("Vessel_or_Plant_code")) %>%
   mutate(vessel_name = case_when(is.na(vessel_name.y) ~ vessel_name.x,
                                  TRUE~ vessel_name.y)) %>%
-  select(-c(vessel_name.x,vessel_name.y)) %>%
+  dplyr::select(-c(vessel_name.x,vessel_name.y)) %>%
   rbind(cwt.temp)
 
 # tried also matching with THE OBSERVER DATABASE ADFG NUMBERS ONTO THE VESSEL_OR_PLANT_CODE but it didnt work. I think the leftover are adfg numbers but 
@@ -261,10 +306,11 @@ cwt <- cwt %>% filter(vessel_name == "") %>%
 # MATCH CWT AND OBSERVER TO GET TRIP TARGET INFORMATION
 #######################################################################################################
 cwt_observer_join<- left_join(cwt, observer, by = c("year", "month","day","vessel_name")) %>%
-  select(recovery_id, tag_code, Observer, vessel_name, Vessel_or_Plant_code, PERMIT, Haul_or_Delivery_no, year, month,day,
-         longitude, latitude, region,trip_target_code,REPORTING_AREA_CODE) 
+  dplyr::select(recovery_id, tag_code, Observer, vessel_name, 
+                Vessel_or_Plant_code, PERMIT, Haul_or_Delivery_no, year, month,day,
+         longitude, latitude, rec.area.code,trip_target_code,REPORTING_AREA_CODE) 
  
-#how many match? 751
+#how many match? 
 cwt_observer_join %>%
   filter(!is.na(trip_target_code)) %>%
   summarise(sum(n()))
@@ -280,11 +326,11 @@ observer_week_end_date <- observer %>%
 #TRY MATCHING ON WEEK END DATE AND VESSEL NAMES -- only adds 26. 
 cwt_observer_join1<- cwt_observer_join %>%
     filter(is.na(trip_target_code)) %>%
-    select(recovery_id, tag_code, Observer, vessel_name, PERMIT, Haul_or_Delivery_no, year, month,day,
-           longitude, latitude, region,Vessel_or_Plant_code ) %>%
+    dplyr::select(recovery_id, tag_code, Observer, vessel_name, PERMIT, Haul_or_Delivery_no, year, month,day,
+           longitude, latitude, rec.area.code,Vessel_or_Plant_code ) %>%
     left_join(observer_week_end_date, by = c("year", "month","day","vessel_name")) %>% 
-    select(recovery_id, tag_code, Observer, vessel_name, PERMIT, Haul_or_Delivery_no, year, month,day,
-           longitude, latitude, region,REPORTING_AREA_CODE,Vessel_or_Plant_code,trip_target_code)  
+    dplyr::select(recovery_id, tag_code, Observer, vessel_name, PERMIT, Haul_or_Delivery_no, year, month,day,
+           longitude, latitude, rec.area.code, REPORTING_AREA_CODE,Vessel_or_Plant_code,trip_target_code)  
 
 cwt_observer_join1 %>%
     filter(!is.na(trip_target_code)) %>%
@@ -301,58 +347,60 @@ na_join<-cwt_observer_join1 %>%
 cwt_matches<- rbind(join1, join2) 
 
 #######################################################################################################
-#the left over NA's, 50% of the data set are matched by fishing dates, if they are within the pollock fishing season we assume they are fishing for pollock. (~800)
+#the left over NA's, 50% of the data set are matched by fishing dates, 
+# if they are within the pollock fishing season we assume they are fishing
+# for pollock. (~800)
 #######################################################################################################
-#based on dates this just says if people were fishing for pollock or not. Doesnt say anything about processing sector, but I think we are assuming shroeside bc there are not many CP's for pollock in the GOA 
+#based on dates this just says if people were fishing for pollock or not. 
+# Doesnt say anything about processing sector, but I think we are assuming shroeside bc there are not many CP's for pollock in the GOA 
 na_join<- na_join %>% 
   unite("fishing_date", c("month", "day","year"),sep = "-", remove=FALSE) %>%
   mutate(fishing_date= as.Date(fishing_date, "%m-%d-%Y")) %>%
-  left_join(dates, by = c("fishing_date", "region"))  %>%
+  left_join(dates, by = c("fishing_date", "rec.area.code"))  %>%
   mutate(trip_target_code = case_when(fishing == "pollock" ~"pollock",
                                       TRUE ~ "other")) %>%
-  select(-c(fishing, ocean_region, fishing_date))
+  dplyr::select(-c(fishing, ocean_region, fishing_date))
  
-all_cwt<- rbind(na_join, cwt_matches) %>%  
-  mutate(
+all_cwt<- rbind(na_join, cwt_matches) # %>%  
+  # mutate(
   #processing_sector = case_when(vessel_name %in% c("TRIDENT",  "TRIDENT AKUTAN", "TRIDENT SEAFOODS SAND POINT","UNISEA","WESTERN_AK_FISHERIES", "SANDPOINT PLANT-TRIDENT SEAFOODS",
   #                                                         "NEW_WEST_FISHERIES") ~ "CP", #all of these are catcher processors 
   #                                      is.na(processing_sector) ~ "S",
   #                                      TRUE ~ processing_sector),
-#there are 5 recoveries with NA for region, lat and long and REPORTING AREA CODE. There are 3 that have a reporting area code and I can add a region to those. 
-         region = case_when(is.na(region) & REPORTING_AREA_CODE == 509 ~ "BER",
-                            is.na(region) & REPORTING_AREA_CODE == 620 ~ "E.APEN",
-                            is.na(region) & REPORTING_AREA_CODE == 630 ~ "NW.GOA",
-                            TRUE ~ region)) %>%
-  filter(!is.na(region), !region == "BER")
+  #there are 5 recoveries with NA for region, lat and long and REPORTING AREA CODE. There are 3 that have a reporting area code and I can add a region to those. 
+         # region = case_when(is.na(region) & REPORTING_AREA_CODE == 509 ~ "BER",
+         #                    is.na(region) & REPORTING_AREA_CODE == 620 ~ "E.APEN",
+         #                    is.na(region) & REPORTING_AREA_CODE == 630 ~ "NW.GOA",
+         #                    TRUE ~ region)) %>%
 
 #all_cwt is the complete version.  
 pollock_cwt <- all_cwt %>%
-  filter(trip_target_code == "pollock") 
+  filter(trip_target_code %in% c("pollock", "pollock, other")) 
 
 #save file: 
-saveRDS(pollock_cwt, "data/AK_CWT_Trawl/CWT_Recovery_Pollock_Shoreside_trip_assignments.RDS")
+saveRDS(pollock_cwt, paste0(base.dir,"/spring-chinook-distribution/Processed Data/Effort Data/CWT_Recovery_Pollock_Shoreside_trip_assignments.RDS"))
 
 #######################################################################################################
 #MAKE SOME PLOTS
 #######################################################################################################
 #how does observed pollock effort compare to CWT recoveries?
-join_data_shoreside<-readRDS("data/shoreside_pollock_effort.RDS") %>%
+join_data_shoreside<-readRDS(paste0(base.dir,"/spring-chinook-distribution/Processed Data/Effort Data/Shoreside_Pollock_GOA_Effort_Summarized.RDS")) %>%
   filter(year > 1995)
  
 #first plot just cwt recoveries pollock vs other fisheries
  all_cwt  %>%
   filter(#processing_sector == "S",
-         !trip_target_code == "pollock, other", !region %in% c("NE.GOA NW.GOA W.APEN E.APEN BER", "NSEAK", "SSEAK")) %>%
+         !trip_target_code == "pollock, other", !rec.area.code %in% c("NEGOA NWGOA WAPEN EAPEN BER", "NSEAK", "SSEAK")) %>%
   mutate(month = str_pad(month, "left", pad=0, width = 2),
-         region = factor(region, levels = c("W.APEN", "E.APEN", "NW.GOA", "NE.GOA","SSEAK"))) %>%
+         rec.area.code = factor(rec.area.code, levels = c("WAPEN", "EAPEN", "NWGOA", "NEGOA","PWS"))) %>%
   unite("year.month",c("year","month"), sep = ".") %>% 
-  group_by(year.month, region) %>%
+  group_by(year.month, rec.area.code) %>%
   count(trip_target_code) %>%
   ggplot(aes(x=year.month, y = n)) +
   geom_bar(aes(fill = trip_target_code, group = trip_target_code), stat="identity") +
 # scale_fill_manual(values = c(pollock = "skyblue", other="grey")) +
-  facet_wrap(~region, scales = "free") +
-# facet_grid(processing_sector~region,scales="free") +
+  facet_wrap(~rec.area.code, scales = "free") +
+# facet_grid(processing_sector~rec.area.code,scales="free") +
   theme_classic() +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) + 
   scale_x_discrete(breaks = every_nth(n = 10))
@@ -361,7 +409,7 @@ cwt_plot<- all_cwt  %>%
   #filter(processing_sector == "S") %>%
   mutate(month = str_pad(month, "left", pad=0, width = 2)) %>%
   unite("year.month",c("year","month"), sep = ".") %>% 
-  group_by(year.month, region) %>%
+  group_by(year.month, rec.area.code) %>%
   count(trip_target_code) %>%
   filter(trip_target_code == "pollock") %>%
   dplyr::rename(pollock_recovery = n)
@@ -369,31 +417,21 @@ cwt_plot<- all_cwt  %>%
 #how do pollock recoveries line up with observed effort? only a small handful of instances where there are pollock recoveries and no effort...? 
 join_data_shoreside %>%  
   ungroup() %>%
-  select(year,month,region,observed_boat_days) %>%   
+  dplyr::select(year,month,rec.area.code,observed_boat_days) %>%   
   mutate(month = str_pad(month, "left", pad=0, width = 2)) %>%
   unite("year.month",c("year","month"), sep = ".") %>% 
-  full_join(cwt_plot, by= c("year.month","region")) %>%
-  select(-trip_target_code) %>%
+  full_join(cwt_plot, by= c("year.month","rec.area.code")) %>%
+  dplyr::select(-trip_target_code) %>%
   gather(3:4, key = "category", value = "number") %>%
   mutate(number= replace_na(number,0), 
-         region = factor(region, levels = c("W.APEN", "E.APEN", "NW.GOA", "NE.GOA","SSEAK")),
+         rec.area.code = factor(rec.area.code, levels = c("WAPEN", "EAPEN", "NWGOA", "NEGOA","SSEAK")),
          category=factor(category, levels=c("pollock_recovery", "observed_boat_days"))) %>%
-  filter(!region %in% c("NE.GOA NW.GOA W.APEN E.APEN BER", "NSEAK")) %>%
+  filter(!rec.area.code %in% c("NEGOA NWGOA WAPEN EAPEN BER", "NSEAK")) %>%
   ggplot() +
   geom_bar(aes(x=year.month,y=number, fill = category),position="stack", stat="identity",alpha = 0.8) +
-  facet_wrap(~region, scales="free_y",ncol = 1) +
+  facet_wrap(~rec.area.code, scales="free_y",ncol = 1) +
   ggtitle("Compare Observed Data and RMIS Pollock Recoveries") +  
   theme_classic() +
   theme(axis.text.x = element_text(angle = 90, hjust = 1,size=7))  +
   scale_x_discrete(breaks = every_nth(n = 20))
-
-
-
-
-
-
-
-
-
-
 

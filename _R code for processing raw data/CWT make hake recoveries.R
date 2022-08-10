@@ -237,7 +237,7 @@ ashop_sample_frac1 <- ashop_sample_frac %>%
   mutate(rec.area.code = region) %>% 
   mutate(rec.year = as.integer(year)) %>%  
   mutate(median.frac.samp = fraction) %>% 
-  select(rec.area.code, rec.year, rec.month, median.frac.samp) 
+  dplyr::select(rec.area.code, rec.year, rec.month, median.frac.samp) 
 
 ashop_chinook <- left_join(ashop_rmis_recovery, ashop_sample_frac1, by = c("rec.year", "rec.month", "rec.area.code"))
 
@@ -346,7 +346,7 @@ shoreside_chinook1 <- shoreside_chinook_reduced %>%  #this is data that kayleigh
   group_by(fishery,estimation.level, rec.year, rec.month, rec.area.code, tag.code) %>%
   count(tag.code) %>% #fish caught/region/month 
   mutate(count=n, est.numb = count) %>% # they only subsample if it is >40 fish/haul. Our data shows that they didnt have more than 15/haul. So they did not subsample, here the count = est.numb (unless est.numb is also based on unobserved effort-then we should change it) 
-  select(-c(n))
+  dplyr::select(-c(n))
 
 shoreside_recoveries <- left_join(shoreside_chinook1, shoreside_sample_frac, by=c("rec.year", "rec.month", "rec.area.code"))
 

@@ -213,32 +213,37 @@
 		#                 53, "NBC",
 		#                 54, "NBC")			
 		# 	hsea.1.lab <-	data.frame(matrix(hsea.1.lab,length(hsea.1.lab)/2,2,byrow=T)); colnames(hsea.1.lab) <- c("lat","lab")
-						
-			hsea.1 <- marine.all %>% filter(grepl("HIGH SEAS 1",recovery_location_name)) %>%
-			      mutate(rec.area.code = case_when(grepl("35N|36N|37N",recovery_location_name) ~ "MONT",
-			                                 grepl("38N",recovery_location_name) ~ "SFB",
-			                                 grepl("39N|40N",recovery_location_name) ~ "MEN",
-			                                 grepl("41N",recovery_location_name) ~ "NCA",
-			                                 grepl("42N",recovery_location_name) ~ "NCA SOR",
-			                                 grepl("43N|44N",recovery_location_name) ~ "SOR",
-			                                 grepl("45N",recovery_location_name) ~ "NOR",
-			                                 grepl("46N",recovery_location_name) ~ "COL",
-			                                 grepl("47N|48N",recovery_location_name) ~ "WAC"))
-
-			if(nrow(hsea.1)>0){
-			  marine.all <- marine.all %>%  filter(!grepl("HIGH SEAS 1",recovery_location_name)) %>% bind_rows(.,hsea.1)
-			}
+				
+			### IMPORTANT.  REMOVE ALL OF THE HIGH SEAS AREA 1 becasue we have that data directly from the observer program
+			marine.all <- marine.all %>% filter(!grepl("HIGH SEAS 1",recovery_location_name))			
+			
+			# hsea.1 <- marine.all %>% filter(grepl("HIGH SEAS 1",recovery_location_name)) %>%
+			#       mutate(rec.area.code = case_when(grepl("35N|36N|37N",recovery_location_name) ~ "MONT",
+			#                                  grepl("38N",recovery_location_name) ~ "SFB",
+			#                                  grepl("39N|40N",recovery_location_name) ~ "MEN",
+			#                                  grepl("41N",recovery_location_name) ~ "NCA",
+			#                                  grepl("42N",recovery_location_name) ~ "NCA SOR",
+			#                                  grepl("43N|44N",recovery_location_name) ~ "SOR",
+			#                                  grepl("45N",recovery_location_name) ~ "NOR",
+			#                                  grepl("46N",recovery_location_name) ~ "COL",
+			#                                  grepl("47N|48N",recovery_location_name) ~ "WAC"))
+			# 
+			# if(nrow(hsea.1)>0){
+			#   marine.all <- marine.all %>%  filter(!grepl("HIGH SEAS 1",recovery_location_name)) %>% bind_rows(.,hsea.1)
+			# }
 
 			# HSEA 3 is Gulf of Alaska			
-			hsea.3 <- marine.all %>% filter(grepl("HIGH SEAS 3",recovery_location_name))
+			hsea.3 <- marine.GOA.HS
 
 			hsea.3 <- hsea.3 %>% 
 			  mutate(rec.area.code = case_when(grepl("610",recovery_location_name) ~ "WAPEN",
 			                                   grepl("620",recovery_location_name) ~ "EAPEN",
+			                                   grepl("621",recovery_location_name) ~ "EAPEN",
 			                                   grepl("630",recovery_location_name) ~ "NWGOA",
 			                                   grepl("640",recovery_location_name) ~ "NEGOA",
 			                                   grepl("649",recovery_location_name) ~ "PWS",
 			                                   grepl("148W|149W|150W|151W|152W|153W",recovery_location_name) ~ "NWGOA",
+			                                   grepl("147W",recovery_location_name) ~ "NWGOA NEGOA",
 			                                   grepl("144W|145W|146W",recovery_location_name) ~ "NEGOA",
 			                                   grepl("154W",recovery_location_name) ~ "EAPEN NWGOA",
 			                                   grepl("155W|156W|157W|158W",recovery_location_name) ~ "EAPEN",
@@ -246,7 +251,7 @@
 			                                   grepl("160W|161W|162W|163W|164W|165W|166W|167W|168W|169W",recovery_location_name) ~ "WAPEN",
 			                                   grepl("170W|171W|172W|173W",recovery_location_name) ~ "ALEUT"))
 			if(nrow(hsea.3)>0){
-			  marine.all <- marine.all %>%  filter(!grepl("HIGH SEAS 3",recovery_location_name)) %>% bind_rows(.,hsea.3)
+			  marine.GOA.HS <- hsea.3
 			}
 
 			# HSEA 4 is Bering Sea
@@ -268,21 +273,46 @@
 			#Get rid of a few split areas based on crappy TRAWL LOCATION DATA
 			
 			#EAPEN NWGOA
-			temp.1	<-	marine.all[marine.all$rec.area.code =="EAPEN NWGOA",]
+			temp.1	<-	marine.GOA.HS[marine.GOA.HS$rec.area.code =="EAPEN NWGOA",]
 			temp.2	<-	temp.1
 			if(nrow(temp.1)>0){
-			  temp.1$est.numb			<- temp.1$est.numb/2
+			  # temp.1$est.numb			<- temp.1$est.numb/2
 			  temp.1$count			  <- temp.1$count/2
 			  temp.1$rec.area.code	<-	"EAPEN"
-			  temp.2$est.numb			<- temp.2$est.numb/2
+			  # temp.2$est.numb			<- temp.2$est.numb/2
 			  temp.2$count			  <- temp.2$count/2
 			  temp.2$rec.area.code	<-	"NWGOA"
 			  temp.all	<-	rbind(temp.1,temp.2)
 			  
-			  marine.all	<-	 marine.all[marine.all$rec.area.code != "EAPEN NWGOA",]
-			  marine.all	<-	 rbind(marine.all,temp.all)
+			  marine.GOA.HS	<-	 marine.GOA.HS[marine.GOA.HS$rec.area.code != "EAPEN NWGOA",]
+			  marine.GOA.HS	<-	 rbind(marine.GOA.HS,temp.all)
 			}			
-	
+
+			#NWGOA NEGOA
+			temp.1	<-	marine.GOA.HS[marine.GOA.HS$rec.area.code =="NWGOA NEGOA",]
+			temp.2	<-	temp.1
+			if(nrow(temp.1)>0){
+			  #temp.1$est.numb			<- temp.1$est.numb/2
+			  temp.1$count			  <- temp.1$count/2
+			  temp.1$rec.area.code	<-	"EAPEN"
+			  #temp.2$est.numb			<- temp.2$est.numb/2
+			  temp.2$count			  <- temp.2$count/2
+			  temp.2$rec.area.code	<-	"NWGOA"
+			  temp.all	<-	rbind(temp.1,temp.2)
+			  
+			  marine.GOA.HS	<-	 marine.GOA.HS[marine.GOA.HS$rec.area.code != "NWGOA NEGOA",]
+			  marine.GOA.HS	<-	 rbind(marine.GOA.HS,temp.all)
+			}			
+			
+			
+			### REPLACE COPPER WITH NEGOA, REPLACE PWS with NEGOA, REPLACE CISS with NWGOA.
+			### All are from gillnet fleets inshore.  Will be removed from the model when gillnet fleets are removed
+			
+			marine.all <- marine.all %>% mutate(rec.area.code = ifelse(rec.area.code=="COPPER","NEGOA",rec.area.code),
+			                                    rec.area.code = ifelse(rec.area.code=="PWS","NEGOA",rec.area.code),
+			                                    rec.area.code = ifelse(rec.area.code=="CISS","NWGOA",rec.area.code))
+			
+				
 			# make vector to search for in highseas 3
 			# boundaries of EAPEN and WAPEN is 159W,
 			  #NWGOA and EAPEN is 154W, 
@@ -291,24 +321,6 @@
 			  # Yakutat bay is about 140W
 			
 
-  		### Exclude PWS, KODIAK, Ak Penn, and Bering Sea fish.
-  #   		marine.all	<-	 marine.all[marine.all$rec.area.code != "PWS",]
-  # 		  marine.all	<-	 marine.all[marine.all$rec.area.code != "KOD",]
-  # 		  marine.all	<-	 marine.all[marine.all$rec.area.code != "CISS",]
-  # 		  marine.all	<-	 marine.all[marine.all$rec.area.code != "APEN",]
-  # 		  marine.all	<-	 marine.all[marine.all$rec.area.code != "BER",]
-  # 		  marine.all	<-	 marine.all[marine.all$rec.area.code != "PWS KOD",]
-  # 		  marine.all	<-	 marine.all[marine.all$rec.area.code != "KOD PWS",]
-  # 		  marine.all	<-	 marine.all[marine.all$rec.area.code != "KOD APEN",]
-  # 		  marine.all	<-	 marine.all[marine.all$rec.area.code != "HSEA",]
-  		## Combine YAK and NSEAK
-  		  # marine.all$rec.area.code[marine.all$rec.area.code == "YAK" ]	<- "NSEAK"			
-			
-			
-			### IMPORTANT.  REMOVE ALL OF THE HIGH SEAS AREA 1 becasue we have that data directly from the observer program
-			#marine.all <- marine.all %>% filter(!grepl("HIGH SEAS 1",recovery_location_name))			
-			
-			
 #####################################################################################
 ##### END Combine Areas
 #####################################################################################

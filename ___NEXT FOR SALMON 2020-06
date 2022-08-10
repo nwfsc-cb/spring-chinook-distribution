@@ -13,16 +13,47 @@ Adjusted all_chinook.RData to avoid leading zeros problem.
 adjusted releases from 2020_07 to avoid read-in error
 Made CWT control files folder.
 
+05/02/2022 Notes
+Looked through spr-sum releases. Fixed "01" script so all releases and recoveries were properly dealt with. Added dplyr summary scripts to marine recoveries and debugged some release duplications.  Moved on to mapping recovery locations.  Looked through rec.area.codes
+COPPER - only gillnet fisheries (16 fish total).  Will be excluded later.
+CISS - more than COPPER but all net fisheries (fishery 20, 28) months - May-Aug. Will be excluded later.
+PWS - 49 fish total. all summertime gillnet fisheries. Almost entirely in the Wally Norenberg terminal area...
+YAK - lots more recoveries (2448). fisheries = troll (2328 (10) + 45(11)), net(12), rec (60), a handful of test fishery fish (3)
+EAPEN - 38 recoveries all from gillnet
+NWGOA - 268 recoveries.  All from gillnet
 
+5/3/2022
+Looked over the recovery area mapping process.  I kept CISS, PWS, COPPER areas separate for now.  They are all net fisheries and will likely get dropped later. I double checked the mapping to the YAK area for troll fisheries. It looks correct.
+I modified some more aggregate functions and moved them to dplyr.
+THen I rediscovered Genoa's "Process ALASKA pollock effort.R" file (in the spring-chinook-distribution repo)
 
+5/4-5/5/2022.
+Did a deep dive on the CWT and recoveries in the pollock fishery.  Decided to use the CWT files from the observer program in AK because they provide lat-long recoveries and provide a way to isolate which recoveries are from the pollock fleet. There is some complicated matching that occurs between the recovered CWT, observer coverage, and other processes. There are a lot of fish that are included in the pollock fleet because they were collected during a time when the pollock fleet was open and fishing. There remains some questions about whether we should allow recoveries associated with times adjacent to
 
+NEXT. Alaska rockfish fleet. Should be pretty easy.
 
+5/23/2022
+Completed all alaskan fisheries, wrote all to file, moved on to the "02_.." file.
+Updated beginning of 02 file.
+Moved on to recreational fishery data. Updated effort for Puget Sound from pamphlets.
+Examined emergency rules for changes to the opening / closing / chinook retention.  Updated WA PUSO Chinook Retention thru 2020. This includes all changes made by emergency rule between 2003 and 2020.
+Also updated Chinook size limits on rec fisheries (vuln.rec files).
+Updated files are in the Orca_salmon_data folders
 
+5/24/2022-6/17/2022
+Ran into some trouble with the Alaska Troll effort files.  Switched from a poor proxy for effort (approximate boat days) to landings.  Double checked the hand troll to power troll conversion (into power-troll equivalents)  using:
+[CPUE(Hand) / CPUE(Power)] * Hand_Landings.
+Modified the fraction of effort in each month and found some problems in the post 2015 data that was causing negative proportions. Fixed that.  Wrote alaska troll effort to file "effort.data.ak.2022-06.csv" is the file to use in all future analyses.
 
+7/28/22
+Finally back to the spring model after getting the OCNMS surveys up and running.
+Updated CA, OR, WA troll effort through 2018 (CA) or through 2019 (WA, OR).
+Updated and checked code for Treaty Troll fleets
+Updated and checked ASHOP and Shoreside fleets. (only data through 2017...)
+Began new scripts to read in data from the AK Rockfish and Pollock Shoreside.
 
-
-
-
+8/1/2022-8/10/2022
+Worked on many things... Fixed and finished AK effort files (shoreside pollock and rockfish (both CP and shoreside)). Improved and debugged extraction of CWT files for all gear groups.  Fixed recovery area assignments.
 
 
 Fisheries and Effort:
