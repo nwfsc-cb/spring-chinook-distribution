@@ -1,24 +1,23 @@
 ### SCRIPT FOR CREATING FILES THAT CAN BE READ IN BY STAN
 
 # Rec Effort data first
-print(base.dir)
+#print(base.dir)
 
-ak.eff <- read.csv(paste(base.dir,"/Salmon-Climate/Processed Data/Effort Data/effort.data.ak.csv",sep=""))
-ca.or.wa.eff <- read.csv(paste(base.dir,"/Salmon-Climate/Processed Data/Effort Data/effort.data.REC.ca.or.wa.csv",sep=""))
-puso.eff       <- read.csv(paste(base.dir,"/Salmon-Climate/Processed Data/Effort Data/effort.data.REC.puso.csv",sep=""))
-puso.retention <- read.csv(paste(base.dir,"/Salmon-Climate/Processed Data/Effort Data/WA PUSO Chinook retention.csv",sep=""))
-sgeo.eff <- read.csv(paste(base.dir,"/Salmon-Climate/Processed Data/Effort Data/effort.data.REC.sgeo.csv",sep=""))
-johnstone.eff <- read.csv(paste(base.dir,"/Salmon-Climate/Processed Data/Effort Data/effort.data.REC.johnstone.csv",sep=""))
-wcvi.eff <- read.csv(paste(base.dir,"/Salmon-Climate/Processed Data/Effort Data/effort.data.REC.wcvi.csv",sep=""))
+ak.eff <- read.csv("./Processed Data/Effort Data/effort.data.ak.csv") # THIS IS ONLY COMMERCIAL TROLL (OMIT)
+ca.or.wa.eff <- read.csv("./Processed Data/Effort Data/effort.data.REC.ca.or.wa.csv")
+puso.eff       <- read.csv("./Processed Data/Effort Data/effort.data.REC.puso-to-2020.csv")
+puso.retention <- read.csv("./Processed Data/Effort Data/WA PUSO Chinook retention.csv")
+sgeo.eff <- read.csv("./Processed Data/Effort Data/effort.data.REC.sgeo.csv")
+johnstone.eff <- read.csv("./Processed Data/Effort Data/effort.data.REC.johnstone.csv")
+wcvi.eff <- read.csv("./Processed Data/Effort Data/effort.data.REC.wcvi.csv")
 
-bc.eff <- read.csv(paste(base.dir,"/Salmon-Climate/Processed Data/Effort Data/effort.data.REC.bc.2019.csv",sep=""))
+bc.eff <- read.csv("./Processed Data/Effort Data/effort.data.REC.bc.2019.csv")
 
-
-can.irec.eff <- read.csv(paste(base.dir,"/Salmon-Climate/Processed Data/Effort Data/iREC chinook effort 05-2019.csv",sep=""))
-can.irec.mapping <- read.csv(paste(base.dir,"/Salmon-Climate/Processed Data/Effort Data/can.irec.areas.mapping.csv",sep=""))
+can.irec.eff <- read.csv("./Processed Data/Effort Data/iREC chinook effort 05-2019.csv")
+can.irec.mapping <- read.csv("./Processed Data/Effort Data/can.irec.areas.mapping.csv")
 colnames(ca.or.wa.eff)[3:14] <- colnames(ak.eff)[3:14]
 
-locations <- read.csv(paste(base.dir,"/Salmon-Climate/Processed Data/Locations-map to coastal areas 1-2019.csv",sep=""))
+locations <- read.csv("./Processed Data/Locations-map to coastal areas 1-2019.csv")
 
 ##### These are the month groupings to start:
 
@@ -49,9 +48,9 @@ ALL.MONTH   <- c("month.01","month.02","month.03","month.04","month.05","month.0
 # 
 # ak.eff.rec <- ak.eff.by.area[,c("year","area.code",MONTH)]
 
-# US Coast second
+# US Coast 
 
-if(loc_18=="TWO_OR"){
+if(loc_18=="TWO_OR" | loc_18=="_two_OR_PUSO_AK"){
   ca.or.wa.eff$area.code <- locations$area.code.two.OR[match(ca.or.wa.eff$port,locations$stat.area.port)]
 }else if(loc_18=="NCA_SOR_PUSO"){
   ca.or.wa.eff$area.code <- locations$area.code.NCA_SOR_PUSO[match(ca.or.wa.eff$port,locations$stat.area.port)]
@@ -59,16 +58,23 @@ if(loc_18=="TWO_OR"){
   ca.or.wa.eff$area.code <- locations$area.code[match(ca.or.wa.eff$port,locations$stat.area.port)]
 }
 ### DIVIDE WESTPORT EFFORT EQUALLY BETWEEN WAC and COL 
-  # ca.or.wa.eff[ca.or.wa.eff$port=="Westport",][,grep("month",colnames(ca.or.wa.eff))] <- ca.or.wa.eff[ca.or.wa.eff$port=="Westport",][,grep("month",colnames(ca.or.wa.eff))] /2
-  # temp <- ca.or.wa.eff[ca.or.wa.eff$port=="Westport",]
-  # temp$area.code <- "COL"
-  # ca.or.wa.eff <- rbind(ca.or.wa.eff,temp)
+  ca.or.wa.eff[ca.or.wa.eff$port=="Westport",][,grep("month",colnames(ca.or.wa.eff))] <- ca.or.wa.eff[ca.or.wa.eff$port=="Westport",][,grep("month",colnames(ca.or.wa.eff))] /2
+  temp <- ca.or.wa.eff[ca.or.wa.eff$port=="Westport",]
+  temp$area.code <- "COL"
+  ca.or.wa.eff <- rbind(ca.or.wa.eff,temp)
 ###
 ca.or.wa.eff.by.area   <- aggregate(ca.or.wa.eff[,ALL.MONTH],by=list(year=ca.or.wa.eff$year,area.code=ca.or.wa.eff$area.code),sum)
 
 if(MONTH.STRUCTURE=="FOUR"){
   ca.or.wa.eff.by.area$month.winter.2 <- rowSums(ca.or.wa.eff.by.area[,WINTER.MONTH[1:3]])
   ca.or.wa.eff.by.area$month.winter.1 <- rowSums(ca.or.wa.eff.by.area[,WINTER.MONTH[4:5]])
+  ca.or.wa.eff.by.area$month.spring <- rowSums(ca.or.wa.eff.by.area[,SPRING.MONTH])
+  ca.or.wa.eff.by.area$month.summer <- rowSums(ca.or.wa.eff.by.area[,SUMMER.MONTH])
+  ca.or.wa.eff.by.area$month.fall   <- rowSums(ca.or.wa.eff.by.area[,FALL.MONTH])
+}
+if(MONTH.STRUCTURE=="SPRING"){
+  ca.or.wa.eff.by.area$month.winter.2 <- rowSums(ca.or.wa.eff.by.area[,WINTER.MONTH[1:2]])
+  ca.or.wa.eff.by.area$month.winter.1 <- rowSums(ca.or.wa.eff.by.area[,WINTER.MONTH[3:4]])
   ca.or.wa.eff.by.area$month.spring <- rowSums(ca.or.wa.eff.by.area[,SPRING.MONTH])
   ca.or.wa.eff.by.area$month.summer <- rowSums(ca.or.wa.eff.by.area[,SUMMER.MONTH])
   ca.or.wa.eff.by.area$month.fall   <- rowSums(ca.or.wa.eff.by.area[,FALL.MONTH])
@@ -85,7 +91,7 @@ ca.or.wa.eff.by.area$year.wint.2  <- ca.or.wa.eff.by.area$year-1
 
 temp <- ca.or.wa.eff.by.area[,c("year.wint.2", "area.code","month.winter.2") ]
 ca.or.wa.eff.by.area <-  ca.or.wa.eff.by.area %>% dplyr::select(-year.wint.2,-month.winter.2)
-ca.or.wa.eff.by.area <- merge(ca.or.wa.eff.by.area,temp,by.x=c("year","area.code"),by.y=c("year.wint.2" ,"area.code"))
+ca.or.wa.eff.by.area <- merge(ca.or.wa.eff.by.area,temp,by.x=c("year","area.code"),by.y=c("year.wint.2" ,"area.code")) # added all=T to avoid cutting off a year of data and maintaining consistency with other scripts
 ca.or.wa.eff.by.area$month.winter <- ca.or.wa.eff.by.area$month.winter.2 + ca.or.wa.eff.by.area$month.winter.1
 
 ca.or.wa.eff.rec <- ca.or.wa.eff.by.area[,c("year","area.code",MONTH)]
@@ -199,6 +205,13 @@ ca.or.wa.eff.rec <- ca.or.wa.eff.by.area[,c("year","area.code",MONTH)]
     puso.eff.wide$month.summer    <- rowSums(puso.eff.wide[,SUMMER.MONTH])
     puso.eff.wide$month.fall      <- rowSums(puso.eff.wide[,FALL.MONTH])
   }
+  if(MONTH.STRUCTURE=="SPRING"){
+    puso.eff.wide$month.winter.2  <- rowSums(puso.eff.wide[,WINTER.MONTH[1:2]])
+    puso.eff.wide$month.winter.1  <- rowSums(puso.eff.wide[,WINTER.MONTH[3:4]])
+    puso.eff.wide$month.spring    <- rowSums(puso.eff.wide[,SPRING.MONTH])
+    puso.eff.wide$month.summer    <- rowSums(puso.eff.wide[,SUMMER.MONTH])
+    puso.eff.wide$month.fall      <- rowSums(puso.eff.wide[,FALL.MONTH])
+  }
   if(MONTH.STRUCTURE=="FRAM"){
     puso.eff.wide$month.winter.2  <- (puso.eff.wide[,WINTER.MONTH[1]])
     puso.eff.wide$month.winter.1  <- rowSums(puso.eff.wide[,WINTER.MONTH[2:4]])
@@ -289,6 +302,13 @@ ca.or.wa.eff.rec <- ca.or.wa.eff.by.area[,c("year","area.code",MONTH)]
                                            season = ifelse(month.numb>=6 & month.numb<=7, "month.summer",season),
                                            season = ifelse(month.numb>=8 & month.numb<=10, "month.fall",season))
   }
+  if(MONTH.STRUCTURE=="SPRING"){
+    bc.trim <- bc.trim %>% mutate(season="", season = ifelse(month.numb<=2, "month.winter.2",""),
+                                  season = ifelse(month.numb>=11 & month.numb<=12, "month.winter.1",season),
+                                  season = ifelse(month.numb>=3 & month.numb<=5, "month.spring",season),
+                                  season = ifelse(month.numb>=6 & month.numb<=7, "month.summer",season),
+                                  season = ifelse(month.numb>=8 & month.numb<=10, "month.fall",season))
+  }
   if(MONTH.STRUCTURE=="FRAM"){
     bc.trim <- bc.trim %>% mutate(season="",season = ifelse(month.numb<=1, "month.winter.2",""),
                                            season = ifelse(month.numb>=10 & month.numb<=12, "month.winter.1",season),
@@ -310,140 +330,8 @@ ca.or.wa.eff.rec <- ca.or.wa.eff.by.area[,c("year","area.code",MONTH)]
   bc.eff.rec[is.na(bc.eff.rec)==T] <- 0
   
   
+  ### iREC DATA
   
-  
-  
-  ### THIS IS THE OLD WAY OF CALCULATING BC EFFORT 
-  
-  # sgeo.trim <- sgeo.eff[,grep("X",colnames(sgeo.eff))]
-  # sgeo.eff$total.effort <- rowSums(sgeo.trim,na.rm=T)
-  # 
-  # sgeo.agg <-expand.grid(month.numb=1:12,year=YEARS.RECOVER)
-  # sgeo.eff <- merge(sgeo.agg, sgeo.eff, all=T)
-  # sgeo.agg <- merge(sgeo.eff[,c("year","month.numb","total.effort")],sgeo.agg,all=T)
-  # 
-  # sgeo.eff.wide <- data.frame(port="SGEO All",year=YEARS.RECOVER)
-  # sgeo.eff.wide <- cbind(sgeo.eff.wide,matrix(0,length(YEARS.RECOVER),12))
-  # for(i in YEARS.RECOVER){
-  #   for(j in 1:12){
-  #     sgeo.eff.wide[sgeo.eff.wide$year == i,j+2 ] <- sgeo.agg$total.effort[sgeo.agg$year== i & sgeo.agg$month.numb== j]
-  #   }
-  # }
-  # 
-  # colnames(sgeo.eff.wide)[3:ncol(sgeo.eff.wide)] <- ALL.MONTH
-  # 
-  # if(MONTH.STRUCTURE=="FOUR"){ 
-  #   sgeo.eff.wide$month.winter.2 <- rowSums(sgeo.eff.wide[,WINTER.MONTH[1:3]])
-  #   sgeo.eff.wide$month.winter.1 <- rowSums(sgeo.eff.wide[,WINTER.MONTH[4:5]])
-  #   sgeo.eff.wide$month.spring <- rowSums(sgeo.eff.wide[,SPRING.MONTH])
-  #   sgeo.eff.wide$month.summer <- rowSums(sgeo.eff.wide[,SUMMER.MONTH])
-  #   sgeo.eff.wide$month.fall   <- rowSums(sgeo.eff.wide[,FALL.MONTH])
-  # }
-  # if(MONTH.STRUCTURE=="FRAM"){
-  #   sgeo.eff.wide$month.winter.2 <- sgeo.eff.wide[,WINTER.MONTH[1]]
-  #   sgeo.eff.wide$month.winter.1 <- rowSums(sgeo.eff.wide[,WINTER.MONTH[2:4]])
-  #   sgeo.eff.wide$month.spring <- rowSums(sgeo.eff.wide[,SPRING.MONTH])
-  #   sgeo.eff.wide$month.summer <- rowSums(sgeo.eff.wide[,SUMMER.MONTH])
-  #   sgeo.eff.wide$month.fall   <- rowSums(sgeo.eff.wide[,FALL.MONTH])
-  # }
-  # 
-  # sgeo.eff.wide$area.code <- "SGEO"
-  # 
-  # sgeo.eff.wide$year.wint.2  <- sgeo.eff.wide$year-1
-  # 
-  # temp <- sgeo.eff.wide[,c("year.wint.2", "area.code","month.winter.2") ]
-  # sgeo.eff.wide <-  sgeo.eff.wide %>% dplyr::select(-year.wint.2,-month.winter.2)
-  # sgeo.eff.wide <- merge(sgeo.eff.wide,temp,by.x=c("year","area.code"),by.y=c("year.wint.2" ,"area.code"),all=T)
-  # sgeo.eff.wide$month.winter <- sgeo.eff.wide$month.winter.2 + sgeo.eff.wide$month.winter.1
-  # 
-  # sgeo.eff.rec <- sgeo.eff.wide[,c("year","area.code",MONTH)]
-  # 
-  # 
-  # ### OK.  FROM VISUAL INSPECTION OF EFFORT DATA, I MADE THESE EXECUTIVE DECISIONS ON WHICH YEARS TO INCLUDE EFFORT DATA FROM:
-  #   # 1) Exclude effort data from pre-1982. (possible to include 7/81, 8/81)
-  #       sgeo.eff.rec[sgeo.eff.rec$year<=1981,3:6] <- 0
-  #   # 2) Exclude effort data from spring (month 4 in 1982, month 5 in 1983) 1982, 1983
-  #       sgeo.eff.rec$month.spring[sgeo.eff.rec$year == 1982] <- 0
-  #       sgeo.eff.rec$month.spring[sgeo.eff.rec$year == 1983] <- 0
-  #   # 3) Exclude effot data from winter in all years because of varying creel effort. 
-  #       sgeo.eff.rec$month.winter <- 0
-  #       
-  # ##### SWVI and NWVI
-  #       if(MONTH.STRUCTURE=="FOUR"){
-  #         wcvi.eff$season[wcvi.eff$month.numb == 4 | wcvi.eff$month.numb == 5 ] <- "month.spring"
-  #         wcvi.eff$season[wcvi.eff$month.numb == 6 | wcvi.eff$month.numb == 7 ] <- "month.summer"
-  #         wcvi.eff$season[wcvi.eff$month.numb == 8 | wcvi.eff$month.numb == 9 | wcvi.eff$month.numb == 10  ] <- "month.fall" 
-  #         wcvi.eff$season[wcvi.eff$month.numb >= 11 ] <- "month.winter.1"
-  #         wcvi.eff$season[wcvi.eff$month.numb <= 3 ] <- "month.winter.2"
-  #         wcvi.eff$year.mod <- wcvi.eff$year
-  #       }
-  #       if(MONTH.STRUCTURE=="FRAM"){
-  #         wcvi.eff$season[wcvi.eff$month.numb == 2 | wcvi.eff$month.numb == 3 | wcvi.eff$month.numb == 4 ] <- "month.spring"
-  #         wcvi.eff$season[wcvi.eff$month.numb == 5 | wcvi.eff$month.numb == 6 ] <- "month.summer"
-  #         wcvi.eff$season[wcvi.eff$month.numb == 7 | wcvi.eff$month.numb == 8 | wcvi.eff$month.numb == 9  ] <- "month.fall" 
-  #         wcvi.eff$season[wcvi.eff$month.numb >= 10 ] <- "month.winter.1"
-  #         wcvi.eff$season[wcvi.eff$month.numb <= 1] <- "month.winter.2"
-  #         wcvi.eff$year.mod <- wcvi.eff$year
-  #       }
-  #       
-  #       # This matches model year to adjoining calendar years.
-  #       wcvi.eff$year.mod[wcvi.eff$season == "month.winter.2"] <- wcvi.eff$year.mod[wcvi.eff$season == "month.winter.2"] - 1 
-  #       wcvi.eff <- wcvi.eff %>% mutate(season = ifelse(season %in% c("month.winter.1","month.winter.2"),"month.winter",season))
-  #       #wcvi.eff <- wcvi.eff[wcvi.eff$season != "month.winter",]
-  #       
-  #       COL <- c("year","year.mod","month","month.numb","season","Area.21","Area.23A","Area.23B","Area.24",
-  #                   "Area.121","Area.123","Area.124")
-  #       swvi.eff <- wcvi.eff[,COL]
-  #       swvi.eff$tot <- rowSums(swvi.eff[,6:ncol(swvi.eff)])
-  #       
-  #       # THIS DROPS WINTER EFFORT TO 0 because there are so few times with survey data.
-  #       swvi.eff <- dcast(swvi.eff,year.mod~season,sum) %>% mutate(area.code="SWVI",month.winter=0)
-  #       swvi.eff <- left_join(data.frame(year.mod=YEARS.RECOVER),swvi.eff)
-  #       swvi.eff$area.code <- "SWVI"
-  #       swvi.eff[is.na(swvi.eff)==T] <- 0
-  #       swvi.eff <- swvi.eff %>% rename(year=year.mod) 
-  #       swvi.eff.rec <- swvi.eff[,c("year","area.code",MONTH)]
-  #       
-  #       #NWVI
-  #       COL <- c("year","year.mod","month","month.numb","season","Area.25","Area.26","Area.27",
-  #                   "Area.125","Area.126","Area.127")
-  #       nwvi.eff <- wcvi.eff[,COL]
-  #       nwvi.eff$tot <- rowSums(nwvi.eff[,6:ncol(nwvi.eff)])
-  #       
-  #       # THIS DROPS WINTER EFFORT TO 0 because there are so few times with survey data.
-  #       nwvi.eff <- dcast(nwvi.eff,year.mod~season,sum) %>% mutate(area.code="NWVI",month.winter=0)
-  #       nwvi.eff <- left_join(data.frame(year.mod=YEARS.RECOVER),nwvi.eff)
-  #       nwvi.eff$area.code <- "NWVI"
-  #       nwvi.eff[is.na(nwvi.eff)==T] <- 0
-  #       nwvi.eff <- nwvi.eff %>% rename(year=year.mod) 
-  #       nwvi.eff.rec <- nwvi.eff[,c("year","area.code",MONTH)]
-  #       
-  #       # Put Johnstone into CBC.
-  #       # Drop June and September data because of rarity...
-  #       cbc.eff <- johnstone.eff %>% mutate(area.code="CBC") %>% filter(!month=="Jun",!month=="June",!month=="Sep")
-  #       cbc.eff <- cbc.eff %>% mutate(effort=Area.11+Area.12)
-  #       
-  #       if(MONTH.STRUCTURE=="FOUR"){
-  #         cbc.eff$season[cbc.eff$month.numb == 6 | cbc.eff$month.numb == 7 ] <- "month.summer"
-  #         cbc.eff$season[cbc.eff$month.numb == 8 | cbc.eff$month.numb == 9 | cbc.eff$month.numb == 10  ] <- "month.fall" 
-  #       }
-  #       if(MONTH.STRUCTURE=="FRAM"){
-  #         cbc.eff$season[cbc.eff$month.numb == 5 | cbc.eff$month.numb == 6 ] <- "month.summer"
-  #         cbc.eff$season[cbc.eff$month.numb == 7 | cbc.eff$month.numb == 8 | cbc.eff$month.numb == 9  ] <- "month.fall" 
-  #       }
-  #       
-  #       cbc.eff <- dcast(cbc.eff,year~season,sum,value.var = "effort") %>% mutate(area.code="CBC")
-  #       if(MONTH.STRUCTURE=="FOUR"){
-  #         cbc.eff <- left_join(data.frame(year=YEARS.RECOVER),cbc.eff) %>% mutate(month.winter=0,month.spring=0,area.code="CBC")
-  #       }
-  #       if(MONTH.STRUCTURE=="FRAM"){
-  #         cbc.eff <- left_join(data.frame(year=YEARS.RECOVER),cbc.eff) %>% 
-  #                         mutate(month.winter=0,month.spring=0,month.summer=0,area.code="CBC")
-  #       }
-  #       
-  #       cbc.eff.rec <- cbc.eff[,c("year","area.code",MONTH)]
-  #       cbc.eff.rec[is.na(cbc.eff.rec)==T] = 0
-        
         ### Process the iREC data from Canada. This is a different data type and form than the other recreational data.
         ### it needs additional processing.
         
@@ -460,6 +348,13 @@ ca.or.wa.eff.rec <- ca.or.wa.eff.by.area[,c("year","area.code",MONTH)]
                                                season = ifelse(MONTH>=4 & MONTH<=5, "month.spring",season),
                                                season = ifelse(MONTH>=6 & MONTH<=7, "month.summer",season),
                                                season = ifelse(MONTH>=8 & MONTH<=10, "month.fall",season))
+        }
+        if(MONTH.STRUCTURE=="SPRING"){
+          can.irec.mod<- can.irec.mod %>% mutate(season = ifelse(MONTH<=2, "month.winter.2",""),
+                                                 season = ifelse(MONTH>=11 & MONTH<=12, "month.winter.1",season),
+                                                 season = ifelse(MONTH>=3 & MONTH<=5, "month.spring",season),
+                                                 season = ifelse(MONTH>=6 & MONTH<=7, "month.summer",season),
+                                                 season = ifelse(MONTH>=8 & MONTH<=10, "month.fall",season))
         }
         if(MONTH.STRUCTURE=="FRAM"){
         can.irec.mod<- can.irec.mod %>% mutate(season = ifelse(MONTH<=1, "month.winter.2",""),
