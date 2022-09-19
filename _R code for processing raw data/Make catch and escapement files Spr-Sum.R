@@ -1,3 +1,7 @@
+# Trim the gears to avoid redundancy in trawl sectors.
+GEAR <- GEAR[grep("Trawl",GEAR,invert=TRUE)]
+N.GEAR <- length(GEAR)
+
 # Make Catch Files
 ### THESE ARE THE IMPORTANT ARRAY OF CATCH
 C <- array(0,dim=c(N.REL,N.mod.month,N.LOC,N.GEAR),dimnames = list(paste("rel.ID",1:N.REL,sep="."),NULL,paste("loc",nom,sep="."),GEAR))
@@ -34,8 +38,12 @@ for(k in 1:N.REL){
 # These are the interesting arrays
 Z_catch[is.na(C)]<-0 # Counts of individuals actually observed
 C[is.na(C)]<-0       # Expanded number of individual observed
-
 ############################
+
+#make some summaries
+
+
+
 
 ## 
 if(MONTH.STRUCTURE=="FOUR"){
@@ -55,6 +63,16 @@ if(MONTH.STRUCTURE=="FRAM"){
   samp.frac.dat$season[samp.frac.dat$model.age %in% c(3,7,11,15)] <- "winter"
   samp.frac.dat$season[samp.frac.dat$model.age %in% c(4,8,12,16)] <- "spring"
 }  
+
+if(MONTH.STRUCTURE=="SPRING"){
+  samp.frac.dat <- catch.dat %>% as.data.frame()
+  samp.frac.dat$season <- ""
+  samp.frac.dat$season[samp.frac.dat$model.age %in% c(1,5,9,13,17,21)] <- "spring"
+  samp.frac.dat$season[samp.frac.dat$model.age %in% c(2,6,10,14,18)] <- "summer"
+  samp.frac.dat$season[samp.frac.dat$model.age %in% c(3,7,11,15,19)] <- "fall"
+  samp.frac.dat$season[samp.frac.dat$model.age %in% c(4,8,12,16,20)] <- "winter"
+}  
+
 
 Lambda <- samp.frac.dat %>% group_by(rec.year.mod,season,fishery.type,rec.area.code) %>% 
                 dplyr::summarize(Frac=mean(median.frac.samp),n.frac=length(median.frac.samp), sd.frac=sd(median.frac.samp),
@@ -98,7 +116,7 @@ for(i in 1:N.LOC){
 
 # Do something slightly different for the ashop and shoreside hake fleets.
     # See Make intermeidate recovery files CLIMATE.R for this information.
-    # They should be entirely complete before htey get here and shouldn't need to be touched.
+    # They should be entirely complete before they get here and shouldn't need to be touched.
 
 colnames(Lambda_troll_flat)       <- colnames(K_troll_flat)
 colnames(Lambda_rec_flat)         <- colnames(K_troll_flat)
@@ -123,7 +141,8 @@ N.ar <- 1
 THESE <- NULL
 for( i in 1:ncol(Lambda_troll_flat)){
   THESE <- which(is.na(Lambda_troll_flat[,i])==T)
-
+  
+  if(length(THESE)>0){
   for(j in 1:length(THESE)){
     start.c <- max(i-N.ar,1)
     stop.c  <- min(ncol(Lambda_troll_flat),i+N.ar)
@@ -133,6 +152,7 @@ for( i in 1:ncol(Lambda_troll_flat)){
     
     Lambda_troll_flat_int[THESE[j],i] =   median(Lambda_troll_flat[start.r:stop.r,start.c:stop.c],na.rm=TRUE)
   } 
+  }
 }
 
 ##3 REC
@@ -161,7 +181,7 @@ N.ar <- 2
 THESE <- NULL
 for( i in 1:ncol(Lambda_treaty_flat)){
   THESE <- which(is.na(Lambda_treaty_flat[,i])==T)
-  
+  if(length(THESE)>0){
   for(j in 1:length(THESE)){
     start.c <- max(i-N.ar,1)
     stop.c  <- min(ncol(Lambda_treaty_flat),i+N.ar)
@@ -171,6 +191,7 @@ for( i in 1:ncol(Lambda_treaty_flat)){
     
     Lambda_treaty_flat_int[THESE[j],i] =   median(Lambda_treaty_flat[start.r:stop.r,start.c:stop.c],na.rm=TRUE)
   } 
+  }
 }
 
 Lambda_troll_flat_int[is.nan(Lambda_troll_flat_int)==T] <- NA
@@ -222,13 +243,13 @@ RIV$first.month <- RIV$peak.month -1
 RIV$last.month <- RIV$peak.month 
 
 # Manually adjust a few rivers based on visual examination
-RIV[RIV==13]<-1
-RIV[RIV== -1 ]<- 11
+#RIV[RIV==13]<-1
+#RIV[RIV== -1 ]<- 11
 
 # Assert all fish enter river starting in August and lasting til October. 
 
-RIV$first.month <- 8
-RIV$last.month  <- 10
+#RIV$first.month <- 8
+#RIV$last.month  <- 10
 
 ##### PARSE RIVER ENTRY FOR WORKING WITH AWG tag codes.
 

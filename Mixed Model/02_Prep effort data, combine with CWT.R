@@ -35,6 +35,8 @@ TRAWL.BC  <- "FALSE"
 
 TRAWL_VULN_QUADRATIC <- "TRUE"
 
+
+
 # CLOGLOG   <- "FALSE" # This is a new option for making the vulnerability function a complementary log-log function as opposed to a logit link
   
 # GROUPINGS FOR MONTHS
@@ -43,9 +45,9 @@ MONTH.STRUCTURE <- "SPRING" # Options: "FOUR"(original structure) or
                           #          "SPRING" (follows the FOUR model schedule but includes March in the spring season)
 
 # These are are the determining factors for defining the years and locations
-YEARS.RELEASE     <- 1978:2013#2010
-YEARS.RECOVER     <- 1979:2018#2015
-YEARS.BROOD       <- 1977:2012#2009
+YEARS.RELEASE     <- 1984:2013#2010
+YEARS.RECOVER     <- 1985:2018#2015
+YEARS.BROOD       <- 1983:2012#2009
 
 N_years_recover <- length(YEARS.RECOVER)
 N_years_release <- length(YEARS.RELEASE)
@@ -134,8 +136,6 @@ if(loc_18 == "_two_OR_PUSO_AK"){
 }
 
 #important is: "fresh.recover"
-
-# GOOD TO HERE.
 
 ### Make the rec effort file from the US coast data and Canada
 source("./_R code for processing raw data/Make Rec effort files Spr-Sum.R",local=T)
@@ -288,8 +288,6 @@ if(loc_18=="TRUE"){
   K.rec[,,11:15]     <- 0
 }
 
-
-
 K_troll   <- K # for ease of use in the STAN program
 K_rec     <- K.rec# for ease of use in the STAN program
 K_rec_can <- K.rec.can# for ease of use in the STAN program
@@ -298,9 +296,8 @@ K_treaty  <- K.treaty# for ease of use in the STAN program
 K_hake_ashop <- K.hake.ashop
 K_hake_shoreside <- K.hake.shoreside
 K_pollock_shoreside <- K.pollock.shoreside
-K_rockfish_shoreside <-K.rockfish.shoreside
-K_rockfish_CP <- K.rockfish.CP
-
+K_rockfish_AK_shoreside <-K.rockfish.shoreside
+K_rockfish_AK_CP <- K.rockfish.CP
 
 ###################################################################################################
 # Make intermediate recovery files.
@@ -308,12 +305,12 @@ K_rockfish_CP <- K.rockfish.CP
 # Make helpers file for later use
 # This file add a model age to all of the CWT recoveries and, for the trawl fleets, matches up the sampling fractions for each observation.
 source("./_R code for processing raw data/Make intermediate recovery files Spr-Sum.R",local=T)
-
+ 
 ###################################################################################################
 ### Create lookup table for fishing morality parameters. [ define year-month-locations for which there were no catches in a particular gear.type ]
 ###################################################################################################
 # Add in trawl fleets to gear list here.
-source("./spring-chinook-distribution/_R code for processing raw data/Make flat files for effort including missing effort Spr-Sum.R",local=T)
+source("./_R code for processing raw data/Make flat files for effort including missing effort Spr-Sum.R",local=T)
 
 ###################################################################################################
 #### HERES IS WHERE WE DEFINE THE POPULATIONS OR  REGIONS OF INTEREST
@@ -335,45 +332,17 @@ REL$ID_numb <- 1:nrow(REL) # This is the identifier for the unique release numbe
 N.REL <- max(REL$ID_numb) # THIS IS THE TOTAL NUMBER OF RELEASES WE ARE EXAMINING.
 
 ### MAKE SURE CONUMA is treated as a SWVI location, not NWVI.
-REL$ocean.region[REL$ocean.region == "NWVI"] <- "SWVI"  
+#REL$ocean.region[REL$ocean.region == "NWVI"] <- "SWVI"  
 
 # This is a kluge to add more release locations that enter the ocean in the Columbia ocean region.  
 # Could do something similar for other regions,if desired
 #REL$loc.numb  <- LOCATIONS$location.number[match(REL$ocean.region,LOCATIONS$location.name)]
 
 REL <- left_join(REL, ORIGIN.LAB %>% dplyr::select(origin.code,loc.numb), by=c("ocean.region"="origin.code")) 
-
-# 
-# if(loc_18 == "NCA_SOR_PUSO" ){
-#   val <- LOCATIONS$location.number[LOCATIONS$location.name=="NCA"]
-#   REL$loc.numb[REL$ocean.region=="SOR"]  <- val + 0.5
-# }
-# if(loc_18 == "TWO_OR" ){
-#   val <- LOCATIONS$location.number[LOCATIONS$location.name=="SOR"]
-#   REL$loc.numb[REL$ocean.region=="COR"]  <- val + 0.5
-# }
-# 
-# val <- LOCATIONS$location.number[LOCATIONS$location.name=="COL"]
-# REL$loc.numb[REL$ocean.region=="SAB"]   <- val + 0.05
-# REL$loc.numb[REL$ocean.region=="LCOL"]  <- val + 0.1
-# REL$loc.numb[REL$ocean.region=="MCOL"]  <- val + 0.25
-# #REL$loc.numb[REL$ocean.region=="UCOL"]  <- val + 0.5
-# REL$loc.numb[REL$ocean.region=="SNAK"]  <- val + 0.75
-# REL$loc.numb[REL$ocean.region=="URB"]   <- val + 0.90
-# 
-# val <- LOCATIONS$location.number[LOCATIONS$location.name=="PUSO"]
-# REL$loc.numb[REL$ocean.region=="PUSO_S"]  <- val + 0.25
-# REL$loc.numb[REL$ocean.region=="PUSO_N"]  <- val + 0.75
-# 
-# val <- LOCATIONS$location.number[LOCATIONS$location.name=="SGEO"]
-# REL$loc.numb[REL$ocean.region=="SGEO_S"]  <- val + 0.25
-# REL$loc.numb[REL$ocean.region=="SGEO_N"]  <- val + 0.75
-
 REL$start_year <- match(REL$brood_year,YEARS.BROOD)
 
-
 #### This script trims the included releases to only those that have reasonable numbers of ocean recoveries.
-source("./Base_Code/_R code for processing raw data/Trim releases based on recoveries.r",local=T)
+source("./_R code for processing raw data/Trim releases based on recoveries Spr-Sum.r",local=T)
 #########
 
   REL$ID_numb <- 1:nrow(REL) # This is the identifier for the unique release number.  This will be carried through the remainder of the analysis
@@ -382,7 +351,7 @@ source("./Base_Code/_R code for processing raw data/Trim releases based on recov
 ###################################################################################################
 ### Create Ocean Recovery Arrays and Escapement Arrays (there is some missing data in the Escapement array )
 ###################################################################################################
-source("./Base_Code/_R code for processing raw data/Make catch and escapement files CLIMATE.r",local=T)
+source("./_R code for processing raw data/Make catch and escapement files Spr-Sum.r",local=T)
 # This is where C, Z_catch, Lambda2, and E arrays are created.
 # They all have the form C[model.month,location,release.id,gear.type]
 # This also creates the E matrix (fish that make it into the river (both to hatchery and caught in fisheries))
@@ -392,12 +361,24 @@ C_rand_numb <- sort(sample(1:N.REL,3)) # 3 Catches to monitor for convergence.
 # E_var and E_sd is the derived variance used in the likelihood by stan.
 # recall that all of the escapements for NCA are assumed to be missing because they have crappy data.
 
+
+
+
+
+
+
 C_troll_true  <- C[,,,"Troll"]
 C_treaty_true <- C[,,,"Treaty Troll"]
 C_rec_true    <- C[,,,"Sport"]
 C_net_true    <- C[,,,"Gillnet & Seine & Other"]
 C_hake_ashop_true <- C[,,,"ashop"]
 C_hake_shoreside_true <- C[,,,"shoreside"]
+
+
+ggplot(REL) + geom_point(aes(y=tot.rec,x=N.released)) + facet_wrap(~ocean.region)
+
+
+
 
 # Lambda_troll_true  <- Lambda[,,,"Troll"]
 # Lambda_treaty_true <- Lambda[,,,"Treaty Troll"]

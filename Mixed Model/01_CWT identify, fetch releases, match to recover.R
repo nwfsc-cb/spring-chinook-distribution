@@ -666,13 +666,12 @@ sampling.fraction <- readRDS(paste0(write.dir,"Sample_Fraction_Pollock_GOA_Summa
 # This reads in the dates of pollock fisheries (important for identifying when pollock bycatch could have occurred)
 source(paste0(base.dir,"/spring-chinook-distribution/_R code for processing raw data/Process_Alaska_Trawl_tidy_pollock_fishing_dates.R"))
 
-# This assigns CWT recoveries to regions. 
+# This assigns CWT recoveries to regions. d 
 # This pulls from the AFSC observer database, NOT RMIS.
 source(paste0(base.dir,"/spring-chinook-distribution/_R code for processing raw data/Process_Alaska_Trawl_Assign_RMIS_TripTarget_CWT.R"))
 
 #Filter the AFSC database to only include tag_codes of interest
 #This is the data that I will use for central and westen Alaska recoveries.
-
 dat.trawl.pollock <- pollock_cwt %>% filter(tag_code %in% tag.dat$tag_code) %>%
                       left_join(.,tag.dat)
 

@@ -154,10 +154,12 @@ D <- left_join(ocean.recover.trawl$dat %>% filter(fishery.type=="ashop"),
                   ASHOP.smoothed %>% dplyr::select(-median.frac.samp,-season.numb))
 D$est.numb2 <- D$count / D$median.frac.samp2
 
+# Pull out only recoveries occurring after TRIM.ASHOP
+D <- D %>% filter(rec.year2>TRIM.ASHOP)
+
 ASHOP.fin <- D
 
-
-# SHORESIDE
+# SHORESIDE HAKE
 A <- melt(shoreside.sample.fraction,id.vars=c("year","area.code","area.numb"),
           variable.name = "season",value.name="median.frac.samp") %>% as.data.frame()
 A <- A %>% mutate(season.numb=0) %>% 

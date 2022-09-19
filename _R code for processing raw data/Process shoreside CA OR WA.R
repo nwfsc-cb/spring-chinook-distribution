@@ -6,11 +6,12 @@
 #NEW COLUMN CREATED CALLED TRIP_LENGTH_ALL. THIS CONDITIONALLY APPLIES TRIP LENGTHS USING DATA WE ARE MOST CONFIDENT IN FIRST (IE LOG BOOKS) THEN TRIPS WITH CONSECUTIVE LANDINGS, THEN ESTIMATES SUBTRAACTED FROM OFFSETS.
 #FINAL DF IS SHORESIDE_MDT_TRIP_LENGTH
 
+library(plyr)
+library(dplyr)
 library(tidyverse)
 library(RColorBrewer)
 library(gridExtra)
 library(gplots)
-
 ###################################################################################################################################################################################
                                                                                       #STEP 1 --> IDENTIFY THE HAKE TRIPS WITHIN PACFIN DATASET 
 ###################################################################################################################################################################################

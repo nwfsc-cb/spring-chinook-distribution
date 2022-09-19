@@ -930,7 +930,13 @@ all.sampling.fraction <- left_join(all.sampling.fraction,temp) %>%
 
 sampling.fraction <- all.sampling.fraction %>% 
                             dplyr::select(year,month,month.numb,rec.area.code,nmfs_area,final.samp.fraction)
-  
+
+# One manual adjustment becasue there were CWT reported by no fish purported sampled..
+sampling.fraction <- sampling.fraction %>% mutate(final.samp.fraction =
+                               case_when(year==2011 & month.numb %in% c(2,3) & rec.area.code=="WAPEN" ~
+                                                sampling.fraction %>% filter(year==2011, month.numb %in% c(2,3) ,rec.area.code=="EAPEN") %>% pull(final.samp.fraction) %>% mean(),
+                                         TRUE ~ final.samp.fraction))
+# MAke a plot
 samp.frac.final <-  ggplot(sampling.fraction,aes(x=year,y=final.samp.fraction,color=month),alpha=0.5) + 
   geom_point(alpha=0.5) +
   geom_line(alpha=0.2) +

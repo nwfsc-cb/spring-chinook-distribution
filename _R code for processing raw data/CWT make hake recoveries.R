@@ -13,7 +13,8 @@ library(here)
 # These are needed for the end of this script to match up with ASHOP and SHORESIDE DATA
 shoreside_chinook = read.csv(paste0(base.dir,"/Orca_Salmon_DATA/Recoveries/Shoreside_CWT/Final_Dataset/shoreside_chinook_tagcode_FTID.csv"))
 ashop_all_salmon = read.csv(paste0(base.dir,"/Orca_Salmon_DATA/Hake Trawl/ASHOP/final_datasets/ashop_chinook.csv"))
-ashop_chinook_CWT = read.csv(paste0(base.dir,"/Orca_Salmon_DATA/Recoveries/ASHOP/snoutbase/A-SHOP_Snoutbase_122118.csv"))
+ashop_chinook_CWT1 = read.csv(paste0(base.dir,"/Orca_Salmon_DATA/Recoveries/ASHOP/snoutbase/A-SHOP_Snoutbase_122118.csv"))
+ashop_chinook_CWT2 = read.csv(paste0(base.dir,"/Orca_Salmon_DATA/Recoveries/ASHOP/snoutbase/A-SHOP_ChinookBio_2012-2021_Matson_061622 for Ole.csv"))
 ashop_sample_frac = read.csv(paste0(base.dir,"/Orca_Salmon_DATA/Hake Trawl/ASHOP/final_datasets/ashop_sample_fraction.csv"))
 
 #add names to fishery gear in dat_recovery_state to make it more interprable
@@ -108,16 +109,32 @@ df_recovery <- df_recovery %>% filter(latitude<49)
 ################################################################################################################################################################
 #SNOUTBASE- Use to match lat and long into to RMIS Highseas to get better recovery information so the recoveries dont snap to a grid
 
-snout = ashop_chinook_CWT %>%
+snout1 = ashop_chinook_CWT1 %>%
   mutate(tag_code = str_pad(CWTCode, width= 6, pad = "0", side="left")) %>% #add leading zero that r removes
   filter(!CWTCode == "-" & !CWTCode == " ") %>% #remove blanks in snout data set
   separate(Date, c("rec_month", "rec_day", "delete"), sep= '/') %>%
   mutate(rec_month = as.numeric(rec_month)) %>% 
   mutate(rec_day = as.numeric(rec_day)) %>% 
   mutate(rec_year= as.numeric(Year)) %>%
+  mutate(Lat= as.numeric(Lat)) %>%
   mutate(Long= as.numeric(Long)) %>%
   mutate(Long = ifelse(rec_year == 2009, Long * -1, Long)) %>%#Fixes this --> ALL RECOVERIES FROM 2009 ARE PROBABLY MISSING A (-) IN LONGITUDE
   unite("id", c("rec_year", "rec_month", "rec_day", "tag_code") )
+
+snout2 = ashop_chinook_CWT2 %>%
+  mutate(tag_code = str_pad(CWTCode, width= 6, pad = "0", side="left")) %>% #add leading zero that r removes
+  filter(!CWTCode == "-" & !CWTCode == " ") %>% #remove blanks in snout data set
+  separate(Date, c("rec_month", "rec_day", "delete"), sep= '/') %>%
+  mutate(rec_month = as.numeric(rec_month)) %>% 
+  mutate(rec_day = as.numeric(rec_day)) %>% 
+  mutate(rec_year= as.numeric(Year)) %>%
+  mutate(Lat= as.numeric(Lat)) %>%
+  mutate(Long= as.numeric(Long)) %>%
+  mutate(Long = ifelse(rec_year == 2009, Long * -1, Long)) %>%#Fixes this --> ALL RECOVERIES FROM 2009 ARE PROBABLY MISSING A (-) IN LONGITUDE
+  unite("id", c("rec_year", "rec_month", "rec_day", "tag_code") )
+
+snout <- bind_rows(snout1 %>% dplyr::select(Year,id,Long,Lat) %>% filter(Year <= 2011),
+                   snout2 %>% dplyr::select(Year,id,Long,Lat))
 
 #is there fish in snoutbase not in rmis? #ANSWER = NO ALL SNOUTBASE FISH ARE IN RMIS
 #get unique list of tag codes for each
