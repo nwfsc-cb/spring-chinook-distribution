@@ -25,3 +25,4 @@ data/all_chinook.Rdata
 data/Not_Using__ak_permits
 src/
 *.RDataTmp?
+*.Rapp.history
