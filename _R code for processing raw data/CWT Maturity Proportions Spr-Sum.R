@@ -1,6 +1,6 @@
 #### Calculate proportions for dirichlet proportions by cohort.
 
-## Run the "Prep raw data for CPUE analysis.R"  file before you run the following.
+## Run the "02_Prep effort data, combine with CWT.R"  file before you run the following.
 library(sirt)
 
 E_prop     <- E_true / rowSums(E_true)
@@ -8,7 +8,7 @@ E_prop     <- data.frame(REL[,c("ID_numb","ID","ocean.region")],E_prop,Tot_N=row
 E_true_lab <- data.frame(REL[,c("ID_numb","ID","ocean.region")],E_true)
 
 # remove low sample size cohorts from consideration
-MIN <- 50
+MIN <- 10
 E_prop<- E_prop[E_prop$Tot_N >= MIN,]
 rel <- unique(E_prop$ID)
 
@@ -22,60 +22,86 @@ for(i in 1:length(rel)){
   temp  <- temp[,grep("X",colnames(temp))]
   these <- which(colSums(temp)>0)
   temp  <- temp[,these]
-  if(nrow(temp)>1){
+  if(length(these)>1){
+  if(nrow(temp)>1 ){
   #temp <- temp[,2:5]
     diri.fit <- dirichlet.mle(temp,eps = 10^(-8))
 
-    if(ncol(temp)==6){
-          DIRI <- rbind(DIRI,c(rel[i],diri.fit$alpha))  
-    }
-    if(length(these)==5){
-      if(min(these)==2){
-          alpha <- c(0.001001* diri.fit$alpha0,diri.fit$alpha)
-          DIRI <- rbind(DIRI,c(rel[i],alpha))  
-      }
-      if(max(these)==5){
-        alpha <- c(diri.fit$alpha,0.001001* diri.fit$alpha0)
-        DIRI <- rbind(DIRI,c(rel[i],alpha))
-      }
-    }
-    if(length(temp)==4){
-      if(min(these)==2 & max(these)==5){
-        alpha <- c(0.001001* diri.fit$alpha0,diri.fit$alpha,0.001001* diri.fit$alpha0)
-        DIRI <- rbind(DIRI,c(rel[i],alpha))
-      }
-      if(min(these)==1 & max(these)==4){
-        alpha <- c(diri.fit$alpha,0.001001* diri.fit$alpha0,0.001001* diri.fit$alpha0)
-        DIRI <- rbind(DIRI,c(rel[i],alpha))
-      }
-      if(min(these)==3 & max(these)==6){
-        alpha <- c(0.001001* diri.fit$alpha0,0.001001* diri.fit$alpha0,diri.fit$alpha)
-        DIRI <- rbind(DIRI,c(rel[i],alpha))
-      }
-    }
-    if(length(temp)==3){
-      if(min(these)==2 & max(these)==4){
-        alpha <- c(0.001001* diri.fit$alpha0,diri.fit$alpha,0.001001* diri.fit$alpha0,0.001001* diri.fit$alpha0)
-        DIRI <- rbind(DIRI,c(rel[i],alpha))
-       }
-     }
-   }
- }
+    AAA <- left_join(data.frame(id = paste0("X",1:6)),
+                      data.frame(id=names(diri.fit$alpha),alpha=diri.fit$alpha))
+    AAA <- AAA %>% mutate(alpha=ifelse(is.na(alpha),0.001 * diri.fit$alpha0,alpha),
+                          ID = rel[i])
+    AAA <- pivot_wider(AAA,id_cols = ID, names_from=id,values_from = alpha)
+    # if(ncol(temp)==6){
+    #       DIRI <- rbind(DIRI,c(rel[i],diri.fit$alpha))  
+    # }
+    # if(length(these)==5){
+    #   if(min(these)==2){
+    #       alpha <- c(0.001001* diri.fit$alpha0,diri.fit$alpha)
+    #       DIRI <- rbind(DIRI,c(rel[i],alpha))  
+    #   }
+    #   if(max(these)==5){
+    #     alpha <- c(diri.fit$alpha,0.001001* diri.fit$alpha0)
+    #     DIRI <- rbind(DIRI,c(rel[i],alpha))
+    #   }
+    # }
+    # if(length(temp)==4){
+    #   if(min(these)==2 & max(these)==5){
+    #     alpha <- c(0.001001* diri.fit$alpha0,diri.fit$alpha,0.001001* diri.fit$alpha0)
+    #     DIRI <- rbind(DIRI,c(rel[i],alpha))
+    #   }
+    #   if(min(these)==1 & max(these)==4){
+    #     alpha <- c(diri.fit$alpha,0.001001* diri.fit$alpha0,0.001001* diri.fit$alpha0)
+    #     DIRI <- rbind(DIRI,c(rel[i],alpha))
+    #   }
+    #   if(min(these)==3 & max(these)==6){
+    #     alpha <- c(0.001001* diri.fit$alpha0,0.001001* diri.fit$alpha0,diri.fit$alpha)
+    #     DIRI <- rbind(DIRI,c(rel[i],alpha))
+    #   }
+    # }
+    # if(length(temp)==3){
+    #   if(min(these)==2 & max(these)==4){
+    #     alpha <- c(0.001001* diri.fit$alpha0,diri.fit$alpha,0.001001* diri.fit$alpha0,0.001001* diri.fit$alpha0)
+    #     DIRI <- rbind(DIRI,c(rel[i],alpha))
+    #    }
+    #  }
+  }
+  if(nrow(temp)==1){
+    print("singleton")
+    AAA <- left_join(data.frame(id = paste0("X",1:6)),
+                     data.frame(id=names(temp),alpha=t(temp)))
+    colnames(AAA)[2] <- "alpha"
+    AAA <- AAA %>% mutate(alpha=ifelse(is.na(alpha),0.001,alpha),
+                          ID =rel[i])
+    AAA <- pivot_wider(AAA,id_cols = ID, names_from=id,values_from = alpha)
+  }
+  }
+  if(length(these)==1){
+    print("only one age observed")
+    AAA <- left_join(data.frame(id = paste0("X",1:6)),
+                     data.frame(id=names(these),alpha=1*0.995))
+    colnames(AAA)[2] <- "alpha"
+    AAA <- AAA %>% mutate(alpha=ifelse(is.na(alpha),0.001,alpha),
+                          ID =rel[i])
+    AAA <- pivot_wider(AAA,id_cols = ID, names_from=id,values_from = alpha)
+  }
+  DIRI <- bind_rows(DIRI,AAA)
+}
 
-DIRI <- data.frame(DIRI)
-colnames(DIRI)[1] <- "ID" 
-#DIRI$ID <- rel[DIRI$ID]
+DIRI <- data.frame(DIRI)   
 colnames(DIRI)[2:7] <- paste("age",1:6,sep=".")
-agg <- aggregate(REL[,c("ID","ocean.region")], by=list("ID"=REL$ID,"ocean.region"=REL$ocean.region),length)
 
-DIRI <- merge(DIRI,agg[,c("ID","ocean.region")],all=T)
+agg.rel <- REL %>% distinct(ID,ocean.region)
+
+DIRI <- full_join( DIRI,agg.rel)
+
 loc <- LOCATIONS
 colnames(loc) <- c("ocean.region","number")
 
 loc.and.numb <- REL %>% group_by(ocean.region,loc.numb) %>% summarize(N=length(ocean.region)) %>% 
                   mutate(number=loc.numb) %>% dplyr::select(ocean.region,number)
 
-DIRI <- merge(loc.and.numb,DIRI,all=T)
+DIRI <- full_join(loc.and.numb,DIRI,all=T)
 # DIRI$number[DIRI$ocean.region == "LCOL"] <- 8.1
 # DIRI$number[DIRI$ocean.region == "MCOL"] <- 8.25
 # DIRI$number[DIRI$ocean.region == "UCOL"] <- 8.5
@@ -84,22 +110,24 @@ DIRI <- merge(loc.and.numb,DIRI,all=T)
 DIRI <- DIRI[is.na(DIRI$ID)==F,]
 DIRI <- DIRI[order(DIRI$number),]
 
-DIRI[,"age.1"] <- as.numeric(as.character(DIRI[,"age.1"]))
-DIRI[,"age.2"] <- as.numeric(as.character(DIRI[,"age.2"]))
-DIRI[,"age.3"] <- as.numeric(as.character(DIRI[,"age.3"]))
-DIRI[,"age.4"] <- as.numeric(as.character(DIRI[,"age.4"]))
-DIRI[,"age.5"] <- as.numeric(as.character(DIRI[,"age.5"]))
-DIRI[,"age.6"] <- as.numeric(as.character(DIRI[,"age.6"]))
+# DIRI[,"age.1"] <- as.numeric(as.character(DIRI[,"age.1"]))
+# DIRI[,"age.2"] <- as.numeric(as.character(DIRI[,"age.2"]))
+# DIRI[,"age.3"] <- as.numeric(as.character(DIRI[,"age.3"]))
+# DIRI[,"age.4"] <- as.numeric(as.character(DIRI[,"age.4"]))
+# DIRI[,"age.5"] <- as.numeric(as.character(DIRI[,"age.5"]))
+# DIRI[,"age.6"] <- as.numeric(as.character(DIRI[,"age.6"]))
 
 DIRI.prop <- data.frame(DIRI[,c("ID","ocean.region","number")],DIRI[,grep("age",colnames(DIRI))] / rowSums(DIRI[,grep("age",colnames(DIRI))]))
 DIRI.prop <- DIRI.prop[order(DIRI.prop$ocean.region),]
-DIRI.prop <- DIRI.prop %>% filter(is.na(age.3)==F)
+#DIRI.prop <- DIRI.prop %>% filter(is.na(age.3)==F)
 
-DIRI.prop.long <- melt(DIRI.prop,id = c("ID","ocean.region","number"))
+DIRI.prop.long <- as.data.table(DIRI.prop) %>% 
+                        data.table::melt(.,c("ID","ocean.region","number")) %>%
+                        as.data.frame()
 
 DIRI.prop.long
 #3 Get rid of instances with not enough data to estimate.
-DIRI.prop.long <- DIRI.prop.long %>% filter(is.na(value)==F)
+#DIRI.prop.long <- DIRI.prop.long 
 
 ######################################################################
 ######################################################################
@@ -109,15 +137,16 @@ DIRI.prop.long <- DIRI.prop.long %>% filter(is.na(value)==F)
 ######################################################################
 ######################################################################
 ######################################################################
-pdf(file=paste(base.dir,"/Salmon-Climate/Processed Data/Escapement/Derived cohort escapement ",RUN.TYPE," ",GROUP,".pdf",sep=""),width=7,height=7)
+pdf(file=paste(base.dir,"/spring-chinook-distribution/Processed Data/Escapement/Derived cohort escapement ",RUN.TYPE," ",GROUP,"min = ",MIN,".pdf",sep=""),width=7,height=7)
 
-NUMB <- sort(unique(DIRI.prop.long$number))
-for(i in 1:length(NUMB)){
-  temp <- DIRI.prop.long[DIRI.prop.long$number == NUMB[i],]
+AAA <- DIRI.prop.long %>% filter(is.na(value)==F) %>% 
+              distinct(ocean.region,number) %>% arrange(number)
+for(i in 1:nrow(AAA)){
+  temp <- DIRI.prop.long %>% filter(ocean.region == AAA$ocean.region[i])
   NOM <- unique(temp$ID)
   p <- ggplot(temp,aes(variable,value)) +
                 geom_bar(stat="identity") +
-                ggtitle(paste(temp$ocean.region)) +
+                ggtitle(paste(AAA$ocean.region[i])) +
                 scale_y_continuous(limits=c(0,1)) +
                 facet_wrap(~ID,ncol=2)
 
@@ -135,6 +164,19 @@ dev.off()
 
 DIRI.region <- NULL
 reg <- unique(DIRI.prop$ocean.region)
+
+
+DIRI.region <- DIRI.prop.long %>% group_by(ocean.region,number,variable) %>%
+    dplyr::summarise(mean.prop = mean(value,na.rm=T),N_pop = length(value)) %>% 
+    pivot_wider(., id_cols = c("ocean.region","number","N_pop"),names_from="variable",values_from="mean.prop") %>%
+    arrange(number)
+
+
+
+
+
+
+
 
 for(i in 1:length(reg)){
  

@@ -1,13 +1,16 @@
 library(RColorBrewer)
+#library(dtplyr)
 library(tidyverse)
 library(gtools)
 library(rstan)
 # library(cmdstanr)
 #   check_cmdstan_toolchain()
-library(reshape2)
+#library(reshape2)
+library(data.table)
 library(MASS)
 library(extrafont)
 library(gtable)
+
 #set.seed(10)
 #test
 rm(list=ls())
@@ -36,7 +39,6 @@ TRAWL.BC  <- "FALSE"
 TRAWL_VULN_QUADRATIC <- "TRUE"
 
 
-
 # CLOGLOG   <- "FALSE" # This is a new option for making the vulnerability function a complementary log-log function as opposed to a logit link
   
 # GROUPINGS FOR MONTHS
@@ -58,6 +60,7 @@ N_years_release <- length(YEARS.RELEASE)
 # if(loc_18 =="NCA_SOR_PUSO"){LOCATIONS <- read.csv("./Processed Data/locations_plus_NCA_SOR_PUSO.csv")}
 if(loc_18 =="_two_OR_PUSO_AK"){LOCATIONS <- read.csv("./Processed Data/locations_two_OR_PUSO_AK.csv")}
 
+# This is the file used for mapping ocean regions to spatial boxes and specifying run timing for spawning.
 ORIGIN.LAB <- read.csv("./Processed Data/origin_labels_all_runs_2022-05.csv")
 
 # print(paste(base.dir,"/GSI_CWT_Chinook/Processed Data/locations_plus_NCA_SOR_PUSO.csv",sep=""))
@@ -120,7 +123,6 @@ gear.func <- function(X,Y){
   THESE <- match(Y,FISHERY)
   return(THESE)
 }
-
 
 ### Import Release Information from File
 load(paste0("./Processed Data/Releases ",RUN.TYPE," ",GROUP,".RData"))
@@ -361,24 +363,22 @@ C_rand_numb <- sort(sample(1:N.REL,3)) # 3 Catches to monitor for convergence.
 # E_var and E_sd is the derived variance used in the likelihood by stan.
 # recall that all of the escapements for NCA are assumed to be missing because they have crappy data.
 
-
-
-
-
-
-
 C_troll_true  <- C[,,,"Troll"]
 C_treaty_true <- C[,,,"Treaty Troll"]
 C_rec_true    <- C[,,,"Sport"]
 C_net_true    <- C[,,,"Gillnet & Seine & Other"]
 C_hake_ashop_true <- C[,,,"ashop"]
 C_hake_shoreside_true <- C[,,,"shoreside"]
+C_pollock_GOA_true <- C[,,,"pollock"]
+C_rockfish_AK_true <- C[,,,"rockfish.AK"]
 
+C_total <- apply(C,c(1,2,3),sum)
+C_ocean <- C[,,,c("Troll","Treaty Troll","Sport",
+                  "ashop","shoreside","pollock","rockfish.AK")]
+C_ocean_total <- apply(C_ocean,c(1,2,3),sum) 
 
-ggplot(REL) + geom_point(aes(y=tot.rec,x=N.released)) + facet_wrap(~ocean.region)
-
-
-
+# This makes some broad-scale summaries of CWT releases and recoveries.
+source("./_R code for processing raw data/Make CWT recover summary plots.R",local=T)
 
 # Lambda_troll_true  <- Lambda[,,,"Troll"]
 # Lambda_treaty_true <- Lambda[,,,"Treaty Troll"]
@@ -425,10 +425,18 @@ C_hake_shoreside_pos <- C_hake_shoreside_true
 C_hake_shoreside_pos[C_hake_shoreside_pos > 0] <- 1
 C_hake_shoreside_zero <- abs(C_hake_shoreside_pos - 1)
 
+C_pollock_GOA_pos <- C_pollock_GOA_true
+C_pollock_GOA_pos[C_pollock_GOA_pos > 0] <- 1
+C_pollock_GOA_zero <- abs(C_pollock_GOA_pos - 1)
+
+C_rockfish_AK_pos <- C_rockfish_AK_true
+C_rockfish_AK_pos[C_rockfish_AK_pos > 0] <- 1
+C_rockfish_AK_zero <- abs(C_rockfish_AK_pos - 1)
+
 # C_net_pos <- C_net_true
 # C_net_pos[C_net_pos > 0] <- 1
 # C_net_zero <- abs(C_net_pos - 1)
-# 
+ 
 ### OBSERVED CATCH by catch type:
 
 ####3 INITIAL RELEASES
@@ -455,7 +463,7 @@ move_id_idx <- move_id$move_id_idx
 ### Import the Dirichlet derived escapement data for each region.
 ### see CWT Maturity Proportion for this and Make catch and Escapement CLIMATE.R
 
-source("./Base_Code/_R code for processing raw data/CWT Maturity Proportions CLIMATE.R",local=T)
+source("./Base_Code/_R code for processing raw data/CWT Maturity Proportions Spr-Sum.R",local=T)
 escape_diri <- read.csv(paste0("./Processed Data/Escapement/Escape_Dirichlet_region ",RUN.TYPE," ",GROUP,".csv"))
 escape_diri <- escape_diri[order(escape_diri$number),]
 N.diri      <- nrow(escape_diri)
@@ -480,7 +488,7 @@ if(MONTH.STRUCTURE == "FOUR"){
 
 if(MONTH.STRUCTURE == "SPRING"){
   # For fall. time_fraction = 0.33 is September 1 migration
-  # For spring run, time_fraction = 0 is March 1, time_fraction = 0.33 is April 1 
+  # For spring run, time_fraction = 0 is March 1, time_fraction = 0.33 is April 1, 0.667 is May 1 
   REL <- REL %>% left_join(., ORIGIN.LAB %>% dplyr::select(ocean.region=origin.code,spawn_time_fraction) )
 }
 

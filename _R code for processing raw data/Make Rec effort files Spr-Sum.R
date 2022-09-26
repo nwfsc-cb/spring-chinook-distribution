@@ -5,7 +5,7 @@
 
 ak.eff <- read.csv("./Processed Data/Effort Data/effort.data.ak.csv") # THIS IS ONLY COMMERCIAL TROLL (OMIT)
 ca.or.wa.eff <- read.csv("./Processed Data/Effort Data/effort.data.REC.ca.or.wa.csv")
-puso.eff       <- read.csv("./Processed Data/Effort Data/effort.data.REC.puso-to-2020.csv")
+puso.eff       <- read.csv("./Processed Data/Effort Data/effort.data.REC.puso-to-2020-FIN.csv")
 puso.retention <- read.csv("./Processed Data/Effort Data/WA PUSO Chinook retention.csv")
 sgeo.eff <- read.csv("./Processed Data/Effort Data/effort.data.REC.sgeo.csv")
 johnstone.eff <- read.csv("./Processed Data/Effort Data/effort.data.REC.johnstone.csv")
@@ -174,7 +174,8 @@ ca.or.wa.eff.rec <- ca.or.wa.eff.by.area[,c("year","area.code",MONTH)]
   puso.eff.wide <- cbind(puso.eff.wide,matrix(0,length(YEARS.RECOVER),12))
   
   # This section is for the original 17 area model
-  puso.eff.wide <- dcast(puso.eff[,c("Year","Month","total.effort")],Year~Month)
+  puso.eff.wide <- pivot_wider(puso.eff %>% dplyr::select(Year,Month,total.effort),
+                      id_cols = "Year",names_from = "Month",values_from = "total.effort")
   puso.eff.wide <- data.frame(port="All Puget Sound",puso.eff.wide)
   colnames(puso.eff.wide)[3:14] <- ALL.MONTH
   
@@ -182,13 +183,15 @@ ca.or.wa.eff.rec <- ca.or.wa.eff.by.area[,c("year","area.code",MONTH)]
   puso.eff.wide$Notes <- NA
   puso.eff.wide$area.code <- "PUSO"
   
-    if(loc_18 == "TRUE" | loc_18 == "TWO_OR" | loc_18 =="NCA_SOR_PUSO"){ # This section is for the 18 area model
-      puso.eff.in.wide <- dcast(puso.eff[,c("Year","Month","total.effort.in")],Year~Month)
+    if(loc_18 == "TRUE" | loc_18 == "TWO_OR" | loc_18 =="NCA_SOR_PUSO" | loc_18 =="_two_OR_PUSO_AK"){ # This section is for the 18 area model
+      puso.eff.in.wide <- pivot_wider(puso.eff %>% dplyr::select(Year,Month,total.effort.in),
+                                   id_cols = "Year",names_from = "Month",values_from = "total.effort.in")
       puso.eff.in.wide <- data.frame(port="All Puget Sound",puso.eff.in.wide)
       colnames(puso.eff.in.wide)[3:14] <- ALL.MONTH
       puso.eff.in.wide$area.code <- "PUSO"
     
-      puso.eff.out.wide <- dcast(puso.eff[,c("Year","Month","total.effort.out")],Year~Month)
+      puso.eff.out.wide <- pivot_wider(puso.eff %>% dplyr::select(Year,Month,total.effort.out),
+                                      id_cols = "Year",names_from = "Month",values_from = "total.effort.out")
       puso.eff.out.wide <- data.frame(port="All Puget Sound",puso.eff.out.wide)
       colnames(puso.eff.out.wide)[3:14] <- ALL.MONTH
       puso.eff.out.wide$area.code <- "PUSO_out"
@@ -325,11 +328,15 @@ ca.or.wa.eff.rec <- ca.or.wa.eff.by.area[,c("year","area.code",MONTH)]
   
   
   bc.eff.rec <- full_join(expand.grid(area.code=c("CBC","SGEO","NWVI","SWVI"),year=YEARS.RECOVER),
-                          dcast(bc.mod,year+area.code~season,value.var=c("total.eff")))
+                          pivot_wider(bc.mod,id_cols = c("year","area.code"),
+                                      names_from = "season",
+                                      values_from = "total.eff"))
+                    
+  
+  
   bc.eff.rec <- bc.eff.rec %>% dplyr::select(year,area.code,month.winter,month.spring,month.summer,month.fall) 
   bc.eff.rec[is.na(bc.eff.rec)==T] <- 0
-  
-  
+
   ### iREC DATA
   
         ### Process the iREC data from Canada. This is a different data type and form than the other recreational data.
@@ -370,7 +377,12 @@ ca.or.wa.eff.rec <- ca.or.wa.eff.by.area[,c("year","area.code",MONTH)]
         can.irec.mod <- can.irec.mod %>% rename(area.code=REGION)
         can.irec.mod <- can.irec.mod %>% group_by(year.mod,area.code,season) %>% summarize(effort=sum(tot.effort))
         
-        can.irec.mod <- dcast(can.irec.mod,year.mod+area.code~season,value.var="effort",sum)
+        can.irec.mod <- pivot_wider(can.irec.mod,id_cols = c("year.mod","area.code"),
+                                    names_from = "season",
+                                    values_from = "effort")
+          
+          
+         # dcast(can.irec.mod,year.mod+area.code~season,value.var="effort",sum)
         can.irec.eff.fin <- left_join(data.frame(expand.grid(year.mod=YEARS.RECOVER,area.code=LOCATIONS$location.name)),can.irec.mod)
         can.irec.eff.fin <- can.irec.eff.fin %>% rename(year=year.mod)
         can.irec.eff.fin <- can.irec.eff.fin[,c("year","area.code",MONTH)]

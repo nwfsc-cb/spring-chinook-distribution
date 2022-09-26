@@ -107,18 +107,23 @@ ocean.recover.trawl$dat <- ocean.recover.trawl$dat %>% mutate(season="") %>%
 
 # ASHOP Make a flat file equivalent to Lambda that will be made for the other gear groups in the 
 # Make catch and escapement files script later.
-A <- melt(ashop.sample.fraction,id.vars=c("year","area.code","area.numb"),
-          variable.name = "season",value.name="median.frac.samp") %>% as.data.frame()
+A<-    pivot_longer(ashop.sample.fraction,cols = starts_with("month"),
+          names_to = "season",values_to="median.frac.samp") %>% as.data.frame()
+
 A <- A %>% mutate(season.numb=0) %>% 
           mutate(season.numb = ifelse(season == "month.spring",1,season.numb)) %>%
           mutate(season.numb = ifelse(season == "month.summer",2,season.numb)) %>%
           mutate(season.numb = ifelse(season == "month.fall",3,season.numb)) %>%
           mutate(season.numb = ifelse(season == "month.winter",4,season.numb))
 
-B <-  dcast(A,year+season+season.numb~area.numb, value.var=c("median.frac.samp"))
+B <-  A %>% arrange(area.numb) %>%
+            pivot_wider(.,
+              id_cols=c("year","season","season.numb"),
+              values_from="median.frac.samp",
+              names_from="area.numb")
 B <- B %>% arrange(year,season.numb)
 
-Lambda_hake_ashop_flat <- B
+Lambda_hake_ashop_flat <- B %>% as.data.frame()
 rownames(Lambda_hake_ashop_flat) <- paste(B$year,B$season,sep=".")
 Lambda_hake_ashop_flat <- Lambda_hake_ashop_flat %>% dplyr::select(-year,-season,-season.numb)
 colnames(Lambda_hake_ashop_flat) <- paste0("loc",".",nom)
@@ -136,7 +141,7 @@ for(i in 1:nrow(trim.B)){
   }
 }
 
-Lambda_hake_ashop_flat_int <- trim.B.mod
+Lambda_hake_ashop_flat_int <- trim.B.mod %>% as.data.frame()
 rownames(Lambda_hake_ashop_flat_int) <- paste(B$year,B$season,sep=".")
 colnames(Lambda_hake_ashop_flat_int) <- paste0("loc",".",nom)
 Lambda_hake_ashop_flat_int[is.na(Lambda_hake_ashop_flat_int)==T] <- 0
@@ -144,9 +149,8 @@ Lambda_hake_ashop_flat_int[is.na(Lambda_hake_ashop_flat_int)==T] <- 0
 ##
 B.smoothed <- cbind(B %>% dplyr::select(year,season.numb),trim.B.mod)
 
-temp2 <- melt(B.smoothed,id.vars=c("year","season.numb"),
-            variable.name="area.numb",
-            value.name="median.frac.samp2")
+temp2 <- pivot_longer(B.smoothed,cols=3:ncol(B.smoothed),
+                names_to = "area.numb",values_to="median.frac.samp2")
 temp2$area.numb <- as.integer(temp2$area.numb)
 
 ASHOP.smoothed <- left_join(A,temp2) %>% rename(rec.area.code=area.code, rec.year2=year)
@@ -160,18 +164,23 @@ D <- D %>% filter(rec.year2>TRIM.ASHOP)
 ASHOP.fin <- D
 
 # SHORESIDE HAKE
-A <- melt(shoreside.sample.fraction,id.vars=c("year","area.code","area.numb"),
-          variable.name = "season",value.name="median.frac.samp") %>% as.data.frame()
+A <-pivot_longer(shoreside.sample.fraction,cols=starts_with("month"),
+             names_to = "season",values_to="median.frac.samp")
+
 A <- A %>% mutate(season.numb=0) %>% 
   mutate(season.numb = ifelse(season == "month.spring",1,season.numb)) %>%
   mutate(season.numb = ifelse(season == "month.summer",2,season.numb)) %>%
   mutate(season.numb = ifelse(season == "month.fall",3,season.numb)) %>%
   mutate(season.numb = ifelse(season == "month.winter",4,season.numb))
 
-B <-  dcast(A,year+season+season.numb~area.numb, value.var=c("median.frac.samp"))
+B <- A %>% arrange(area.numb) %>%
+            pivot_wider(.,
+                 id_cols=c("year","season","season.numb"),
+                 values_from="median.frac.samp",
+                 names_from="area.numb")
 B <- B %>% arrange(year,season.numb)
 
-Lambda_hake_shoreside_flat <- B
+Lambda_hake_shoreside_flat <- B %>% as.data.frame()
 rownames(Lambda_hake_shoreside_flat) <- paste(B$year,B$season,sep=".")
 Lambda_hake_shoreside_flat <- Lambda_hake_shoreside_flat %>% dplyr::select(-year,-season,-season.numb)
 colnames(Lambda_hake_shoreside_flat) <- paste0("loc",".",nom)
@@ -190,16 +199,16 @@ for(i in 1:nrow(trim.B)){
   }
 }
 
-Lambda_hake_shoreside_flat_int <- trim.B.mod
+Lambda_hake_shoreside_flat_int <- trim.B.mod %>% as.data.frame()
 rownames(Lambda_hake_shoreside_flat_int) <- paste(B$year,B$season,sep=".")
 colnames(Lambda_hake_shoreside_flat_int) <- paste0("loc",".",nom)
 Lambda_hake_shoreside_flat_int[is.na(Lambda_hake_shoreside_flat_int)==T] <- 0
 
 B.smoothed <- cbind(B %>% dplyr::select(year,season.numb),trim.B.mod)
 
-temp2 <- melt(B.smoothed,id.vars=c("year","season.numb"),
-              variable.name="area.numb",
-              value.name="median.frac.samp2")
+temp2 <- pivot_longer(B.smoothed,cols=3:ncol(B.smoothed),
+             names_to = "area.numb",values_to="median.frac.samp2")
+
 temp2$area.numb <- as.integer(temp2$area.numb)
 
 SHORE.smoothed <- left_join(A,temp2) %>% rename(rec.area.code=area.code, rec.year2=year)

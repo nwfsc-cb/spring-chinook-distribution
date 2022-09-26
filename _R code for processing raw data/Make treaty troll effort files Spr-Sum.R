@@ -17,7 +17,12 @@ treaty.eff <- left_join(treaty.eff,data.frame(month.name=names(ak.eff)[grep("mon
 treaty.eff.by.area <- full_join(treaty.eff,expand.grid(year=YEARS.RECOVER,month.name=sort(unique(treaty.eff$month.name))))
 treaty.eff.by.area <- treaty.eff %>% group_by(year,month.name,area.code) %>% summarise(count = sum(unique.tickets))
 
-treaty.eff.trim <- dcast(treaty.eff.by.area, year+area.code~month.name,value.var = "count")
+treaty.eff.trim <- pivot_wider(treaty.eff.by.area,
+                             id_cols=c("year","area.code"),
+                             names_from = "month.name",
+                             values_from = "count")
+
+
 treaty.eff.trim[is.na(treaty.eff.trim)==T] <- 0
 
 # Old way of doing it... (pre-August 2019) 

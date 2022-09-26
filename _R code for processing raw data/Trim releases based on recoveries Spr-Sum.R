@@ -6,8 +6,8 @@
 
 
 #### SHARED ACROSS ALL GROUPS
-# Eliminate releases with fewer than 10,000 fish
-REL <- REL %>% filter(N.released > 10000) %>% as.data.frame()
+# Eliminate releases with fewer than 8,000 fish
+REL <- REL %>% filter(N.released > 5000) %>% as.data.frame()
 
 if(GROUP == "FRAM_2022_05"){
 # Also eliminate some Alaskan groups that have virtually no recoveries in the ocean.

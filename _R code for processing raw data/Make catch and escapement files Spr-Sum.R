@@ -15,23 +15,24 @@ for(k in 1:N.REL){
   print(paste(k,"of",N.REL))
   for(l in 1:N.GEAR){
     
-    temp.2 <- melt(catch.dat[catch.dat$ID == REL$ID[k] & 
-                               catch.dat$brood.year == REL$brood_year[k] &
-                               catch.dat$rel.year == REL$release_year[k] &
-                               catch.dat$fishery.type == GEAR[l], ],
-                   id.var=c("model.age","rec.area.code"),measure.vars =c("est.numb"))
+    A <- catch.dat[catch.dat$ID == REL$ID[k] & 
+                     catch.dat$brood.year == REL$brood_year[k] &
+                     catch.dat$rel.year == REL$release_year[k] &
+                     catch.dat$fishery.type == GEAR[l], ] %>% as.data.table()
+    temp.2 <- data.table::melt(A,
+                   id.var=c("model.age","rec.area.code"),measure.vars =c("est.numb")) %>%
+                    as.data.frame()
     temp.3 <- merge(temp,temp.2,all=T)
     temp.3 <- temp.3[order(temp.3$loc.numb,temp.3$model.age),]
     C[k,,,l] <- temp.3$value
     
-    temp.2 <- melt(catch.dat[catch.dat$ID == REL$ID[k] & 
-                               catch.dat$brood.year == REL$brood_year[k] &
-                               catch.dat$rel.year == REL$release_year[k] &
-                               catch.dat$fishery.type == GEAR[l], ],
-                   id.var=c("model.age","rec.area.code"),measure.vars =c("count"))
+    temp.2 <- data.table::melt(A,
+                   id.var=c("model.age","rec.area.code"),measure.vars =c("count")) %>%
+                    as.data.frame()
     temp.3 <-merge(temp,temp.2,all=T)
     temp.3 <- temp.3[order(temp.3$loc.numb,temp.3$model.age),]
     Z_catch[k,,,l] <- temp.3$value
+    
   }
 }
 
@@ -325,22 +326,21 @@ escape.dat.frac <- aggregate(dat$median.frac.samp,by=list(
   mean,na.rm=T)
 
 colnames(escape.dat.frac)[ncol(escape.dat.frac)] <- "mean.frac.samp"
-escape.dat <- merge(escape.dat,escape.dat.frac)
 
-### Do some adjustments for fish that appear in fresh water in january, feb or march of the following year.
+### Do some adjustments for fish that appear in fresh water in november or later following year.
+riv.temp <- river.entry[river.entry$rec.month >=11,]
+riv.temp.spr <- riv.temp %>% filter(grepl("_spr",ID))
+riv.temp.wint <- riv.temp %>% filter(grepl("_wint",ID))
 
-riv.temp <- river.entry[river.entry$rec.month <=3,]
-adjust <- aggregate(riv.temp[,c("est.numb")],by=list(
-  ID = riv.temp$ID, 
-  brood.year = riv.temp$brood.year,
-  rel.year = riv.temp$rel.year, 
-  #rec.month = fresh.recover$dat$rec.month, 
-  rec.year = riv.temp$rec.year, 
-  ocean.region = riv.temp$ocean.region), 
-  sum,na.rm=T)
+riv.temp.spr.wint <- bind_rows(riv.temp.spr,riv.temp.wint)
+
+adjust <- riv.temp.spr.wint %>% 
+              group_by(ID,brood.year,rel.year,
+                      rec.year,ocean.region) %>%
+              summarise(x= sum(est.numb))
 
 adjust.add <- adjust
-adjust.add$rec.year <-adjust.add$rec.year-1
+adjust.add$rec.year <-adjust.add$rec.year+1
 
 escape.dat1<- merge(escape.dat,adjust.add,all=T)
 escape.dat1$x[is.na(escape.dat1$x)==T] <- 0
@@ -355,15 +355,17 @@ escape.dat2$est.numb <- escape.dat2$est.numb - escape.dat2$x
 escape.dat <- escape.dat1[,1:9]
 escape.dat$est.numb[escape.dat$est.numb < 0] <- 0
 
+escape.dat <- merge(escape.dat,escape.dat.frac)
+
 #######################
 #######################
 # Manually inflate the variance of SFB returning fish (median frac samp = 0.3)
     # also inflate NWVI (Conuma) to 0.01
 #######################
 #######################
-escape.dat$mean.frac.samp[escape.dat$ocean.region =="NCA"] <- 0.2
-escape.dat$mean.frac.samp[escape.dat$ocean.region =="SFB"] <- 0.2
-escape.dat$mean.frac.samp[escape.dat$ocean.region =="NWVI"] <- 0.01
+# escape.dat$mean.frac.samp[escape.dat$ocean.region =="NCA"] <- 0.2
+# escape.dat$mean.frac.samp[escape.dat$ocean.region =="SFB"] <- 0.2
+# escape.dat$mean.frac.samp[escape.dat$ocean.region =="NWVI"] <- 0.01
 ###############################################################################################################
 
 escape.dat$mod.year <- escape.dat$age 
@@ -375,9 +377,10 @@ escape.dat$mod.year <- escape.dat$age
 # escape.dat$mod.year[escape.dat$model.age >28 & escape.dat$model.age <=35 ] <- 5
 # escape.dat$mod.year[escape.dat$model.age >35 & escape.dat$model.age <=42 ] <- 6
        
-escape.year <- aggregate(escape.dat[,c("est.numb","count","count.zero")],by=list(ID=escape.dat$ID,mod.year=escape.dat$mod.year,brood.year=escape.dat$brood.year, rel.year=escape.dat$rel.year),sum)
-escape.year.frac <- aggregate(escape.dat[,c("mean.frac.samp")],by=list(ID=escape.dat$ID,mod.year=escape.dat$mod.year,brood.year=escape.dat$brood.year,rel.year=escape.dat$rel.year),mean)
-colnames(escape.year.frac)[ncol(escape.year.frac)] <- "mean.frac.samp"
+escape.year <- escape.dat %>% group_by(ID,mod.year,brood.year,rel.year) %>%
+                          summarise(est.numb=sum(est.numb), count=sum(count),count.zero=sum(count.zero))
+escape.year.frac <- escape.dat %>% group_by(ID,mod.year,brood.year,rel.year) %>% 
+                          summarise(mean.frac.samp = mean(mean.frac.samp))
 escape.year <- merge(escape.year,escape.year.frac)
 escape.year$cal.year <- escape.year$rel.year + escape.year$mod.year - 1
 
@@ -391,7 +394,11 @@ N.mod.year <- 6
 E <- array(NA,dim=c(N.REL,N.mod.year,5),dimnames = list(paste("rel.ID",1:N.REL,sep="."),1:N.mod.year,c("mod.year","est.numb","count","count.zero","lambda2")))
 for(i in 1:N.REL){
   E[i,,1] <- 1:N.mod.year
-  temp <- escape.year[escape.year$ID == REL$ID[i] & escape.year$rel.year == REL$release_year[i],]
+  temp <- escape.year %>% filter(ID == REL$ID[i],
+                                 brood.year == REL$brood_year[i],
+                                 rel.year == REL$release_year[i])
+    
+  #  escape.year[escape.year$ID == REL$ID[i] & escape.year$brood.year == REL$brood_year[i] & escape.year$rel.year == REL$release_year[i],]
   for(j in 1:N.mod.year){
     if(nrow(temp[temp$mod.year == j,])==1){
       E[i,j,2] <- temp$est.numb[temp$mod.year == j]

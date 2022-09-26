@@ -68,6 +68,15 @@ for(i in 1:nrow(chosen.release)){
                               all.release.dat$brood_year <= BROOD.YEAR.RANGE[2] ,] #&
                               #all.release.dat$first.release.month >= chosen.release$month.start[i] &
                               #all.release.dat$last.release.month <= chosen.release$month.stop[i] ,]
+  }else if(chosen.release$Hatchery[i] =="NONE" ){
+    temp	<- all.release.dat[all.release.dat$stock_location_code == chosen.release$stock_location_code[i] &
+                              all.release.dat$study_integrity !="W" &
+                              all.release.dat$study_integrity !="D" &
+                              #all.release.dat$release_location_name == chosen.release$release_location_name[i] &
+                              #all.release.dat$run == chosen.release$Run[i] &
+                              all.release.dat$brood_year >= BROOD.YEAR.RANGE[1] &
+                              all.release.dat$brood_year <= BROOD.YEAR.RANGE[2] ,]#&
+
   }else{
     temp	<- all.release.dat[all.release.dat$hatchery_location_code == chosen.release$hatchery_location_code[i] &
                               all.release.dat$stock_location_code == chosen.release$stock_location_code[i] &
@@ -160,7 +169,7 @@ focal.releases <- focal.releases %>% filter(cwt.released>0)
 # focal.releases <- focal.releases %>% arrange(ID,brood_year)
 
 write.csv(focal.releases,
-          file = paste0("./Orca_Salmon_DATA/Releases/SPR-SUM/Tag codes ",RUN.TYPE," chinook ",GROUP," CLIMATE ",loc_18,".csv"),row.names=FALSE)
+          file = paste0(base.dir,"/Orca_Salmon_DATA/Releases/SPR-SUM/Tag codes ",RUN.TYPE," chinook ",GROUP," Spr-Sum",loc_18,".csv"),row.names=FALSE)
 ###############################################################################################
 ###############################################################################################
 ###############################################################################################
@@ -187,7 +196,7 @@ write.csv(focal.releases,
 ### Pull out recoveries for the tag groups of interest.
 ################### Go get the tag code file
 # this data comes from above script
-tag.dat	<- read.csv(paste0(base.dir,"/Orca_Salmon_DATA/Releases/SPR-SUM/Tag codes ",RUN.TYPE," chinook ",GROUP," CLIMATE ",loc_18,".csv"))
+tag.dat	<- read.csv(paste0(base.dir,"/Orca_Salmon_DATA/Releases/SPR-SUM/Tag codes ",RUN.TYPE," chinook ",GROUP," Spr-Sum",loc_18,".csv"))
 
 A	<-	aggregate(tag.dat$cwt.released,by=list(ID=tag.dat$ID,ocean.region=tag.dat$ocean.region,brood_year=tag.dat$brood_year,
                                             release_year=tag.dat$release.year,release_month=tag.dat$first.release.month),sum)

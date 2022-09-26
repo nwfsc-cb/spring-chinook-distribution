@@ -38,13 +38,27 @@ ZZ.pollock$indicator[is.na(ZZ.pollock$indicator)==T] <- 0
 ZZ.rockfish.AK$indicator[is.na(ZZ.rockfish.AK$indicator)==T] <- 0
 
 #make flat files.  These simply indicate whether there were CWT fish recovered in this area-time combination or not. (1 or 0)
-A_troll_flat  <-  dcast(ZZ.troll,rec.year+lab+month.lab~loc.numb,value.var = "indicator") %>% arrange(rec.year,month.lab)
-A_treaty_flat <-  dcast(ZZ.treaty,rec.year+lab+month.lab~loc.numb,value.var = "indicator") %>% arrange(rec.year,month.lab)
-A_rec_flat    <-  dcast(ZZ.rec,rec.year+lab+month.lab~loc.numb,value.var = "indicator") %>% arrange(rec.year,month.lab)
-A_hake_ashop_flat        <-  dcast(ZZ.ashop,rec.year+lab+month.lab~loc.numb,value.var = "indicator") %>% arrange(rec.year,month.lab)
-A_hake_shoreside_flat    <-  dcast(ZZ.shoreside,rec.year+lab+month.lab~loc.numb,value.var = "indicator") %>% arrange(rec.year,month.lab)
-A_pollock_shoreside_flat        <-  dcast(ZZ.pollock,rec.year+lab+month.lab~loc.numb,value.var = "indicator") %>% arrange(rec.year,month.lab)
-A_rockfish_AK_shoreside_flat    <-  dcast(ZZ.rockfish.AK,rec.year+lab+month.lab~loc.numb,value.var = "indicator") %>% arrange(rec.year,month.lab)
+A_troll_flat  <-  pivot_wider(ZZ.troll,id_cols=c("rec.year","lab","month.lab"),
+                                       names_from="loc.numb",values_from="indicator") %>% 
+                              arrange(rec.year,month.lab) %>% as.data.frame()
+A_treaty_flat <-  pivot_wider(ZZ.treaty,id_cols=c("rec.year","lab","month.lab"),
+                              names_from="loc.numb",values_from="indicator") %>% 
+                      arrange(rec.year,month.lab) %>% as.data.frame()
+A_rec_flat    <-  pivot_wider(ZZ.rec,id_cols=c("rec.year","lab","month.lab"),
+                              names_from="loc.numb",values_from="indicator") %>% 
+                      arrange(rec.year,month.lab) %>% as.data.frame()
+A_hake_ashop_flat <-  pivot_wider(ZZ.ashop,id_cols=c("rec.year","lab","month.lab"),
+                                         names_from="loc.numb",values_from="indicator") %>% 
+                            arrange(rec.year,month.lab) %>% as.data.frame()
+A_hake_shoreside_flat <- pivot_wider(ZZ.shoreside,id_cols=c("rec.year","lab","month.lab"),
+                                     names_from="loc.numb",values_from="indicator") %>% 
+                            arrange(rec.year,month.lab) %>% as.data.frame()
+A_pollock_shoreside_flat <-  pivot_wider(ZZ.pollock,id_cols=c("rec.year","lab","month.lab"),
+                                                  names_from="loc.numb",values_from="indicator") %>% 
+                              arrange(rec.year,month.lab) %>% as.data.frame()
+A_rockfish_AK_shoreside_flat <-    pivot_wider(ZZ.rockfish.AK,id_cols=c("rec.year","lab","month.lab"),
+                                                  names_from="loc.numb",values_from="indicator") %>% 
+                                      arrange(rec.year,month.lab) %>% as.data.frame()
 
 # Start model in spring so drop first winter row
 first.year = min(YEARS.RECOVER)
