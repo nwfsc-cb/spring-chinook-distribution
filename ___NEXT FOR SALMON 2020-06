@@ -58,7 +58,10 @@ Worked on many things... Fixed and finished AK effort files (shoreside pollock a
 8/24/2022
 Did a bunch of work for Sean Matson helping out with hake bycatch.  From him I got updated data for CWT recoveries from ASHOP and Shoreside.  I still only have effort data for ASHOP through 2017 and for Shoreside through 2016 (I think).  But now I have the CWT recoveries at least.
 
-
+9/21/2022
+Spent the last few days slogging through the 02... code.  Specifically, I made a number of changes to the processing code (e.g. removed / changed references to reshape2 package).
+Requested new, updated data from ASHOP.  Will submit new request to PSMFC soon for shoreside data.
+Found problems with the Puget Sound rec data.  Rechecked all of the data I have in hand (1978-80 and 1995-present).  Need to poke at the 1981-1994 data in the UW library.
 
 
 

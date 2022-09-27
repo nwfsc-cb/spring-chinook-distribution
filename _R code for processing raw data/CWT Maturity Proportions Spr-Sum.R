@@ -172,143 +172,29 @@ DIRI.region <- DIRI.prop.long %>% group_by(ocean.region,number,variable) %>%
     arrange(number)
 
 
-
-
-
-
-
-
-for(i in 1:length(reg)){
- 
-  temp <- DIRI.prop[DIRI.prop$ocean.region==reg[i],]
-  if(reg[i] == "COR" |reg[i] == "NOR" |reg[i] == "SOR" ){
-    temp <- DIRI.prop[DIRI.prop$ocean.region=="COR" | DIRI.prop$ocean.region=="NOR" | DIRI.prop$ocean.region=="SOR",] 
-  }
-  if(reg[i] == "SWVI" |reg[i] == "NWVI" ){
-    temp <- DIRI.prop[DIRI.prop$ocean.region=="NWVI" | DIRI.prop$ocean.region=="SWVI",] 
-  }
-  
-  # Get rid of locations with no escapement estimates.
-  # temp <- temp[temp$ID != "Stayton" & 
-  #                temp$ID != "Feather_small" & 
-  #                temp$ID != "Feather_large" & 
-  #                temp$ID != "Nimbus" &
-  #                temp$ID != "Yakima_fall" &
-  #                temp$ID != "Bonneville_large" &
-  #                temp$ID != "Elwha" &
-  #                temp$ID != "Nanaimo" &
-  #                temp$ID != "Chehalis" &
-  #                temp$ID != "Cowichan" &
-  #                temp$ID != "Conuma" 
-  #                  ,]
-  
-  temp <- temp[,grep("age",colnames(temp))]
-  temp[temp < 0.002] <- 0
-  
-  these <- which(colSums(temp)>0)
-  temp  <- temp[,these]
-  
-  if(nrow(temp)>1){
-  diri.fit <- dirichlet.mle(temp,eps = 10^(-8))
-  alpha    <- diri.fit$alpha
-  
-  print(alpha)
-  
-  if(length(these)==6){
-    DIRI.region <- rbind(DIRI.region,alpha)  
-  }
-  if(length(these)==5){
-     if(min(these)==2){
-       alpha <- c(0.001001* diri.fit$alpha0,diri.fit$alpha)
-       DIRI.region <- rbind(DIRI.region,alpha)  
-     }
-    if(min(these)==1){
-      alpha <- c(diri.fit$alpha,0.001001* diri.fit$alpha0)
-      DIRI.region <- rbind(DIRI.region,alpha)  
-    }
-  }
-    
-    if(length(these)==4){
-      if(min(these)==2 & max(these)==5){
-        alpha <- c(0.001001* diri.fit$alpha0,diri.fit$alpha,0.001001* diri.fit$alpha0)
-        DIRI.region <- rbind(DIRI.region,alpha)  
-      }
-    }  
-  } #end temp>1 if
-  if(nrow(temp)==1){
-      if(length(these)==6){
-        DIRI.region <- rbind(DIRI.region,unlist(temp)*15)
-      }
-    if(length(these)==5){
-      if(min(these)==2){
-        temp <- c(0.01,unlist(temp))
-        DIRI.region <- rbind(DIRI.region,temp*15)
-      }
-      if(min(these)==1){
-        temp <- c(0.01,unlist(temp))
-        DIRI.region <- rbind(DIRI.region,temp*15)  
-      }
-    }
-    
-    if(length(these)==4){
-      if(min(these)==2 & max(these)==5){
-        temp <- c(0.01,unlist(temp),0.01)
-        DIRI.region <- rbind(DIRI.region,temp*15)  
-      }
-    }  
-  }
-  
-}
-
-
-DIRI.region <- data.frame(ocean.region = as.character(reg), DIRI.region)
-DIRI.region <- merge(loc,DIRI.region,all=T)
-
-temp.loc <- REL %>% group_by(ocean.region,loc.numb) %>% summarize(n=length(loc.numb)) %>% 
-            dplyr::select(-n) %>% as.data.frame() %>%
-            rename(number2=loc.numb)
-
-DIRI.region <- merge(DIRI.region,temp.loc) %>% dplyr::select(-number) %>% rename(number=number2) %>% 
-                  dplyr::select(ocean.region, number,age.1,age.2,age.3,age.4,age.5,age.6)
-
-DIRI.region <- DIRI.region[is.na(DIRI.region$age.3)==F,]
-DIRI.region <- DIRI.region[order(DIRI.region$number),]
-colnames(DIRI.region)[3:8] <- colnames(DIRI)[c(grep("age",colnames(DIRI)))]
-
-DIRI.region.prop <- data.frame(DIRI.region[,c("ocean.region","number")],DIRI.region[,grep("age",colnames(DIRI.region))] / rowSums(DIRI.region[,grep("age",colnames(DIRI.region))]))
-DIRI.region.prop <- DIRI.region.prop[order(DIRI.region.prop$number),]
-
-DIRI.region.prop.long <- melt(DIRI.region.prop,id = c("ocean.region","number"))
+DIRI.region.prop.long <- pivot_longer(DIRI.region,cols = starts_with("age"))
 
 ###################################################################
 ######################################################################
-pdf(file=paste(base.dir,"/Salmon-Climate/Processed Data/Escapement/Derived cohort escapement (REGION by number) ",RUN.TYPE," ",GROUP,".pdf",sep=""),width=5,height=7)
+pdf(file=paste(base.dir,"/spring-chinook-distribution/Processed Data/Escapement/Derived cohort escapement (REGION by number) ",RUN.TYPE," ",GROUP,".pdf",sep=""),width=5,height=7)
 
   temp <- DIRI.region.prop.long
-  p <- ggplot(temp,aes(variable,value)) +
+  p <- ggplot(temp,aes(x=name,y=value)) +
     geom_bar(stat="identity") +
     ggtitle("All Regions") +
     scale_y_continuous(limits=c(0,0.75)) +
-    facet_wrap(~number,ncol=2)
+    facet_wrap(~ocean.region,ncol=5)
   
   print(p)
 dev.off()
 
 ######################################################################
-pdf(file=paste(base.dir,"/Salmon-Climate/Processed Data/Escapement/Derived cohort escapement (REGION by name)",RUN.TYPE," ",GROUP,".pdf",sep=""),width=5,height=7)
 
-temp <- DIRI.region.prop.long
-p <- ggplot(temp,aes(variable,value)) +
-  geom_bar(stat="identity") +
-  ggtitle("All Regions") +
-  scale_y_continuous(limits=c(0,0.75)) +
-  facet_wrap(~ocean.region,ncol=2)
+#MAKE RULES FOR SHARING INFORMATION HERE:
 
-print(p)
-dev.off()
 
 #####################################################################
-write.csv(DIRI.region,file=paste(base.dir,"/Salmon-Climate/Processed Data/Escapement/Escape_Dirichlet_region ",RUN.TYPE," ",GROUP,".csv",sep=""),row.names = F)
+write.csv(DIRI.region,file=paste(base.dir,"/spring-chinook-distribution/Processed Data/Escapement/Escape_Dirichlet_region ",RUN.TYPE," ",GROUP,".csv",sep=""),row.names = F)
 
 # ALP <- DIRI.region[DIRI.region$ocean.region=="COL",grep("age",colnames(DIRI.region))]
 # ALP <- DIRI.region[DIRI.region$ocean.region=="COR",grep("age",colnames(DIRI.region))]

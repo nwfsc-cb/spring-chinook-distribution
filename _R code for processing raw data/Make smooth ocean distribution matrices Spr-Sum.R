@@ -37,7 +37,7 @@ d_pred_knot_ws2 <- d_pred_knot_ws^2
 
 # Worked example
 theta = 3
-V     = 9
+V     = 1
 cov.knot.to.knot <- exp(- d_knot_knot_sf2 / theta^2) * V^2
 cov.knot.to.pred <- exp(- d_pred_knot_sf2 / theta^2) * V^2
 w_star <- mvrnorm(1,rep(0,N_knot_sf),cov.knot.to.knot)

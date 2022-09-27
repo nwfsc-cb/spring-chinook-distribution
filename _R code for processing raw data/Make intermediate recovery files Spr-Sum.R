@@ -243,6 +243,53 @@ ocean.recover.trawl$dat <- rbind(ASHOP.fin,SHORESIDE.fin) %>% dplyr::select(-est
     mutate(season,season = ifelse(rec.month %in% FAL,"month.fall",season)) %>%
     mutate(season,season = ifelse(rec.month %in% WIN,"month.winter",season))
     
+  # GOA Pollock Make a flat file equivalent to Lambda that will be made for the other gear groups in the 
+  # Make catch and escapement files script later.
+  A<-    pivot_longer(pollock.sample.fraction,cols = starts_with("month"),
+                      names_to = "season",values_to="median.frac.samp") %>% as.data.frame()
+  
+  A <- A %>% mutate(season.numb=0) %>% 
+    mutate(season.numb = ifelse(season == "month.spring",1,season.numb)) %>%
+    mutate(season.numb = ifelse(season == "month.summer",2,season.numb)) %>%
+    mutate(season.numb = ifelse(season == "month.fall",3,season.numb)) %>%
+    mutate(season.numb = ifelse(season == "month.winter",4,season.numb))
+  
+  B <-  A %>% arrange(area.numb) %>%
+    pivot_wider(.,
+                id_cols=c("year","season","season.numb"),
+                values_from="median.frac.samp",
+                names_from="area.numb")
+  B <- B %>% arrange(year,season.numb)
+  
+  Lambda_pollock_GOA_flat <- B %>% as.data.frame()
+  rownames(Lambda_pollock_GOA_flat) <- paste(B$year,B$season,sep=".")
+  Lambda_pollock_GOA_flat <- Lambda_pollock_GOA_flat %>% dplyr::select(-year,-season,-season.numb)
+  colnames(Lambda_pollock_GOA_flat) <- paste0("loc",".",nom)
+  
+  # GOA Pollock Make a flat file equivalent to Lambda that will be made for the other gear groups in the 
+  # Make catch and escapement files script later.
+  A<-    pivot_longer(rock.shoreside.sample.fraction,cols = starts_with("month"),
+                      names_to = "season",values_to="median.frac.samp") %>% as.data.frame()
+  
+  A <- A %>% mutate(season.numb=0) %>% 
+    mutate(season.numb = ifelse(season == "month.spring",1,season.numb)) %>%
+    mutate(season.numb = ifelse(season == "month.summer",2,season.numb)) %>%
+    mutate(season.numb = ifelse(season == "month.fall",3,season.numb)) %>%
+    mutate(season.numb = ifelse(season == "month.winter",4,season.numb))
+  
+  B <-  A %>% arrange(area.numb) %>%
+    pivot_wider(.,
+                id_cols=c("year","season","season.numb"),
+                values_from="median.frac.samp",
+                names_from="area.numb")
+  B <- B %>% arrange(year,season.numb)
+  
+  Lambda_rockfish_AK_flat <- B %>% as.data.frame()
+  rownames(Lambda_rockfish_AK_flat) <- paste(B$year,B$season,sep=".")
+  Lambda_rockfish_AK_flat <- Lambda_rockfish_AK_flat %>% dplyr::select(-year,-season,-season.numb)
+  colnames(Lambda_rockfish_AK_flat) <- paste0("loc",".",nom)
+  
+  
   # Merge in AK trawl recoveries into the larger set of RMIS and southern CWT recoveries
     catch.dat <- bind_rows(ocean.recover.pollock.trawl$dat,ocean.recover.rockfish.AK.shoreside$dat) %>% dplyr::select(-season) %>%
                 mutate(estimation.level=NA) %>%              

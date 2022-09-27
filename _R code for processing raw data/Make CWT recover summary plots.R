@@ -27,8 +27,6 @@ ggplot(REL.mod) +
   facet_wrap(~ocean.region) +
   ggtitle("All ocean recoveries")
 
-
-
 #############
 B <-  data.frame(apply(C_ocean,c(1,4),sum))
 B <-B %>% mutate(Tot = rowSums(.))

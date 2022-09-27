@@ -6,15 +6,15 @@ library(MASS)
 
 N.LOC.INIT <- length(unique(REL$ocean.region))
 
-mat.age.true <- seq(1,5,by=0.1)
-mat.age <- mat.age.true-5
+mat.age.true <- seq(1,max(OCEAN.MODEL.AGE$model.year),by=0.1)
+mat.age <- mat.age.true-max(OCEAN.MODEL.AGE$model.year)
 #log.mat.age <- log(mat.age)
 lat <- seq(0,8, by=1)
 
-gamma_0_fix      <- 5.3
+gamma_0_fix      <- 2
 #gamma_0_sig     <-  0.1
-gamma_age_mu    <- 2.9
-gamma_age_sig   <- 0.4
+gamma_age_mu    <- 1.0
+gamma_age_sig   <- 0.6
 # gamma_lat_mu    <- 0.0
 # gamma_lat_sig   <- 0.0001
 
@@ -58,7 +58,7 @@ these <- sort(sample(1:N.LOC.INIT,min(N.LOC.INIT,3)))
 for(i in names(pred)[these]){
   temp <- pred[[i]]
   print(i)
-  x.lim <- c(1,5)
+  x.lim <- c(1,max(OCEAN.MODEL.AGE$model.year))
   y.lim <- c(0,1)
   
   #   plot(Mean~mat.age, data=temp, lwd=4,axes=F,xlim=x.lim,ylim=y.lim,xlab="",ylab="",type="l")
@@ -73,7 +73,7 @@ for(i in names(pred)[these]){
   par(new=T)
   plot(q.95~mat.age, data=temp, lwd=1,lty=2,axes=F,xlim=x.lim,ylim=y.lim,xlab="",ylab="",type="l")
   
-  axis(1, at = 1:5,labels=1:5)
+  axis(1, at = 1:6,labels=1:6)
   axis(2,las=2)
   box(bty="l")
   text(i,x=0,y=0.9)
@@ -104,7 +104,7 @@ for(i in names(pred)[these]){
 
   # Mortality that declines with ocean age
 intercept <-24 # age in month at which the mortality rate is constant.
-month <- 1:55
+month <- 1:max(OCEAN.MODEL.AGE$ocean.age)
 month[month>=25] <- 24
 
 month <- month - intercept 
@@ -221,8 +221,6 @@ pred.S.year <- exp(-pred.M.year)
 pred.S.year
 
 plot(pred.S.year,ylim=c(0.5,1))
-
-
 par(new=T)
 plot(exp(pred.log.M),ylim=c(0,0.2),col=2)
 
