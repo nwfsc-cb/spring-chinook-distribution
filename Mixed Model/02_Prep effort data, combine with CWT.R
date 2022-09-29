@@ -463,7 +463,7 @@ move_id_idx <- move_id$move_id_idx
 ### Import the Dirichlet derived escapement data for each region.
 ### see CWT Maturity Proportion for this and Make catch and Escapement CLIMATE.R
 
-source("./Base_Code/_R code for processing raw data/CWT Maturity Proportions Spr-Sum.R",local=T)
+source("./_R code for processing raw data/CWT Maturity Proportions Spr-Sum.R",local=T)
 escape_diri <- read.csv(paste0("./Processed Data/Escapement/Escape_Dirichlet_region ",RUN.TYPE," ",GROUP,".csv"))
 escape_diri <- escape_diri[order(escape_diri$number),]
 N.diri      <- nrow(escape_diri)
@@ -489,7 +489,7 @@ if(MONTH.STRUCTURE == "FOUR"){
 if(MONTH.STRUCTURE == "SPRING"){
   # For fall. time_fraction = 0.33 is September 1 migration
   # For spring run, time_fraction = 0 is March 1, time_fraction = 0.33 is April 1, 0.667 is May 1 
-  REL <- REL %>% left_join(., ORIGIN.LAB %>% dplyr::select(ocean.region=origin.code,spawn_time_fraction) )
+  REL <- REL %>% ungroup() %>% left_join(., ORIGIN.LAB %>% dplyr::select(ocean.region=origin.code,spawn_time_fraction) )
 }
 
 if(MONTH.STRUCTURE == "FRAM"){
@@ -501,63 +501,63 @@ if(MONTH.STRUCTURE == "FRAM"){
 #################################################################################################
 #source("./Base_Code/Climate R Scripts/Ocean Temperatures.R",local=T)
 # Raw temperature data:
-TEMP.DAT <- read.csv("./Processed Data/Temperature/Temperature Deep_2018.csv")
-
-# Temperature Deviations calculated from 3 seasons model (winter is treated as deviation from spring mean for identifiability reasons)
-TEMP.DEV.DAT <- read.csv("./Processed Data/Temperature/Temperature Deviations 4seas Deep_2018.csv")
-
-  ocean.temp     <-   TEMP.DAT %>% filter(year <= max(YEARS.RECOVER))  
-  #ocean.temp     <-  ocean.temp[2:nrow(ocean.temp),]
-  ocean.temp.dev <-  TEMP.DEV.DAT %>% filter(year <= max(YEARS.RECOVER))  
-  #ocean.temp.dev <-  ocean.temp.dev[2:nrow(ocean.temp.dev),]
-  rownames(ocean.temp.dev) <- paste(ocean.temp.dev$year,ocean.temp.dev$season,sep=".")
-  ocean.temp$season <- factor(ocean.temp$season,levels=c("Spr","Sum","Fal","Win"))
-  ocean.temp.dev$season <- factor(ocean.temp.dev$season,levels=c("Spr","Sum","Fal","Win"))
-  
-  ocean.temp <- ocean.temp %>% arrange(year,season)
-  ocean.temp.dev <- ocean.temp.dev %>% arrange(year,season) %>% as.data.frame()
-  rownames(ocean.temp.dev) <- paste(ocean.temp.dev$year,ocean.temp.dev$season,sep=".")
-  
-  # This makes winter have a deviation to zero and all years before 1981 have a deviation of zero
-  ocean.temp.dev[ocean.temp.dev$year <= 1981,3:ncol(ocean.temp.dev) ] <- 0
-  ocean.temp.dev[ocean.temp.dev$season =="Win",3:ncol(ocean.temp.dev) ] <- 0 
-  ocean.temp.dev <- ocean.temp.dev %>% dplyr::select(-year, -season)
-  #ocean.temp.dev <- ocean.temp.dev[1:N_season_total,]
-  
-  ocean.temp.dev <- ocean.temp.dev*0.1 #### THIS IS REALLY IMPORTANT. REMEMBER TO RESCALE FUTURE PREDICTIONS by 0.1
-  
-  # Eliminate deviations from PUSO and SGEO
-    #ocean.temp.dev$PUSO <- 0
-    #ocean.temp.dev$SGEO <- 0
-  
-  if(loc_18 == "TRUE" | loc_18 =="TWO_OR" | loc_18=="NCA_SOR_PUSO"){
-    #ocean.temp.dev$PUSO_out <- 0
-    CHAR <- c(as.character(LOCATIONS$location.name))
-    ocean.temp.dev <- ocean.temp.dev %>% dplyr::select(all_of(CHAR))
-    ocean.temp <- ocean.temp %>% dplyr::select(year,season,CHAR)
-  }
-  
-  #### MAKE A new index for working with temperature deviation data.
-  REL$origin_start_year_idx <- 1+(REL$start_year - 1)*N_month  
-  origin_year_idx <- matrix(seq(0,N.mod.month-1),N.REL,N.mod.month,byrow=T) + matrix(REL$origin_start_year_idx,N.REL,N.mod.month)
-
-  if(MONTH.STRUCTURE =="FOUR"|MONTH.STRUCTURE=="SPRING"){
-    first <- which(rownames(ocean.temp.dev)==paste(min(YEARS.RECOVER),"Spr",sep="."))
-    last <- which(rownames(ocean.temp.dev)==paste(max(YEARS.RECOVER),"Fal",sep="."))
-    ocean.temp.dev <- ocean.temp.dev[first:last,]
-  }
-  
-  if(MONTH.STRUCTURE =="FRAM"){
-    first <- which(rownames(ocean.temp.dev)==paste(min(YEARS.RECOVER),"Sum",sep="."))
-    last <- which(rownames(ocean.temp.dev)==paste(max(YEARS.RECOVER),"Fal",sep="."))
-    ocean.temp.dev <- ocean.temp.dev[first:last,]
-  }
-    
-  temperature_season_idx    <- rep(0,nrow(ocean.temp.dev))
-  temperature_season_idx[grep("Win",rownames(ocean.temp.dev))] <- 1
-  temperature_season_idx[grep("Spr",rownames(ocean.temp.dev))] <- 1
-  temperature_season_idx[grep("Sum",rownames(ocean.temp.dev))] <- 2
-  temperature_season_idx[grep("Fal",rownames(ocean.temp.dev))] <- 3
+# TEMP.DAT <- read.csv("./Processed Data/Temperature/Temperature Deep_2018.csv")
+# 
+# # Temperature Deviations calculated from 3 seasons model (winter is treated as deviation from spring mean for identifiability reasons)
+# TEMP.DEV.DAT <- read.csv("./Processed Data/Temperature/Temperature Deviations 4seas Deep_2018.csv")
+# 
+#   ocean.temp     <-   TEMP.DAT %>% filter(year <= max(YEARS.RECOVER))  
+#   #ocean.temp     <-  ocean.temp[2:nrow(ocean.temp),]
+#   ocean.temp.dev <-  TEMP.DEV.DAT %>% filter(year <= max(YEARS.RECOVER))  
+#   #ocean.temp.dev <-  ocean.temp.dev[2:nrow(ocean.temp.dev),]
+#   rownames(ocean.temp.dev) <- paste(ocean.temp.dev$year,ocean.temp.dev$season,sep=".")
+#   ocean.temp$season <- factor(ocean.temp$season,levels=c("Spr","Sum","Fal","Win"))
+#   ocean.temp.dev$season <- factor(ocean.temp.dev$season,levels=c("Spr","Sum","Fal","Win"))
+#   
+#   ocean.temp <- ocean.temp %>% arrange(year,season)
+#   ocean.temp.dev <- ocean.temp.dev %>% arrange(year,season) %>% as.data.frame()
+#   rownames(ocean.temp.dev) <- paste(ocean.temp.dev$year,ocean.temp.dev$season,sep=".")
+#   
+#   # This makes winter have a deviation to zero and all years before 1981 have a deviation of zero
+#   ocean.temp.dev[ocean.temp.dev$year <= 1981,3:ncol(ocean.temp.dev) ] <- 0
+#   ocean.temp.dev[ocean.temp.dev$season =="Win",3:ncol(ocean.temp.dev) ] <- 0 
+#   ocean.temp.dev <- ocean.temp.dev %>% dplyr::select(-year, -season)
+#   #ocean.temp.dev <- ocean.temp.dev[1:N_season_total,]
+#   
+#   ocean.temp.dev <- ocean.temp.dev*0.1 #### THIS IS REALLY IMPORTANT. REMEMBER TO RESCALE FUTURE PREDICTIONS by 0.1
+#   
+#   # Eliminate deviations from PUSO and SGEO
+#     #ocean.temp.dev$PUSO <- 0
+#     #ocean.temp.dev$SGEO <- 0
+#   
+#   if(loc_18 == "TRUE" | loc_18 =="TWO_OR" | loc_18=="NCA_SOR_PUSO"){
+#     #ocean.temp.dev$PUSO_out <- 0
+#     CHAR <- c(as.character(LOCATIONS$location.name))
+#     ocean.temp.dev <- ocean.temp.dev %>% dplyr::select(all_of(CHAR))
+#     ocean.temp <- ocean.temp %>% dplyr::select(year,season,CHAR)
+#   }
+#   
+#   #### MAKE A new index for working with temperature deviation data.
+#   REL$origin_start_year_idx <- 1+(REL$start_year - 1)*N_month  
+#   origin_year_idx <- matrix(seq(0,N.mod.month-1),N.REL,N.mod.month,byrow=T) + matrix(REL$origin_start_year_idx,N.REL,N.mod.month)
+# 
+#   if(MONTH.STRUCTURE =="FOUR"|MONTH.STRUCTURE=="SPRING"){
+#     first <- which(rownames(ocean.temp.dev)==paste(min(YEARS.RECOVER),"Spr",sep="."))
+#     last <- which(rownames(ocean.temp.dev)==paste(max(YEARS.RECOVER),"Fal",sep="."))
+#     ocean.temp.dev <- ocean.temp.dev[first:last,]
+#   }
+#   
+#   if(MONTH.STRUCTURE =="FRAM"){
+#     first <- which(rownames(ocean.temp.dev)==paste(min(YEARS.RECOVER),"Sum",sep="."))
+#     last <- which(rownames(ocean.temp.dev)==paste(max(YEARS.RECOVER),"Fal",sep="."))
+#     ocean.temp.dev <- ocean.temp.dev[first:last,]
+#   }
+#     
+#   temperature_season_idx    <- rep(0,nrow(ocean.temp.dev))
+#   temperature_season_idx[grep("Win",rownames(ocean.temp.dev))] <- 1
+#   temperature_season_idx[grep("Spr",rownames(ocean.temp.dev))] <- 1
+#   temperature_season_idx[grep("Sum",rownames(ocean.temp.dev))] <- 2
+#   temperature_season_idx[grep("Fal",rownames(ocean.temp.dev))] <- 3
 
 #################################################################################################
 ### Create Priors for maturity, vulnerability, fishing mortality parameters
@@ -591,7 +591,7 @@ spawn_loc <- escape_diri[,c("ocean.region","number","init.loc")]
 
 #################################################
 ### Calculate the matrix that informs where fish can enter the river from the ocean.
-source("./Base_Code/_R code for processing raw data/Make river entry matrices.R",local=T)
+source("./_R code for processing raw data/Make river entry matrices.R",local=T)
 
 #### MAKE A DATA FILE FOR log_n_fin_ratio_data to ensure very few fish are left in the ocean at the end of the simulation
 REL$log_N_ratio_mean <- -7
@@ -617,7 +617,7 @@ if(MONTH.STRUCTURE == "FRAM"){
   vuln.rec.mat    <-   read.csv("./Processed Data/Vulnerability/vuln.rec.1978-2018_FRAM.csv")
 }
 
-if(loc_18 =="TWO_OR"){
+if(loc_18 =="TWO_OR" | loc_18 == "_two_OR_PUSO_AK"){
   vuln.troll.mat  <-   vuln.troll.mat %>% mutate(SOR = (SOR + COR )/2) %>% dplyr::select(-COR)
   vuln.treaty.mat  <-   vuln.treaty.mat %>% mutate(SOR = (SOR + COR )/2) %>% dplyr::select(-COR)
   vuln.rec.mat  <-   vuln.rec.mat %>% mutate(SOR = (SOR + COR )/2) %>% dplyr::select(-COR)
@@ -649,10 +649,10 @@ vuln_rec_mat    <- vuln.rec.mat %>% dplyr::select(-Year,-Season) * 0.01
 ############################################################################################################
 ### Call script that creates matrices needed to make spatial distributions smooth.
 ############################################################################################################
-source("./Base_Code/_R code for processing raw data/Make smooth ocean distribution matrices.R",local=T)
+source("./_R code for processing raw data/Make smooth ocean distribution matrices Spr-Sum.R",local=T)
 
 ######## PLOT EFFORT AND CPUE FILES
-#source("./Base_Code/_R code for processing raw data/Plot effort, CPUE heatmaps CLIMATE.R",local=T)
+source("./_R code for processing raw data/Plot effort, CPUE heatmaps CLIMATE.R",local=T)
 
 ############# MAKE A PDF of the various hatchery and release attributes.
 #setwd(paste(base.dir,"/GSI_CWT_Chinook/Output plots/  __Markdown",sep=""))

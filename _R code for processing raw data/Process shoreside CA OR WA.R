@@ -42,7 +42,7 @@ C <- dat %>%
                   INPFC_AREA_TYPE_CODE,
                   NUM_OF_DAYS_FISHED, 
                   SPECIES_CODE_NAME, 
-                  LANDED_WEIGHT_LBS)) %>%
+                  LANDED_WEIGHT_LBS))  %>%
   dplyr::group_by(LANDING_YEAR, 
                   LANDING_MONTH, 
                   LANDING_DAY, 

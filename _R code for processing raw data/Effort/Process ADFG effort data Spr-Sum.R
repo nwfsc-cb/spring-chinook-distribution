@@ -265,5 +265,120 @@ for(i in year){
   
   both <- data.frame(power.all[,1:2], power.all[,3:ncol(power.all)] + hand.all[,3:ncol(hand.all)])
 
+##################################################################
+##################################################################  
+##################################################################
+##################################################################
+##################################################################
+# The above section is for data from John Carlile.  I also retrieved data directly from 
+# the fish ticket database "early" is 1975-1990, "late" is 1991-1999
+    
+  dat.catch.cfec.early <- readRDS(paste(data.dir,"/Effort info/Alaska/Raw Fish Ticket Data/Compiled RDS files of fish tix/Troll_Chinook_Landings_AK_75_90.rds",sep=""))
+  dat.catch.cfec.late  <- readRDS(paste(data.dir,"/Effort info/Alaska/Raw Fish Ticket Data/Compiled RDS files of fish tix/Troll_Chinook_Landings_AK_91_99.rds",sep=""))
+  rec.codes.stat6 <- read.csv(paste0(data.dir,"/Effort info/Alaska/Raw Fish Ticket Data/Compiled RDS files of fish tix/rec.area.codes.stat6.csv"))
+  # do the simple thing and aggregate the number of landings and mass of landings by month
+  # Pull out the month, map to areas, sum
+  dat.by.month <- dat.catch.cfec.early %>% filter(!landdate=="") %>% 
+                        mutate(land.date = as.Date(landdate,format("%m/%d/%Y")),month = month(land.date)) %>%
+                        group_by(year,month,gearn,stat6,spec,specn) %>%
+                        summarise(N_land = length(year),Lbs = sum(f_netlbs)) %>%
+                        left_join(.,rec.codes.stat6) %>%
+                        group_by(year,month,gearn,area.code,spec,specn) %>%
+                        summarise(N_land = sum(N_land),tot_lbs = sum(Lbs))
+  
+  dat.by.month <- dat.by.month %>% 
+                  mutate(cpue=tot_lbs/N_land)
+    
+  # look at time-series
+  dat.by.month <- dat.by.month %>% mutate(year.month = year+(month-1)/12)
+  
+  ggplot(dat.by.month) + 
+    geom_line(aes(x=year.month,y=N_land))+
+    geom_point(aes(x=year.month,y=N_land))+
+    facet_grid(area.code~gearn)
+
+  ggplot(dat.by.month) + 
+    geom_line(aes(x=year.month,y=cpue))+
+    geom_point(aes(x=year.month,y=cpue))+
+    facet_grid(area.code~gearn,scales="free")
+
+  # spread wide-from to look at ratios
+  
+  dat.wide <- pivot_wider(dat.by.month,id_cols = c("year","month","area.code"),
+                          names_from = "gearn",values_from = c("N_land","cpue")) %>%
+              mutate(cpue.ratio = cpue_5/cpue_15) %>%
+              mutate(year.month = year+(month-1)/12) %>%
+              mutate(season =case_when(month<=3 ~"winter",
+                             month>=4 & month <=6 ~"spring",
+                             month>=6 & month <=9 ~"summer",
+                             month>=10  ~"fall")) %>%
+              mutate(N_land_5=ifelse(is.na(N_land_5),0,N_land_5))
+  
+  dat.sum <- dat.wide %>% filter(N_land_15>5,N_land_5>5) %>% 
+              mutate(season =case_when(month<=3 ~"winter",
+                                       month>=4 & month <=6 ~"spring",
+                                       month>=6 & month <=9 ~"summer",
+                                       month>=10  ~"fall")) %>%
+              group_by(year,season,area.code) %>%
+              summarise(cpue_mean = mean(cpue.ratio))
+              
+  dat.wide <- left_join(dat.wide, dat.sum) %>% 
+                mutate(N_land_5_adj = 
+                         ifelse(N_land_5>10 & N_land_15>10,
+                                N_land_5*cpue.ratio,
+                                N_land_5*cpue_mean)) %>%
+                mutate(N_land_5_adj = ifelse(N_land_5 == 0, 0,N_land_5_adj),
+                       N_land_15 = ifelse(is.na(N_land_15), 0,N_land_15))
+    
+    # pull out years of interest
+    dat.79.84 <- dat.wide %>% filter(year>=1979,year<=1984)
+    # only YAK has NA. Mostly winter.  Take a median across all winter-spring months and use that
+    med.YAK <-     dat.79.84 %>% filter(month<=4 | month>=9) %>%
+                  filter(area.code=="YAK",!is.na(cpue.ratio)) %>%
+                  pull(cpue.ratio) %>% median()
+    dat.79.84 <- dat.79.84 %>% mutate(N_land_5_adj=ifelse(is.na(N_land_5_adj),N_land_5*med.YAK,N_land_5_adj))    
+
+    # Combine for a total effort in landings and trim out extra columns.
+    dat.79.84 <- dat.79.84 %>% mutate(tot.land = N_land_15 + N_land_5_adj) %>%
+                  dplyr::select(year,month,area.code,tot.land,year.month)
+    
+  # ggplot(dat.wide %>% filter(N_land_15>10,N_land_5>10,month>3,month<8)) + 
+  #   geom_line(aes(x=year.month,y=cpue.ratio))+
+  #   geom_point(aes(x=year.month,y=cpue.ratio))+
+  #   facet_wrap(~area.code,ncol=3,scales="free")
+  # 
+  # ggplot(dat.wide %>% filter(N_land_15>10,N_land_5>10)) +
+  #   geom_point(aes(x=cpue_5,y=cpue_15,color=year))+
+  #   facet_wrap(~area.code,ncol=3,scales="free")
+  
+  ################################ ok.  Make the 79-84 data into the form like both, combine, and write to file.
+  dat.both <- dat.79.84 %>% rename(SEAK.region=area.code) %>% 
+    mutate(month.lab = ifelse(nchar(month)==1,
+                                    paste0(0,as.character(month)),
+                                    as.character(month))) %>%
+    mutate(month.lab = paste0("month.",month.lab)) %>%
+    pivot_wider(.,id_cols = c("year","SEAK.region"),
+                names_from = "month.lab",
+                values_from="tot.land")
+    
+  # Plot to check this works ok with existing data
+  # A <- pivot_longer(both,cols=starts_with("month"),values_to="carlile_land")
+  # B <- pivot_longer(dat.both,cols=starts_with("month"),values_to="cfec_land")
+  # B$year <- as.character(B$year)
+  # C <- full_join(A,B)
+  # 
+  # ggplot(C %>% filter(year>=1985,year<=1990)) +
+  #   geom_point(aes(x=carlile_land,y=cfec_land,color=name))+
+  #   geom_abline(intercept=0,slope=1,col="red") +
+  #   # scale_x_continuous(trans="log") +
+  #   # scale_y_continuous(trans="log") +
+  #   facet_grid(year~SEAK.region,scales="free")
+
+   # get rid of NA 
+  dat.both[is.na(dat.both)==TRUE] <- 0
+  dat.both$year <- as.character(dat.both$year)
+    
+  both <- bind_rows(both,dat.both)
+      
   write.csv(both, file="/Users/ole.shelton/GitHub/spring-chinook-distribution/Processed Data/Effort Data/effort.data.ak.2022-06.csv",row.names=F)
   
