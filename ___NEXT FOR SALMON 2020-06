@@ -64,7 +64,12 @@ Requested new, updated data from ASHOP.  Will submit new request to PSMFC soon f
 Found problems with the Puget Sound rec data.  Rechecked all of the data I have in hand (1978-80 and 1995-present).  Need to poke at the 1981-1994 data in the UW library.
 
 
-
+9/30/2022
+Spent the week finding and fixing errors and conflicts in "02_..."
+Found Alaska fish ticket data on my computer, used it to derive effort (landings) estimates for 1979-84 troll data.  This data differs slightly from the data provided by J. Carlile.  Not really sure why... But it is strongly correlated. I'm going to use it.  This pushes the years of recovery back to 1979.
+Receive the complete dataset from the CTC.  Will look at it next week to determine how best to use it.
+Requested additional data from the shoreside hake fleets. Hope to get ASHOP and shoreside data updates back soon.
+Started to work on the heatmap scripts and am planning make additional updates to them soon.
 
 
 
