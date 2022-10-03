@@ -47,9 +47,9 @@ MONTH.STRUCTURE <- "SPRING" # Options: "FOUR"(original structure) or
                           #          "SPRING" (follows the FOUR model schedule but includes March in the spring season)
 
 # These are are the determining factors for defining the years and locations
-YEARS.RELEASE     <- 1984:2013#2010
-YEARS.RECOVER     <- 1985:2018#2015
-YEARS.BROOD       <- 1983:2012#2009
+YEARS.RELEASE     <- 1978:2013#2010
+YEARS.RECOVER     <- 1979:2018#2015
+YEARS.BROOD       <- 1977:2012#2009
 
 N_years_recover <- length(YEARS.RECOVER)
 N_years_release <- length(YEARS.RELEASE)
@@ -650,6 +650,13 @@ vuln_rec_mat    <- vuln.rec.mat %>% dplyr::select(-Year,-Season) * 0.01
 ### Call script that creates matrices needed to make spatial distributions smooth.
 ############################################################################################################
 source("./_R code for processing raw data/Make smooth ocean distribution matrices Spr-Sum.R",local=T)
+
+#write REL to file:
+saveRDS(REL,file=paste0(base.dir,"/spring-chinook-distribution/Processed Data/REL matrix ",RUN.TYPE," ",GROUP,".rds"))
+
+RUN.TYPE  <- "spring-summer" # options: "fall" or "spring-summer"
+GROUP
+
 
 ######## PLOT EFFORT AND CPUE FILES
 source("./_R code for processing raw data/Plot effort, CPUE heatmaps CLIMATE.R",local=T)
