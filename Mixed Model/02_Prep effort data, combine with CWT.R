@@ -206,9 +206,9 @@ if(MONTH.STRUCTURE=="FOUR"){
 }
 if(MONTH.STRUCTURE=="SPRING"){
   REL.ALL$n.month <- 0
-  REL.ALL$n.month <- 12 - REL.ALL$Median.month.release + 3  ## Start keeping track of fish in March (spring) of brood year+2 
-  REL.ALL$n.month[REL.ALL$n.year == 2] <- 3 - REL.ALL$Median.month.release[REL.ALL$n.year == 2] ## Start keeping track of fish in April (spring) of year following release.
-  REL.ALL$n.month[REL.ALL$n.month <= 1 ]  <- 1
+  REL.ALL$n.month <- 12 - REL.ALL$Median.month.release + 2  ## Start keeping track of fish in March (spring) of brood year+2 
+  REL.ALL$n.month[REL.ALL$n.year == 2] <- 2 - REL.ALL$Median.month.release[REL.ALL$n.year == 2] ## Start keeping track of fish in MArch (spring) of year following release.
+  #REL.ALL$n.month[REL.ALL$n.month <= 1 ]  <- 1
 }
 if(MONTH.STRUCTURE=="FRAM"){
   REL.ALL$n.month <- 0
@@ -217,6 +217,8 @@ if(MONTH.STRUCTURE=="FRAM"){
  # REL.ALL$n.month[REL.ALL$n.year == 0] <-  + 12 - REL.ALL$Median.month.release[REL.ALL$n.year == 0]  
   REL.ALL$n.month[REL.ALL$n.month <= 1 ]  <- 1
 }
+
+REL.ALL <- REL.ALL %>% filter(n.year<=2)
 
 N.REL.all <- nrow(REL.ALL) # THIS IS THE TOTAL NUMBER OF RELEASES WE ARE EXAMINING.
 N.LOC <- max(LOCATIONS$location.number)
@@ -651,17 +653,53 @@ vuln_rec_mat    <- vuln.rec.mat %>% dplyr::select(-Year,-Season) * 0.01
 ############################################################################################################
 source("./_R code for processing raw data/Make smooth ocean distribution matrices Spr-Sum.R",local=T)
 
-#write REL to file:
-saveRDS(REL,file=paste0(base.dir,"/spring-chinook-distribution/Processed Data/REL matrix ",RUN.TYPE," ",GROUP,".rds"))
-
-RUN.TYPE  <- "spring-summer" # options: "fall" or "spring-summer"
-GROUP
-
 
 ######## PLOT EFFORT AND CPUE FILES
-source("./_R code for processing raw data/Plot effort, CPUE heatmaps CLIMATE.R",local=T)
+source("./_R code for processing raw data/Make heatmap functions.R",local=T)
 
+source("./_R code for processing raw data/Plot effort, CPUE heatmaps Spr-Sum",local=T)
 ############# MAKE A PDF of the various hatchery and release attributes.
+#write REL to file:
+saveRDS(REL,file=paste0(base.dir,"/spring-chinook-distribution/Processed Data/REL matrix ",RUN.TYPE," ",GROUP,".rds"))
+# write effort flat files to file
+
+EFFORT <- list( 
+  LOCATIONS =LOCATIONS,
+  YEARS.RECOVER = YEARS.RECOVER,
+  K_treaty_flat =K_treaty_flat,
+  K_troll_flat =K_troll_flat,
+  K_rec_can_flat=K_rec_can_flat,
+  K_rec_can_irec_flat=K_rec_can_irec_flat,
+  K_rec_flat=K_rec_flat,
+  K_rec_PUSO_flat=K_rec_PUSO_flat,
+  K_hake_ashop_flat=K_hake_ashop_flat, 
+  K_hake_shoreside_flat=K_hake_shoreside_flat,
+  K_pollock_shoreside_flat=K_pollock_shoreside_flat,
+  K_rockfish_AK_shoreside_flat=K_rockfish_AK_shoreside_flat,
+  
+  Lambda_hake_ashop_flat = Lambda_hake_ashop_flat,
+  Lambda_hake_shoreside_flat = Lambda_hake_shoreside_flat,
+  Lambda_pollock_GOA_flat = Lambda_pollock_GOA_flat,
+  Lambda_rec_flat = Lambda_rec_flat,
+  Lambda_troll_flat = Lambda_troll_flat,
+  Lambda_treaty_flat = Lambda_treaty_flat,
+  Lambda_rockfish_AK_flat = Lambda_rockfish_AK_flat
+  )
+              
+CATCH = list(
+  C_troll_true =C_troll_true,
+  C_treaty_true = C_treaty_true,
+  C_rec_true  = C_rec_true,
+  C_hake_ashop_true = C_hake_ashop_true,
+  C_hake_shoreside_true = C_hake_shoreside_true,
+  C_pollock_GOA_true =C_pollock_GOA_true,
+  C_rockfish_AK_true = C_rockfish_AK_true,
+  C_ocean_total = C_ocean_total)
+
+save(file=paste0(base.dir,"/spring-chinook-distribution/Processed Data/Effort ",RUN.TYPE," ",GROUP,".RData"),EFFORT)
+save(file=paste0(base.dir,"/spring-chinook-distribution/Processed Data/Catch ",RUN.TYPE," ",GROUP,".RData"),CATCH )
+
+
 #setwd(paste(base.dir,"/GSI_CWT_Chinook/Output plots/  __Markdown",sep=""))
 #rmarkdown::render("./Output plots/  __Markdown/release-summaries.rmd",
 #                  output_format = "pdf_document")

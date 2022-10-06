@@ -3,7 +3,7 @@
 # Rec Effort data first
 #print(base.dir)
 
-ak.eff <- read.csv("./Processed Data/Effort Data/effort.data.ak.csv") # THIS IS ONLY COMMERCIAL TROLL (OMIT)
+ak.eff <- read.csv("./Processed Data/Effort Data/effort.data.ak.2022-09.csv") # THIS IS ONLY COMMERCIAL TROLL (OMIT)
 ca.or.wa.eff <- read.csv("./Processed Data/Effort Data/effort.data.REC.ca.or.wa.csv")
 puso.eff       <- read.csv("./Processed Data/Effort Data/effort.data.REC.puso-to-2020-FIN.csv")
 puso.retention <- read.csv("./Processed Data/Effort Data/WA PUSO Chinook retention.csv")

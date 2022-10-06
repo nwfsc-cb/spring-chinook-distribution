@@ -3,7 +3,7 @@
 # Troll Effort data first
 #base.dir<-getwd()
 
-ak.eff <- read.csv(paste(base.dir,"/spring-chinook-distribution/Processed Data/Effort Data/effort.data.ak.2022-06.csv",sep=""))
+ak.eff <- read.csv(paste(base.dir,"/spring-chinook-distribution/Processed Data/Effort Data/effort.data.ak.2022-09.csv",sep=""))
 bc.eff <- read.csv(paste(base.dir,"/spring-chinook-distribution/Processed Data/Effort Data/effort.data.bc.1978-2018.csv",sep=""))
 colnames(bc.eff)[3:14] <- colnames(ak.eff)[3:14]
 ca.or.wa.eff <- read.csv(paste(base.dir,"/spring-chinook-distribution/Processed Data/Effort Data/effort.data.ca.or.wa-2022-07.csv",sep=""))
@@ -24,6 +24,10 @@ ALL.MONTH   <- c("month.01","month.02","month.03","month.04","month.05","month.0
   ##############################################################
   # Alaska first 
   
+
+ak.eff <- ak.eff %>% arrange(year)
+
+
   if(MONTH.STRUCTURE=="FOUR"){
     ak.eff$month.winter.2 <- rowSums(ak.eff[,WINTER.MONTH[1:3]])
     ak.eff$month.winter.1 <- rowSums(ak.eff[,WINTER.MONTH[4:5]])
@@ -62,7 +66,7 @@ ALL.MONTH   <- c("month.01","month.02","month.03","month.04","month.05","month.0
   # Replace "YAK" with "NEGOA"
   ak.eff <- ak.eff %>% mutate(area.code=ifelse(area.code == "YAK","NEGOA",area.code))
   # Drop 1984 and earlier data because data starts in 1985
-  ak.eff <- ak.eff %>% filter(year >= 1985)
+  #ak.eff <- ak.eff %>% filter(year >= 1985)
   
   
   ##############################################################

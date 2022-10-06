@@ -125,6 +125,10 @@ B <- B %>% arrange(year,season.numb)
 
 Lambda_hake_ashop_flat <- B %>% as.data.frame()
 rownames(Lambda_hake_ashop_flat) <- paste(B$year,B$season,sep=".")
+# get rid of later than spring in final recovery year
+Lambda_hake_ashop_flat <- Lambda_hake_ashop_flat %>% filter(year<max(YEARS.RECOVER)) %>% 
+                          bind_rows(.,
+                                    Lambda_hake_ashop_flat %>% filter(year == max(YEARS.RECOVER),season=="month.spring"))
 Lambda_hake_ashop_flat <- Lambda_hake_ashop_flat %>% dplyr::select(-year,-season,-season.numb)
 colnames(Lambda_hake_ashop_flat) <- paste0("loc",".",nom)
 
@@ -143,6 +147,8 @@ for(i in 1:nrow(trim.B)){
 
 Lambda_hake_ashop_flat_int <- trim.B.mod %>% as.data.frame()
 rownames(Lambda_hake_ashop_flat_int) <- paste(B$year,B$season,sep=".")
+# get rid of later than spring in final recovery year
+Lambda_hake_ashop_flat_int <- Lambda_hake_ashop_flat_int[1:nrow(Lambda_hake_ashop_flat),]
 colnames(Lambda_hake_ashop_flat_int) <- paste0("loc",".",nom)
 Lambda_hake_ashop_flat_int[is.na(Lambda_hake_ashop_flat_int)==T] <- 0
 
@@ -182,6 +188,8 @@ B <- B %>% arrange(year,season.numb)
 
 Lambda_hake_shoreside_flat <- B %>% as.data.frame()
 rownames(Lambda_hake_shoreside_flat) <- paste(B$year,B$season,sep=".")
+Lambda_hake_shoreside_flat <- Lambda_hake_shoreside_flat %>% filter(year<max(YEARS.RECOVER)) %>% 
+    bind_rows(.,Lambda_hake_shoreside_flat %>% filter(year == max(YEARS.RECOVER),season=="month.spring"))
 Lambda_hake_shoreside_flat <- Lambda_hake_shoreside_flat %>% dplyr::select(-year,-season,-season.numb)
 colnames(Lambda_hake_shoreside_flat) <- paste0("loc",".",nom)
 
@@ -201,6 +209,7 @@ for(i in 1:nrow(trim.B)){
 
 Lambda_hake_shoreside_flat_int <- trim.B.mod %>% as.data.frame()
 rownames(Lambda_hake_shoreside_flat_int) <- paste(B$year,B$season,sep=".")
+Lambda_hake_shoreside_flat_int <- Lambda_hake_shoreside_flat_int[1:nrow(Lambda_hake_shoreside_flat),]
 colnames(Lambda_hake_shoreside_flat_int) <- paste0("loc",".",nom)
 Lambda_hake_shoreside_flat_int[is.na(Lambda_hake_shoreside_flat_int)==T] <- 0
 
@@ -263,6 +272,8 @@ ocean.recover.trawl$dat <- rbind(ASHOP.fin,SHORESIDE.fin) %>% dplyr::select(-est
   
   Lambda_pollock_GOA_flat <- B %>% as.data.frame()
   rownames(Lambda_pollock_GOA_flat) <- paste(B$year,B$season,sep=".")
+  Lambda_pollock_GOA_flat <- Lambda_pollock_GOA_flat %>% filter(year<max(YEARS.RECOVER)) %>% 
+    bind_rows(.,Lambda_pollock_GOA_flat %>% filter(year == max(YEARS.RECOVER),season=="month.spring"))
   Lambda_pollock_GOA_flat <- Lambda_pollock_GOA_flat %>% dplyr::select(-year,-season,-season.numb)
   colnames(Lambda_pollock_GOA_flat) <- paste0("loc",".",nom)
   
@@ -286,9 +297,10 @@ ocean.recover.trawl$dat <- rbind(ASHOP.fin,SHORESIDE.fin) %>% dplyr::select(-est
   
   Lambda_rockfish_AK_flat <- B %>% as.data.frame()
   rownames(Lambda_rockfish_AK_flat) <- paste(B$year,B$season,sep=".")
+  Lambda_rockfish_AK_flat <- Lambda_rockfish_AK_flat %>% filter(year<max(YEARS.RECOVER)) %>% 
+    bind_rows(.,Lambda_rockfish_AK_flat %>% filter(year == max(YEARS.RECOVER),season=="month.spring"))
   Lambda_rockfish_AK_flat <- Lambda_rockfish_AK_flat %>% dplyr::select(-year,-season,-season.numb)
   colnames(Lambda_rockfish_AK_flat) <- paste0("loc",".",nom)
-  
   
   # Merge in AK trawl recoveries into the larger set of RMIS and southern CWT recoveries
     catch.dat <- bind_rows(ocean.recover.pollock.trawl$dat,ocean.recover.rockfish.AK.shoreside$dat) %>% dplyr::select(-season) %>%

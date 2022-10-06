@@ -9,11 +9,11 @@ RUN.TYPE = "spring-summer" ### options: fall, spring-summer(this includes all no
 REC.DATA.NAME = "all_chinook 2020-07-11.Rdata"  # Chose the name of the recoveries file to be able to 
                                                 # track which data you are using.
 
-GROUP <- "FRAM_2020_07"  ### Options "CA", "CA+" "COL" "CA+COL" "CA+COL_AWG" 
+GROUP <- "FRAM_2022_05"  ### Options "CA", "CA+" "COL" "CA+COL" "CA+COL_AWG" 
                                   ### "CA+COL+PUSO" , FRAM_v1, FRAM_v2, FREAM_2020_07
                       # THIS IS WHAT YOU READ IN WITH
                      ###  "FRAM_EXP" is an experimental one for looking at                 
-GROUP.2 <- "FRAM_2020_07"  # THIS IS WHAT GETS WRITTEN TO FILE.  Unless == "CA+COL_AWG" this should be the same as GROUP
+GROUP.2 <- "FRAM_2022_05"  # THIS IS WHAT GETS WRITTEN TO FILE.  Unless == "CA+COL_AWG" this should be the same as GROUP
                           #A CLUGE SO CAN READ IN THE SAME DATA BUT END UP WITH A SLIGHTLY DIFFERENT DATA FRAME
 loc_18 <- "_two_OR_PUSO_AK" ## THIS IS THE MAPPING TO RECOVERIES AREA CODING.  Options I have tried:
                               ## options for this are a null string ("", should be default) 

@@ -3,7 +3,7 @@
 # 
 #base.dir<-getwd()
 
-ak.eff <- read.csv(paste(base.dir,"/spring-chinook-distribution/Processed Data/Effort Data/effort.data.ak.csv",sep=""))
+ak.eff <- read.csv(paste(base.dir,"/spring-chinook-distribution/Processed Data/Effort Data/effort.data.ak.2022-09.csv",sep=""))
 treaty.eff.old <- read.csv(paste(base.dir,"/spring-chinook-distribution/Processed Data/Effort Data/effort.indian.wa.csv",sep=""))
 treaty.eff <- read.csv(paste(base.dir,"/spring-chinook-distribution/Processed Data/Effort Data/effort.treaty.us.csv",sep=""))
 
