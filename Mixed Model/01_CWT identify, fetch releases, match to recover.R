@@ -1,6 +1,6 @@
 library(readxl)
 library(dplyr)
-
+library(lubridate)
 #### Consolideted CWT releases file for Climate analysis
 #base.dir <- "/Users/ole.shelton/GitHub"
 ##rmis.base.dir <- "C:/Users/jense/Documents/GitHub/rmis-data" # MODIFIED TO REFLECT MY LOCAL DIRECTORY
@@ -19,7 +19,6 @@ loc_18 <- "_two_OR_PUSO_AK" ## THIS IS THE MAPPING TO RECOVERIES AREA CODING.  O
                               ## If you are doing spring run fish, including fish from Alaska you should use:
                                         ### "two_OR_PUSO_AK"
 if(RUN.TYPE=="spring-summer"){loc_18 <- "_two_OR_PUSO_AK"}
-
                               ## or "_18loc" for using 2 areas for PUSO, 
                               ## or "_two_OR_PUSO" for two OR areas (SOR and NOR) and two PUSOs. SOR and COR are combined. 
                                   ### "_two_OR_PUSO" is the spatial grouping used in the 2021 publication.
@@ -34,7 +33,6 @@ all.release.dat	<-	read.csv(paste0(rmis.base.dir,"/data/chinook/all_releases.csv
 # This is the older file I used pre-12/2019:
 #all.release.dat	<-	read.csv("/Users/ole.shelton/GitHub/Orca_Salmon_DATA/Releases/all chinook releases.csv")
 all.release.dat$hatchery_location_code	<- as.character(all.release.dat$hatchery_location_code)
-
 
 ### NEED NOTE ON HOW I IDENTIFIED THESE RELEASES IN PARTICULAR
 # if(RUN.TYPE=="fall"){
@@ -198,6 +196,16 @@ write.csv(focal.releases,
 # this data comes from above script
 tag.dat	<- read.csv(paste0(base.dir,"/Orca_Salmon_DATA/Releases/SPR-SUM/Tag codes ",RUN.TYPE," chinook ",GROUP," Spr-Sum",loc_18,".csv"))
 
+# Go get the AWG data. 
+dat.awg <- readRDS(paste0(base.dir,"/Orca_Salmon_DATA/AWG chinook CTC data/2022-09/CWDBRecovery.rds"))
+dat.awg <- dat.awg %>% mutate(RecDate = as.Date(RecoveryDate,"%m/%d/%Y"),
+                   month=month(RecDate),year=year(RecDate), day=day(RecDate))
+
+#label the tag codes that are in the AWG database so they can be kept separate during aggregation
+awg.codes <- dat.awg %>% distinct(TagCode) %>% rename(tag_code=TagCode)
+
+tag.dat <- tag.dat %>% mutate(ID = ifelse(tag_code %in% awg.codes$tag_code, paste0(ID,"_awg"),ID ))
+
 A	<-	aggregate(tag.dat$cwt.released,by=list(ID=tag.dat$ID,ocean.region=tag.dat$ocean.region,brood_year=tag.dat$brood_year,
                                             release_year=tag.dat$release.year,release_month=tag.dat$first.release.month),sum)
 B	<-	data.frame(expand.grid(brood_year=BROOD.YEAR.RANGE[1]:BROOD.YEAR.RANGE[2],ID=sort(unique(A$ID))))
@@ -229,7 +237,7 @@ save(releases,file=paste0(base.dir,"/spring-chinook-distribution/Processed Data/
 code.all	<- unique(tag.dat$tag_code)
 
 # Go get the recovery codes from weitkamp 
-dat.loc.key	<- read.csv(paste0(base.dir,"/Orca_Salmon_DATA/Recoveries/recovery codes-wietkamp+shelton 04-2022 two PUSO.csv"),header=T)
+dat.loc.key	<- read.csv(paste0(base.dir,"/Orca_Salmon_DATA/Recoveries/recovery codes-wietkamp+shelton 10-2022 two PUSO.csv"),header=T)
 
 ################### First read in all of the recovery data files
 #setwd("/Users/ole.shelton/GitHub/rmis-data/data/chinook")
@@ -260,9 +268,56 @@ class(all.code.recoveries$tag_code)
 recover.marine	<-	all.code.recoveries[substr(all.code.recoveries$recovery_location_code,2,2)=="M",]
 recover.fresh	  <-	all.code.recoveries[substr(all.code.recoveries$recovery_location_code,2,2)=="F",]
 
+# use this section to add in Auxiliary recoveries from the AWG data.
+# FOR FRESHWATER ONLY.
+dat.awg.F <- dat.awg %>% filter(Auxiliary == 1, 
+                                TagCode %in% code.all,
+                                substr(RecoverySite,2,2)=="F")
+
+dat.awg.F <- dat.awg.F %>% 
+                  mutate(gear=NA,
+                         recovery_location_name =NA,
+                         sampling_site=NA,
+                         detection_method = NA,
+                         length_type=NA) %>%
+                  dplyr::select(species=Species,
+                                tag_code=TagCode,
+                                recovery_id=RecoveryID,
+                                #recovery_date=RecoveryDate,
+                                fishery=CWDBFishery,
+                                gear=gear,
+                                sex=Sex,
+                                length=Length,
+                                length_type=length_type,
+                                length_code=LengthCode,
+                                recovery_location_code = RecoverySite,
+                                recovery_location_name =recovery_location_name,
+                                sampling_site=sampling_site,
+                                sample_type=SampleType,
+                                estimation_level=EstimationLevel,
+                                estimated_number= EstimatedNumber,
+                                detection_method = detection_method,
+                                rec.year=year,rec.month=month,
+                                auxiliary = Auxiliary)
+
+# Take a look at the marine recoveries.
+dat.awg.M <- dat.awg %>% filter(Auxiliary == 1, 
+                                TagCode %in% code.all,
+                                substr(RecoverySite,2,2)=="M")
+
+# Identify some of these as actually freshwater recoveries in disguise, 
+# move them to the recover.fresh database.
+dat.awg.F2 <- dat.awg.M %>% filter(CWDBFishery %in% c(0,46) )
+                                
+recover.fresh <- bind_rows(recover.fresh %>% mutate(auxiliary = 0) %>% 
+                             dplyr::select(-recovery_date),
+                             dat.awg.F)
+
+
 #######---  Marine ---####################################################################
 #Merge recovery code names with areas used.
-#### Assign recoveries into regions delineated by Weitkamp 2002 and 2010
+#### Assign recoveries into regions delineated by Weitkamp 2002 and 2010 
+#### and expanded and modified by Shelton et al 2019, 2021. 
 recover.marine$rec.area.code <- NA
 
 # #### USE THIS FOR FIRST RUN 
@@ -975,8 +1030,7 @@ fresh.by.hatchery	<-
             summarise(est.numb=sum(est.numb,na.rm=T),
                       count = sum(count,na.rm=T),
                       median.frac.samp = median(frac.samp,na.rm=T))
-  
-  
+
 # Deal with the zeros second
 fresh.by.hatchery.count.zero	<-	aggregate(fresh.zero$count,by=list(
   ID		=	fresh.zero$ID,

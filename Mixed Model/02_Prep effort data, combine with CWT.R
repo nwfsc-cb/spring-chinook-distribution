@@ -657,7 +657,7 @@ source("./_R code for processing raw data/Make smooth ocean distribution matrice
 ######## PLOT EFFORT AND CPUE FILES
 source("./_R code for processing raw data/Make heatmap functions.R",local=T)
 
-source("./_R code for processing raw data/Plot effort, CPUE heatmaps Spr-Sum",local=T)
+source("./_R code for processing raw data/Plot effort, CPUE heatmaps Spr-Sum.R",local=T)
 ############# MAKE A PDF of the various hatchery and release attributes.
 #write REL to file:
 saveRDS(REL,file=paste0(base.dir,"/spring-chinook-distribution/Processed Data/REL matrix ",RUN.TYPE," ",GROUP,".rds"))

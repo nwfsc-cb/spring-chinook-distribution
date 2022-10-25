@@ -5,7 +5,7 @@ library(lubridate)
 rmis.base.dir <- "/Users/ole.shelton/GitHub/rmis-data"
 base.dir <- "/Users/ole.shelton/GitHub"
 
-dat <- readRDS(paste0(base.dir,"//Orca_Salmon_DATA/AWG chinook CTC data/2022-09/CWDBRecovery.rds"))
+dat <- readRDS(paste0(base.dir,"/Orca_Salmon_DATA/AWG chinook CTC data/2022-09/CWDBRecovery.rds"))
 
 # Go get the tag codes that I use 
 tag.codes.fall <- read.csv(paste0(base.dir,"/Orca_Salmon_DATA/Releases/CLIMATE/Tag codes fall chinook FRAM_v2 CLIMATE _two_OR_PUSO.csv"))
