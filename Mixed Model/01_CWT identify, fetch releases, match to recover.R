@@ -155,7 +155,6 @@ focal.releases <- focal.releases %>% filter(tag_code %in% trim.temp$tag_code) %>
 # Remove releases that have exactly 0 cwt and adipose clip releases.
 focal.releases <- focal.releases %>% filter(cwt.released>0)
 
-
 ### MODIFY THIS SECTION TO INCLUDE AWG tag groups separately.
 # awg.cwt <- read.csv("/Users/ole.shelton/GitHub/GSI_CWT_Chinook/AWG chinook CTC data/WireTagCode-OLE.csv")
 # f1  <- focal.releases %>% filter(tag_code %in% awg.cwt$TagCode) %>% mutate(awg.tag.code =1)
@@ -200,6 +199,9 @@ tag.dat	<- read.csv(paste0(base.dir,"/Orca_Salmon_DATA/Releases/SPR-SUM/Tag code
 dat.awg <- readRDS(paste0(base.dir,"/Orca_Salmon_DATA/AWG chinook CTC data/2022-09/CWDBRecovery.rds"))
 dat.awg <- dat.awg %>% mutate(RecDate = as.Date(RecoveryDate,"%m/%d/%Y"),
                    month=month(RecDate),year=year(RecDate), day=day(RecDate))
+
+# Use this to check if the appropriate code tags are present in the database.
+dat.wire.code <- read.csv(paste0(base.dir,"/Orca_Salmon_DATA/AWG chinook CTC data/2022-09/WireTagCode.csv")) 
 
 #label the tag codes that are in the AWG database so they can be kept separate during aggregation
 awg.codes <- dat.awg %>% distinct(TagCode) %>% rename(tag_code=TagCode)
@@ -272,33 +274,9 @@ recover.fresh	  <-	all.code.recoveries[substr(all.code.recoveries$recovery_locat
 # FOR FRESHWATER ONLY.
 dat.awg.F <- dat.awg %>% filter(Auxiliary == 1, 
                                 TagCode %in% code.all,
-                                substr(RecoverySite,2,2)=="F")
-
-dat.awg.F <- dat.awg.F %>% 
-                  mutate(gear=NA,
-                         recovery_location_name =NA,
-                         sampling_site=NA,
-                         detection_method = NA,
-                         length_type=NA) %>%
-                  dplyr::select(species=Species,
-                                tag_code=TagCode,
-                                recovery_id=RecoveryID,
-                                #recovery_date=RecoveryDate,
-                                fishery=CWDBFishery,
-                                gear=gear,
-                                sex=Sex,
-                                length=Length,
-                                length_type=length_type,
-                                length_code=LengthCode,
-                                recovery_location_code = RecoverySite,
-                                recovery_location_name =recovery_location_name,
-                                sampling_site=sampling_site,
-                                sample_type=SampleType,
-                                estimation_level=EstimationLevel,
-                                estimated_number= EstimatedNumber,
-                                detection_method = detection_method,
-                                rec.year=year,rec.month=month,
-                                auxiliary = Auxiliary)
+                                substr(RecoverySite,2,2)=="F") %>%
+                      #replace messed up recovery years.
+                      mutate(year=ifelse( abs(year-RunYear) >=1,RunYear,year))  
 
 # Take a look at the marine recoveries.
 dat.awg.M <- dat.awg %>% filter(Auxiliary == 1, 
@@ -307,18 +285,85 @@ dat.awg.M <- dat.awg %>% filter(Auxiliary == 1,
 
 # Identify some of these as actually freshwater recoveries in disguise, 
 # move them to the recover.fresh database.
-dat.awg.F2 <- dat.awg.M %>% filter(CWDBFishery %in% c(0,46) )
+FISH.CODE <- c(0,20,22,26,46)
+dat.awg.F2 <- dat.awg.M %>% filter(CWDBFishery %in% FISH.CODE )
                                 
+# Move all gillnet (fishery==20) to fw recoveries.
+# Move all coastal gillnet (fishery==22) to fw recoveries.
+# Move freshwater sport (fishery 46) to fw recoveries.
+# Move in-river subsistence (fishery 0) to fw recoveries.
+# They occur in the various terminal areas of SEAK and the fraser.
+
+# Merge the two dat.awg.F data streams and Change the names of dat.awg.F
+dat.awg.F <- dat.awg.F %>% bind_rows(.,dat.awg.F2) %>%
+  mutate(gear=NA,
+         recovery_location_name =NA,
+         sampling_site=NA,
+         detection_method = NA,
+         length_type=NA) %>%
+  dplyr::select(species=Species,
+                tag_code=TagCode,
+                recovery_id=RecoveryID,
+                #recovery_date=RecoveryDate,
+                fishery=CWDBFishery,
+                gear=gear,
+                sex=Sex,
+                length=Length,
+                length_type=length_type,
+                length_code=LengthCode,
+                recovery_location_code = RecoverySite,
+                recovery_location_name =recovery_location_name,
+                sampling_site=sampling_site,
+                sample_type=SampleType,
+                estimation_level=EstimationLevel,
+                estimated_number= EstimatedNumber,
+                detection_method = detection_method,
+                rec.year=year,rec.month=month,
+                auxiliary = Auxiliary)
+
 recover.fresh <- bind_rows(recover.fresh %>% mutate(auxiliary = 0) %>% 
                              dplyr::select(-recovery_date),
                              dat.awg.F)
 
+# Get rid of the marine recoveries that we moved to freshwater. 
+dat.awg.M <- dat.awg.M %>% filter(!CWDBFishery %in% FISH.CODE) %>%
+                mutate(RecDate_short = as.integer(paste0(substr(RecDate,1,4),
+                                              substr(RecDate,6,7),
+                                              substr(RecDate,9,10))))
 
 #######---  Marine ---####################################################################
 #Merge recovery code names with areas used.
 #### Assign recoveries into regions delineated by Weitkamp 2002 and 2010 
 #### and expanded and modified by Shelton et al 2019, 2021. 
 recover.marine$rec.area.code <- NA
+
+#Add in extra recoveries from the Auxiliary data (AWG data)
+recover.marine <- dat.awg.M %>% 
+  mutate(gear=NA,
+         recovery_location_name =NA,
+         sampling_site=NA,
+         detection_method = NA,
+         length_type=NA) %>%
+  dplyr::select(species=Species,
+                tag_code=TagCode,
+                recovery_id=RecoveryID,
+                recovery_date=RecDate_short,
+                fishery=CWDBFishery,
+                gear=gear,
+                sex=Sex,
+                length=Length,
+                length_type=length_type,
+                length_code=LengthCode,
+                recovery_location_code = RecoverySite,
+                recovery_location_name =recovery_location_name,
+                sampling_site=sampling_site,
+                sample_type=SampleType,
+                estimation_level=EstimationLevel,
+                estimated_number= EstimatedNumber,
+                detection_method = detection_method,
+                rec.year=year,rec.month=month) %>%
+    bind_rows(recover.marine, .)
+
 
 # #### USE THIS FOR FIRST RUN 
 # recover.marine$rec.area.code <- dat.loc.key$Rec.area.Shelton[match(recover.marine$recovery_location_code, dat.loc.key$location_code)]
@@ -445,7 +490,6 @@ marine.GOA.HS <- recover.marine %>%
                           sample.type=sample_type) %>%
                   summarise(count=length(estimated_number)) %>%
                   as.data.frame() 
-
 
 ## Merge with release group
 marine.all	<- left_join(tag.dat,marine.1,by="tag_code")
@@ -854,13 +898,12 @@ fresh.all	<- recover.fresh %>%
                       fishery,
                       rec.year,
                       rec.area.code = recovery_location_code,
-                      sample.type=sample_type) %>%
+                      sample.type=sample_type,
+                      auxiliary) %>%
               summarise(count= length(tag_code), est.numb = sum(estimated_number,na.rm=T)) %>%
-              arrange(tag_code,rec.year,fishery)
+              arrange(tag_code,rec.year,fishery) %>%
+              full_join(tag.dat,.)
   
-fresh.merge	<- merge(tag.dat,fresh.all,by="tag_code")
-fresh.all <- fresh.merge
-
 ################
 ##### ADD IN AUXILIARY DATA FROM TRINITY AND KLAMATH RIVERS
 ################
@@ -908,144 +951,90 @@ fresh.all <- fresh.merge
 ######################################################################################
 # Make one file for determining time of river entry
 # Area, year, month, release group, fishery
-fresh.river	<- aggregate(recover.fresh$estimated_number,by=list(
-  tag_code  = recover.fresh$tag_code,
-  fishery	  = recover.fresh$fishery,	
-  rec.year  = recover.fresh$rec.year,
-  rec.month = recover.fresh$rec.month,
-  rec.area.code = recover.fresh$recovery_location_code,
-  #							estimation.level = recover.fresh$estimation_level,
-  #							period.type = recover.fresh$period_type,
-  #							period = recover.fresh$period,
-  sample.type = recover.fresh$sample_type),
-  sum,na.rm=T)
+fresh.river	<- recover.fresh %>% 
+                  group_by(tag_code,
+                           fishery,
+                           rec.year,
+                           rec.month,
+                           rec.area.code = recovery_location_code,
+                           sample.type=sample_type,
+                           auxiliary) %>%
+                  summarise(est.numb=sum(estimated_number,na.rm=T)) %>%
+                  left_join(tag.dat,.)
 
-fresh.merge.river	<- merge(tag.dat,fresh.river,by="tag_code")
-fresh.merge.river	<- fresh.merge.river[order(fresh.merge.river$tag_code,
-                                             fresh.merge.river$fishery,
-                                             fresh.merge.river$rec.year
-),] #  fresh.merge.count$rec.month
-colnames(fresh.merge.river)[ncol(fresh.merge.river)]	<-	"est.numb"
-fresh.river <- fresh.merge.river
 
-fresh.by.hatchery.river	<-	aggregate(fresh.river$est.numb,by=list(
-  ID		=	fresh.river$ID,
-  brood.year = fresh.river$brood_year,
-  rel.year = fresh.river$release.year,
-  rel.month = fresh.river$first.release.month,
-  ocean.region = fresh.river$ocean.region,
-  fishery		= fresh.river$fishery,	
-  rec.year  = fresh.river$rec.year,
-  rec.month = fresh.river$rec.month),
-  #		  rec.area.code = fresh.river$rec.area.code,
-  #		  estimation.level = fresh.river$estimation.level),
-  sum,na.rm=T)
-colnames(fresh.by.hatchery.river)[ncol(fresh.by.hatchery.river)]	<-	"est.numb"
 
+fresh.by.hatchery.river	<- fresh.river %>% ungroup() %>%
+                                group_by(ID,
+                                         brood.year=brood_year,
+                                         rel.year=release.year,
+                                         ocean.region = ocean.region,
+                                         fishery,
+                                         rec.year,
+                                         rec.month,
+                                         auxiliary) %>%
+                                summarise(est.numb=sum(est.numb,na.rm=T))
+  
 ######################################################################################
 fresh.all		<-	fresh.all[fresh.all$sample.type !=5 &fresh.all$sample.type !=4,]
 #fresh.all		<-	fresh.all[fresh.all$est.numb > 0,]
 
 # Break the fresh recoveries into two groups.  One with estimated numbers, one without.
 fresh.zero <- fresh.all[fresh.all$est.numb==0,]
-fresh.pos <- fresh.all[fresh.all$est.numb > 0,]
+fresh.pos <- fresh.all %>% filter(est.numb!=0)
 
 fresh.pos$frac.samp<-fresh.pos$count/fresh.pos$est.numb
 fresh.pos$frac.samp[fresh.pos$frac.samp > 1] <- 1
 
 ######################################################################################
 # Deal with the positives first	
-fresh.by.hatchery.numb	<-	aggregate(fresh.pos$est.numb,by=list(
-  ID		=	fresh.pos$ID,
-  brood.year = fresh.pos$brood_year,
-  rel.year = fresh.pos$release.year,
-  rel.month = fresh.pos$first.release.month,
-  ocean.region = fresh.pos$ocean.region,
-  fishery		= fresh.pos$fishery,	
-  rec.year  = fresh.pos$rec.year),
-  #		  rec.month = fresh.pos$rec.month),
-  #		  rec.area.code = fresh.pos$rec.area.code,
-  #		  estimation.level = fresh.pos$estimation.level),
-  sum,na.rm=T)
-colnames(fresh.by.hatchery.numb)[ncol(fresh.by.hatchery.numb)]	<-	"est.numb"
+fresh.by.hatchery	<-	fresh.pos %>% 
+                              group_by(
+                                ID,
+                                brood.year = brood_year,
+                                rel.year = release.year,
+                                #rel.month = first.release.month,
+                                ocean.region = ocean.region,
+                                fishery		= fishery,	
+                                rec.year  = rec.year,
+                                auxiliary) %>% 
+                            summarise(est.numb=sum(est.numb,na.rm=T),
+                                      count=sum(count,na.rm=T),
+                                      median.frac.samp = median(frac.samp))
+# Next the zeros.
+fresh.by.hatchery.count.zero	<-	fresh.zero %>% 
+    group_by(
+      ID,
+      brood.year = brood_year,
+      rel.year = release.year,
+      #rel.month = first.release.month,
+      ocean.region = ocean.region,
+      fishery		= fishery,	
+      rec.year  = rec.year,
+      auxiliary) %>% 
+    summarise(count.zero=sum(count,na.rm=T))
 
-fresh.by.hatchery.count	<-	aggregate(fresh.pos$count,by=list(
-  ID		=	fresh.pos$ID,
-  brood.year = fresh.pos$brood_year,
-  rel.year = fresh.pos$release.year,
-  rel.month = fresh.pos$first.release.month,
-  ocean.region = fresh.pos$ocean.region,
-  fishery		= fresh.pos$fishery,	
-  rec.year  = fresh.pos$rec.year),
-  #		  rec.month = fresh.pos$rec.month),
-  #		  rec.area.code = fresh.pos$rec.area.code,
-  #		  estimation.level = fresh.pos$estimation.level),
-  sum,na.rm=T)
-colnames(fresh.by.hatchery.count)[ncol(fresh.by.hatchery.count)]	<-	"count"
+fresh.w.fishery <- full_join(fresh.by.hatchery, fresh.by.hatchery.count.zero)    
 
-fresh.by.hatchery.frac	<-	aggregate(fresh.pos$frac.samp,by=list(
-  ID		 	=	fresh.pos$ID,
-  brood.year = fresh.pos$brood_year,
-  rel.year 	= fresh.pos$release.year,
-  rel.month = fresh.pos$first.release.month,
-  ocean.region = fresh.pos$ocean.region,
-  fishery		= fresh.pos$fishery,	
-  rec.year 	= fresh.pos$rec.year),
-  #		  rec.month 	= fresh.pos$rec.month),
-  #		  rec.area.code 	= fresh.pos$rec.area.code,
-  #		  estimation.level = fresh.pos$estimation.level),
-  median,na.rm=T)
-colnames(fresh.by.hatchery.frac)[ncol(fresh.by.hatchery.frac)]	<-	"median.frac.samp"
-
-fresh.by.hatchery	<-	merge(fresh.by.hatchery.numb,fresh.by.hatchery.count)
-fresh.by.hatchery	<-	merge(fresh.by.hatchery,fresh.by.hatchery.frac)
-
-# Deal with the zeros second
-fresh.by.hatchery.count.zero	<-	aggregate(fresh.zero$count,by=list(
-  ID		=	fresh.zero$ID,
-  brood.year = fresh.zero$brood_year,
-  rel.year = fresh.zero$release.year,
-  rel.month = fresh.zero$first.release.month,
-  ocean.region = fresh.zero$ocean.region,
-  fishery		= fresh.zero$fishery,	
-  rec.year  = fresh.zero$rec.year),
-  sum,na.rm=T)
-colnames(fresh.by.hatchery.count.zero)[ncol(fresh.by.hatchery.count.zero)]	<-	"count.zero"
-
-fresh.by.hatchery	<-	merge(fresh.by.hatchery,fresh.by.hatchery.count.zero,all=T)
-fresh.w.fishery   <- fresh.by.hatchery
+# Eliminated a NA row
+fresh.w.fishery <- fresh.w.fishery %>% filter(!is.na(ocean.region))
 
 ######################################################################################
 #### COMBINE THE VARIOUS FISHERIES
 ######################################################################################
 
 # Deal with the positives first	
-fresh.by.hatchery	<-	
-  fresh.pos %>% group_by(ID,
-                         brood.year=brood_year,
-                         rel.year=release.year,
-                         rel.month=first.release.month,
+fresh.consolidated	<-	
+  fresh.w.fishery %>% group_by(ID,
+                         brood.year,
+                         rel.year,
+                         #rel.month,
                          ocean.region,
-                         rec.year) %>%
+                         rec.year,auxiliary) %>%
             summarise(est.numb=sum(est.numb,na.rm=T),
                       count = sum(count,na.rm=T),
-                      median.frac.samp = median(frac.samp,na.rm=T))
-
-# Deal with the zeros second
-fresh.by.hatchery.count.zero	<-	aggregate(fresh.zero$count,by=list(
-  ID		=	fresh.zero$ID,
-  brood.year = fresh.zero$brood_year,
-  rel.year = fresh.zero$release.year,
-  rel.month = fresh.zero$first.release.month,
-  ocean.region = fresh.zero$ocean.region,
-  #	  fishery		= fresh.zero$fishery,	
-  rec.year  = fresh.zero$rec.year),
-  sum,na.rm=T)
-colnames(fresh.by.hatchery.count.zero)[ncol(fresh.by.hatchery.count.zero)]	<-	"count.zero"
-
-fresh.by.hatchery	<-	merge(fresh.by.hatchery,fresh.by.hatchery.count.zero,all=T)
-
-fresh.consolidated <- fresh.by.hatchery
+                      median.frac.samp = median(median.frac.samp,na.rm=T),
+                      count.zero = sum(count.zero,na.rm=T))
 
 ####################################################
 ####################################################
@@ -1059,32 +1048,12 @@ fresh.consolidated <- fresh.by.hatchery
 ####################################################
 ####################################################
 ####################################################
-# 		fresh.recover.complex   <- list()
-# 		fresh.recover.simple    <- list()
-# 		ocean.region <- sort(unique(fresh.consolidated$ocean.region))
-# 		for(i in 1:length(ocean.region)){
-# 		  temp1 <- fresh.w.fishery[fresh.w.fishery$ocean.region == ocean.region[i],]
-# 		  temp2 <- fresh.consolidated[fresh.consolidated$ocean.region == ocean.region[i],]
-# 		  reg.ID <- sort(unique(temp1$ID))
-# 		  ID.1<- list()
-# 		  ID.2<- list()
-# 		  for(j in 1:length(reg.ID)){
-# 		    ID.1[[j]] <- list(temp1[temp1$ID == reg.ID[j],])
-# 		    ID.2[[j]] <- list(temp2[temp2$ID == reg.ID[j],])
-# 		  }
-# 		  names(ID.1) <- reg.ID  
-# 		  names(ID.2) <- reg.ID  
-# 		  fresh.recover.complex[[i]] <- ID.1
-# 		  fresh.recover.simple[[i]]  <- ID.2
-# 		}
-# 		names(fresh.recover.complex) <- ocean.region
-# 		names(fresh.recover.simple) <- ocean.region
 
 fresh.recover = list(#fresh.recover.simple=fresh.recover.simple,
   #fresh.recover.complex=fresh.recover.complex,
-  dat.fish=fresh.w.fishery,
-  dat.consolidated =fresh.consolidated,
-  river.entry = fresh.by.hatchery.river)
+  dat.fish=fresh.w.fishery, # this is a data frame with the fisheries still included.
+  dat.consolidated =fresh.consolidated, # This is summed across FW fisheries (including spawning)
+  river.entry = fresh.by.hatchery.river) #
 
 save(fresh.recover,file=paste0("./Processed Data/Fresh Recoveries ",RUN.TYPE," ",GROUP,loc_18,".RData"))	  
 

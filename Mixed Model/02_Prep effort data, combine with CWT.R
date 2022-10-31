@@ -194,8 +194,8 @@ release.all$ocean.region <- as.character(release.all$ocean.region)
 
 REL.ALL <- release.all
 REL.ALL$n.year <- REL.ALL$release_year - REL.ALL$brood_year
-# exclude releases with brood_year==release_year
-REL.ALL <- REL.ALL %>% filter(n.year>0)
+# exclude releases with brood_year==release_year.  This is removed for spr-sum model.
+# REL.ALL <- REL.ALL %>% filter(n.year>0)
 
 if(MONTH.STRUCTURE=="FOUR"){
   REL.ALL$n.month <- 0
@@ -353,9 +353,10 @@ source("./_R code for processing raw data/Trim releases based on recoveries Spr-
   N.REL <- max(REL$ID_numb) # THIS IS THE TOTAL NUMBER OF RELEASES WE ARE EXAMINING.
 
 ###################################################################################################
-### Create Ocean Recovery Arrays and Escapement Arrays (there is some missing data in the Escapement array )
+### Create Ocean Recovery Arrays and In-River Recovery Arrays (there is some missing data in the Escapement array )
 ###################################################################################################
-source("./_R code for processing raw data/Make catch and escapement files Spr-Sum.r",local=T)
+source("./_R code for processing raw data/Make catch files Spr-Sum.r",local=T)
+source("./_R code for processing raw data/Make in-river recovery files Spr-Sum.r",local=T)
 # This is where C, Z_catch, Lambda2, and E arrays are created.
 # They all have the form C[model.month,location,release.id,gear.type]
 # This also creates the E matrix (fish that make it into the river (both to hatchery and caught in fisheries))

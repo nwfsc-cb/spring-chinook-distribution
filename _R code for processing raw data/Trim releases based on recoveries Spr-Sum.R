@@ -6,13 +6,14 @@
 
 
 #### SHARED ACROSS ALL GROUPS
-# Eliminate releases with fewer than 8,000 fish
-REL <- REL %>% filter(N.released > 5000) %>% as.data.frame()
+# Eliminate releases with fewer than 4,000 fish
+REL <- REL %>% filter(N.released > 4000) %>% as.data.frame()
 
 if(GROUP == "FRAM_2022_05"){
 # Also eliminate some Alaskan groups that have virtually no recoveries in the ocean.
   REL <- REL %>% filter(!ocean.region %in% 
-                          c("CHIG_spr","KOD_spr","COPP_spr","YAK_spr","PWS_spr"))
+                          c("CHIG_spr","KOD_spr","PWS_spr"))
+                          #"COPP_spr","YAK_spr","PWS_spr"))
 }
 
 
