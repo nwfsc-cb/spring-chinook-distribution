@@ -71,7 +71,33 @@ Receive the complete dataset from the CTC.  Will look at it next week to determi
 Requested additional data from the shoreside hake fleets. Hope to get ASHOP and shoreside data updates back soon.
 Started to work on the heatmap scripts and am planning make additional updates to them soon.
 
+10/7/2022
+Spent much of the week on other things but did create a progress report for the regional office.  It forced me to look carefully at a lot of the plots of ocean recoveries for different runs.  They are very illuminating. They emphasize the importance of being able to deal with the different catchability for different runs and for being able to look at spawn timing and accessibility to fisheries for different runs.
+Will work on the AWG stocks next (and the in-river data in particular) and think about size-at-age.
 
+
+10/25-31/2022
+Received AWG from the CTC.  Have been extensively processing the data.
+Parsed the various net recoveries to try and come up with a defensible set of choices about who qualifies as in-river.
+In script 01...
+Move fishery code 20 to freshwater (they are all terminal gillnets in AK or CAN)
+
+I compiled all of the FW recoveries, merged in the AWG data and made a bunch of plots of the recoveries by region and
+
+CA - Chat with Will Sat...
+no run reconstructions for spring run in CV (SFB_butte_spr, SFB_feather_spr)
+Winter run work for management is not strictly from RMIS... but actually getting this raw data seems unlikely.
+We know that the Trinity spring has missing data.
+There is good information suggesting these stocks don't go on walk about offshore.  So assuming they all stay in-bounds is ok/
+Conclusion: Scale the river recoveries by their proportional abundance, but do not include their raw FW recoveries in the estimation model.
+
+OR Coast-
+SOR, COR both have not- great patterns on FW recoveries but I do not have any direct information about the quality of FW infromation. Hope to get some info from the OR folk for the listing criteria later this week.
+
+COL basin.
+This is the first place that auxiliary AWG data comes into play.  It is important for WILL_spr but not for upriver stock.  This includes stocks which are in the CTC model like UCOL_sum as well as others that are not.  There were virtually no auxiliary recoveries from the URB stock as well.
+
+O
 
 
 
