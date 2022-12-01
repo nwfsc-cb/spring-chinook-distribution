@@ -197,7 +197,7 @@ p.sum2 <- ggplot(dat.sum %>% filter(age %in% c(2,3,4,5))) +
 p.sum2
 
 
-pdf(file=paste0(base.dir,"/spring-chinook-distribution/Output plots/FW_plots/Freshwater_recoveries_by_region.pdf"),
+pdf(file=paste0(base.dir,"/spring-chinook-distribution/Output plots/FW_plots/Freshwater_recoveries_by_region-",GROUP,".pdf"),
                 onefile=T,width=15,height=8.5)
     print(p1)
     print(p2)
@@ -216,6 +216,8 @@ dev.off()
  
  # make a figure for each ocean.region faceted by wramp
  p_ID_by_ocean.region <- list()
+ p_ID_by_ocean.region_aux0 <- list()
+ p_ID_by_ocean.region_aux1 <- list()
  for(i in 1:length(S.to.N)){
   p_ID_by_ocean.region[[S.to.N[i]]] <- 
     ggplot(dat.sum %>% filter(ocean.region==S.to.N[i])) +
@@ -224,16 +226,46 @@ dev.off()
       scale_y_continuous("Surv to FW",trans="log",breaks=c(1e-6,1e-5,1e-4,1e-3,1e-2))+
       facet_wrap(~ID) +
       ggtitle(S.to.N[i])
+  
+  p_ID_by_ocean.region_aux0[[S.to.N[i]]] <- 
+    ggplot(dat.sum %>% filter(ocean.region==S.to.N[i])) +
+    geom_point(aes(y=fw.prop.0,x=brood.year,color=as.factor(age)),alpha=0.75) +
+    theme_bw() +
+    scale_y_continuous("Surv to FW",trans="log",breaks=c(1e-6,1e-5,1e-4,1e-3,1e-2))+
+    facet_wrap(~ID) +
+    ggtitle(S.to.N[i])
+
+  p_ID_by_ocean.region_aux1[[S.to.N[i]]] <- 
+    ggplot(dat.sum %>% filter(ocean.region==S.to.N[i])) +
+    geom_point(aes(y=fw.prop.0,x=brood.year,color=as.factor(age)),alpha=0.75) +
+    theme_bw() +
+    scale_y_continuous("Surv to FW",trans="log",breaks=c(1e-6,1e-5,1e-4,1e-3,1e-2))+
+    facet_wrap(~ID) +
+    ggtitle(S.to.N[i])
+  
+  
  }
     
- pdf(file=paste0(base.dir,"/spring-chinook-distribution/Output plots/FW_plots/Freshwater_recoveries_by_region_ID.pdf"),
+ pdf(file=paste0(base.dir,"/spring-chinook-distribution/Output plots/FW_plots/Freshwater_recoveries_by_region_ID-",GROUP,".pdf"),
                  onefile=T,width=11,height=8.5)
     for(i in 1:length(S.to.N)){
      print(p_ID_by_ocean.region[[S.to.N[i]]])
     }
  dev.off()
  
+ pdf(file=paste0(base.dir,"/spring-chinook-distribution/Output plots/FW_plots/Freshwater_recoveries_by_region_ID_AUX0-",GROUP,".pdf"),
+     onefile=T,width=11,height=8.5)
+ for(i in 1:length(S.to.N)){
+   print(p_ID_by_ocean.region_aux0[[S.to.N[i]]])
+ }
+ dev.off()
  
+ pdf(file=paste0(base.dir,"/spring-chinook-distribution/Output plots/FW_plots/Freshwater_recoveries_by_region_ID_AUX1-",GROUP,".pdf"),
+     onefile=T,width=11,height=8.5)
+ for(i in 1:length(S.to.N)){
+   print(p_ID_by_ocean.region_aux1[[S.to.N[i]]])
+ }
+ dev.off()
 
  
  
