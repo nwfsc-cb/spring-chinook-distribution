@@ -1,13 +1,152 @@
-
-
-
 # Trim recovery files to eliminate releases that have few (< 5) or no ocean recoveries.
-
-
 
 #### SHARED ACROSS ALL GROUPS
 # Eliminate releases with fewer than 4,000 fish
 REL <- REL %>% filter(N.released > 4000) %>% as.data.frame()
+
+# This culling occurs because of the lack of in-river recoveries.
+if(GROUP == "FRAM_2022_12"){
+  # Also eliminate some Alaskan groups that have virtually no recoveries in the ocean.
+  REL <- REL %>% filter(!ocean.region %in% 
+                          c("CHIG_spr","KOD_spr","PWS_spr","COOK_spr","COPP_spr","YAK_spr",
+                            "NSEAK_W_spr", # (Medvejie, Hidden Falls SITKA)
+                            "FRAS_L_spr", # Birkenhead
+                            "FRAS_L_sum",  #Chilliwack, Inch
+                            "FRAS_U_sum",  #Quesnel, Chilko, Stuart
+                            "HAIDA_sum",
+                            "JUAN_spr"))
+
+  # Trim by specific regions (ordered N-S)
+  
+  #NSEAK
+  REL <- REL %>% filter(# Cull some of "NSEAK_N_spr",
+                        !ID %in% c("Big_Boulder_spr",
+                                   "Burro_spr",
+                                   "Chilkat_hatch_spr",
+                                   "Chilkat_wild_sum",
+                                   "King_Salmon_R_AK_spr",
+                                   "Macaulay_Chilkat_hatch_spr",
+                                   "Macaulay_spr",
+                                   "Myers_Chilkat_hatch_spr",
+                                   "Snett_spr",
+                                   "Taku_Can_Wild_spr",
+                                   "Taku_wild_spr"))
+  
+  #SSEAK  
+  REL <- REL %>% filter(# Cull some of SSEAK stocks
+    !ID %in% c("Crystal_Crystal_spr",
+               "Snett_Crystal_spr",
+               "Chickamin_wild",
+               "Deer_mtn_spr",
+               "LPW_Chickamin_spr",
+               "LPW_Unuk_spr",
+               "Neets_spr",
+               "Neets_Whitman_spr",
+               "Tamgas_Unuk_spr",
+               "Whitman_Chickamin_spr",
+               "Whitman_spr",
+               "Stikine_Can_Wild_spr",
+               "Stikine_wild_spr"))
+                        
+  # NBC
+  REL <- REL %>% filter(# Cull some of "NBC_sum and NBC_spr",
+                      !ID %in% c("Babine_sum",
+                                 "Kispiox_sum",
+                                 "Kitsumkalum_sum",
+                                 "Cedar_spr",
+                                 "Morice_spr",
+                                 "Nass_spr"))
+  
+  # CBC
+  REL <- REL %>% filter(# Cull some of "CBC_sum",
+            !ID %in% c("Antarko_low_sum",
+                       "Chuckwalla_sea_sum",
+                       "Kilbella_sea_sum",
+                       "Shotbolt_sum",
+                       "Snootli_Antarko_low_sum",
+                       "Snootli_Antarko_up_sum",
+                       "Snootli_Chuckwalla_sum",
+                       "Snootli_Nusatsum_sum"))
+  
+  # SGEO and FRASER
+  REL <- REL %>% filter(# Cull some of SGEO and FRAS,
+          !ID %in% c("Clearwater_spr",
+               "Deadman_spr",
+               "Eagle_spr",
+               "Spius_Coldwater_spr",
+               "Spius_Nicola_spr",
+               "Spius_Salmon_spr",
+               "Spius_spr",
+               "Clearwater_sum",
+               "Eagle_sum",
+               "Dome_spr",
+               "Quesnel_Bowron_spr",
+               "Quesnel_Cariboo_spr",
+               "Quesnel_Chilcotin_spr",
+               "Salmon_BC-F_spr",
+               "Quesnel_Chilko_sum",
+               "Quesnel_sum",
+               "Stuart_sum",
+               "Comox_sum",
+               "Nanaimo_sum",
+               "Porteau_sum",
+               "Puntledge_sum",
+               "Tenderfoot_sum"))
+  
+  # PUGET SOUND
+  REL <- REL %>% filter(# Cull some of SGEO and FRAS,
+    !ID %in% c("Kendall_Nooksack_spr",
+               "Kendall_spr",
+               "Marblemount_Clark_spr_awg",
+               "Hupp_spr",
+               "Bernie_G_Sky_sum",
+               "Bernie_G_Wallace_sum",
+               "Harvey_sum"))
+  
+  # WAC
+  
+  
+  # COLUMBIA
+  # SNAKE
+    REL <- REL %>% filter(# Cull some of SNAKE 
+      !ID %in% c("Snake_low_spr",
+               "Salmon_ID_spr"))
+    # UCOL
+    REL <- REL %>% filter(# Cull some of UCOL
+      !ID %in% c("Leavenworth_wind_spr",
+                 "Methow_spr",
+                 "Carlton_sum",
+                 "Chelan_sum",
+                 "Dryden_sum",
+                 "Eastbank_sum",
+                 "Methow_Okanog_wild_sum",
+                 "Similkameen_sum",
+                 "Turtle_Rock_sum",
+                 "Wells_sum"))
+    # MCOL
+    REL <- REL %>% filter(# Cull some of MCOL
+      !ID %in% c("Ltl_White_Umatilla_spr",
+                 "Parkdale_descutes_spr",
+                 "Parkdale_hood_spr",
+                 "Round_Butte_hood_spr"))
+    
+    # Willamette
+    REL <- REL %>% filter(# Cull some of WILL_spr
+      !ID %in% c("CEDC_pens_spr",
+                 "Clackamas_spr",
+                 "Dexter_will_spr",
+                 "Leaburg_spr",
+                 "Marion_spr",
+                 "Marion_spr_awg",
+                 "McKenzie_spr",
+                 "S_Santiam_spr",
+                 "Willamette_santiam_spr",
+                 "Willamette_Will_spr"))
+                 
+    REL <- REL %>% filter(# Cull some of WILL_spr
+      !ID %in% c("OPSR_spr",
+                 "Rogue_spr"))
+}
 
 if(GROUP == "FRAM_2022_05"){
 # Also eliminate some Alaskan groups that have virtually no recoveries in the ocean.
@@ -15,7 +154,6 @@ if(GROUP == "FRAM_2022_05"){
                           c("CHIG_spr","KOD_spr","PWS_spr"))
                           #"COPP_spr","YAK_spr","PWS_spr"))
 }
-
 
 ####### THIS SECTION REMOVES RELEASES THAT HAVE ZERO (or close to zero) RECOVERIES.
 

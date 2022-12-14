@@ -171,6 +171,7 @@ dat.sum$ocean.region <- factor(dat.sum$ocean.region,
 p1 <- ggplot(dat.sum ) +
         geom_point(aes(y=fw.prop.0,x=brood.year,color=as.factor(age)),alpha=0.5) +
         theme_bw() +
+        ggtitle("No AWG only")+
         scale_y_continuous("Surv to FW (no aux)",trans="log",breaks=c(1e-6,1e-5,1e-4,1e-3,1e-2))+
         facet_wrap(~ocean.region)
 p1
@@ -178,6 +179,7 @@ p1
 p2 <- ggplot(dat.sum ) +
   geom_point(aes(y=fw.prop.1,x=brood.year,color=as.factor(age)),alpha=0.5) +
   theme_bw() +
+  ggtitle("AWG only")+
   scale_y_continuous("Surv to FW (aux only)",trans="log",breaks=c(1e-6,1e-5,1e-4,1e-3,1e-2))+
   facet_wrap(~ocean.region)
 p2
@@ -237,7 +239,7 @@ dev.off()
 
   p_ID_by_ocean.region_aux1[[S.to.N[i]]] <- 
     ggplot(dat.sum %>% filter(ocean.region==S.to.N[i])) +
-    geom_point(aes(y=fw.prop.0,x=brood.year,color=as.factor(age)),alpha=0.75) +
+    geom_point(aes(y=fw.prop.1,x=brood.year,color=as.factor(age)),alpha=0.75) +
     theme_bw() +
     scale_y_continuous("Surv to FW",trans="log",breaks=c(1e-6,1e-5,1e-4,1e-3,1e-2))+
     facet_wrap(~ID) +

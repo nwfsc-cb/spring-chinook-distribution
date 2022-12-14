@@ -10,9 +10,9 @@ base.dir <- "/Users/ole.shelton/GitHub"
 
 RUN.TYPE = "spring-summer" ### options: fall, spring-summer, south, case_study, case_study_south
 
-GROUP <- "FRAM_2022_05"  ### Options "CA", "CA+" "COL" "CA+COL" "CA+COL_AWG" "CA+COL+PUSO" , FRAM_v1, FRAM_v2 # THIS IS WHAT YOU READ IN WITH
+GROUP <- "FRAM_2022_12"  ### Options "CA", "CA+" "COL" "CA+COL" "CA+COL_AWG" "CA+COL+PUSO" , FRAM_v1, FRAM_v2 # THIS IS WHAT YOU READ IN WITH
                      ###  "FRAM_EXP" is an experimental one for looking at                 
-GROUP.2 <- "FRAM_2022_05"  # THIS IS WHAT GETS WRITTEN TO FILE.  Unless == "CA+COL_AWG" this should be the same as GROUP
+GROUP.2 <- "FRAM_2022_12"  # THIS IS WHAT GETS WRITTEN TO FILE.  Unless == "CA+COL_AWG" this should be the same as GROUP
                           #A CLUGE SO CAN READ IN THE SAME DATA BUT END UP WITH A SLIGHTLY DIFFERENT DATA FRAME
 loc_18 <- "_two_OR_PUSO_AK" ## THIS IS THE MAPPING TO RECOVERIES AREA CODING.  Options I have tried:
                               ## options for this are a null string ("", should be default) 
@@ -1059,6 +1059,67 @@ save(fresh.recover,file=paste0("./Processed Data/Fresh Recoveries ",RUN.TYPE," "
 
 ####################################################
 #############################################
+
+# Read in auxiliary data for Columbia River survival
+
+UCOL.pit <- read.csv(paste0(base.dir,"/Orca_Salmon_DATA/Columbia SAR data/UP_COL_SAR_11-29-22.csv"))
+SNAK.pit <- read.csv(paste0(base.dir,"/Orca_Salmon_DATA/Columbia SAR data/SNAKE_SAR_12-05-22.csv"))
+MCOL.pit <- read.csv(paste0(base.dir,"/Orca_Salmon_DATA/Columbia SAR data/MID_COL_SAR_11-29-22.csv"))
+
+# Upper Columbia first
+# Filter out only the recoveries that occur at Bonneville
+UCOL.pit <- UCOL.pit %>% filter(grepl("to Bonneville",SAR_Reach))
+# For each Group Description keep only the furthest upstream release.
+# For some this will be release site.  For some this will be Rocky reach.  
+# For some this will be McNary Dam
+UCOL.pit <- UCOL.pit %>% 
+    filter(grepl("Rocky|Release",SAR_Reach) | grepl("Wenatchee",GroupDescription) ) %>%
+    mutate(area= "UCOL")
+    
+
+UCOL.pit %>% distinct(GroupDescription, MigrYr)
+
+# Middle Columbia next
+# Filter out only the recoveries that occur at Bonneville
+MCOL.pit <- MCOL.pit %>% filter(grepl("to Bonneville",SAR_Reach))
+# For each Group Description keep only the furthest upstream release.
+# For some this will be release site.  For some this will be Rocky reach.  
+# For some this will be McNary Dam
+MCOL.pit <- MCOL.pit %>% 
+  filter(grepl("McNary|Release",SAR_Reach) | grepl("John",GroupDescription) ) %>%
+  mutate(area= "MCOL")
+
+# Get rid of duplicate Hanford data.
+MCOL.pit <- MCOL.pit %>% 
+  anti_join(.,data.frame(SAR_Reach="McNary Dam to Bonneville Dam",
+                         GroupDescription ="Hanford Reach Wild Fall Chinook"))
+  
+MCOL.pit %>% distinct(GroupDescription, SAR_Reach)
+MCOL.pit %>% distinct(GroupDescription)
+  
+# Snake last
+# Filter out only the recoveries that occur at Bonneville
+SNAK.pit <- SNAK.pit %>% filter(grepl("to Bonneville",SAR_Reach))
+# For each Group Description keep only the furthest upstream release.
+# For some this will be release site.  For most this will be Lower Granite 
+# For one (Tucannon, this will be Lower Monumental)
+
+SNAK.pit <- SNAK.pit %>% mutate(area="SNAK")
+
+# Combine all
+dat.pit <- bind_rows(SNAK.pit,MCOL.pit,UCOL.pit)
+
+
+# summarize pit data
+pit.summary <- dat.pit %>% group_by(area,GroupDescription,SAR_Reach) %>%
+                    summarise(min.year  = min(MigrYr),
+                              max.year=max(MigrYr),n.year = length(MigrYr))
+
+pit.sar.data <- list(dat.pit = dat.pit,
+                     pit.summary = pit.summary)
+
+save(pit.sar.data,file=paste0("./Processed Data/PIT SAR ",RUN.TYPE," ",GROUP,loc_18,".RData"))	  
+
 
 # 	Sample Type
 # Must match one of the following:
