@@ -26,7 +26,7 @@ SAMP.FILE <- paste0("./Output files/",NAME,".csv")
 
 ### This is the definitions file for running the spatial statistical model for salmon.
 RUN.TYPE  <- "spring-summer" # options: "fall" or "spring-summer"
-GROUP     <- "FRAM_2022_05" ## Define the data file to access options include "CA+COL" "CA+COL+PUSO", others.
+GROUP     <- "FRAM_2022_12" ## Define the data file to access options include "CA+COL" "CA+COL+PUSO", others.
 SHORT     <- "NO" # This is an indicator variable which is now mostly irrelevant.
 loc_18    <- "_two_OR_PUSO_AK"  # Options: "TRUE", "TWO_OR", "NCA_SOR_PUSO" "TWO_OR_SPRING"
 
@@ -194,8 +194,8 @@ release.all$ocean.region <- as.character(release.all$ocean.region)
 
 REL.ALL <- release.all
 REL.ALL$n.year <- REL.ALL$release_year - REL.ALL$brood_year
-# exclude releases with brood_year==release_year
-REL.ALL <- REL.ALL %>% filter(n.year>0)
+# exclude releases with brood_year==release_year.  This is removed for spr-sum model.
+# REL.ALL <- REL.ALL %>% filter(n.year>0)
 
 if(MONTH.STRUCTURE=="FOUR"){
   REL.ALL$n.month <- 0
@@ -206,9 +206,9 @@ if(MONTH.STRUCTURE=="FOUR"){
 }
 if(MONTH.STRUCTURE=="SPRING"){
   REL.ALL$n.month <- 0
-  REL.ALL$n.month <- 12 - REL.ALL$Median.month.release + 2  ## Start keeping track of fish in March (spring) of brood year+2 
   REL.ALL$n.month[REL.ALL$n.year == 2] <- 2 - REL.ALL$Median.month.release[REL.ALL$n.year == 2] ## Start keeping track of fish in MArch (spring) of year following release.
-  #REL.ALL$n.month[REL.ALL$n.month <= 1 ]  <- 1
+  REL.ALL$n.month[REL.ALL$n.year == 1] <- 12 - REL.ALL$Median.month.release[REL.ALL$n.year == 1] + 2 ## Start keeping track of fish in MArch (spring) of year following release.
+  REL.ALL$n.month[REL.ALL$n.year == 0] <- 12 + 12 - REL.ALL$Median.month.release[REL.ALL$n.year == 0] + 2 ## Start keeping track of fish in MArch (spring) of year following release.
 }
 if(MONTH.STRUCTURE=="FRAM"){
   REL.ALL$n.month <- 0
@@ -353,9 +353,12 @@ source("./_R code for processing raw data/Trim releases based on recoveries Spr-
   N.REL <- max(REL$ID_numb) # THIS IS THE TOTAL NUMBER OF RELEASES WE ARE EXAMINING.
 
 ###################################################################################################
-### Create Ocean Recovery Arrays and Escapement Arrays (there is some missing data in the Escapement array )
+### Create Ocean Recovery Arrays and In-River Recovery Arrays (there is some missing data in the Escapement array )
 ###################################################################################################
-source("./_R code for processing raw data/Make catch and escapement files Spr-Sum.r",local=T)
+source("./_R code for processing raw data/Make catch files Spr-Sum.r",local=T)
+source("./_R code for processing raw data/Make in-river recovery files Spr-Sum.r",local=T)
+
+  
 # This is where C, Z_catch, Lambda2, and E arrays are created.
 # They all have the form C[model.month,location,release.id,gear.type]
 # This also creates the E matrix (fish that make it into the river (both to hatchery and caught in fisheries))
@@ -458,6 +461,13 @@ move_id_spawn <- as.character((move_id$loc.spawn))
 
 # redefine move_id_idx as a vector
 move_id_idx <- move_id$move_id_idx
+
+############################################
+# Read in auxiliary data on survival - PIT tags from the Columbia river -
+# Then map those data to appropriate individual releases.
+############################################
+load(paste0("./Processed Data/PIT SAR ",RUN.TYPE," ",GROUP,loc_18,".RData"))
+source("./_R code for processing raw data/Make PIT survival files Spr-Sum.R",local=T)
 
 ############################################
 # MATURITY and ESCAPEMENT
@@ -657,7 +667,7 @@ source("./_R code for processing raw data/Make smooth ocean distribution matrice
 ######## PLOT EFFORT AND CPUE FILES
 source("./_R code for processing raw data/Make heatmap functions.R",local=T)
 
-source("./_R code for processing raw data/Plot effort, CPUE heatmaps Spr-Sum",local=T)
+source("./_R code for processing raw data/Plot effort, CPUE heatmaps Spr-Sum.R",local=T)
 ############# MAKE A PDF of the various hatchery and release attributes.
 #write REL to file:
 saveRDS(REL,file=paste0(base.dir,"/spring-chinook-distribution/Processed Data/REL matrix ",RUN.TYPE," ",GROUP,".rds"))
@@ -694,7 +704,15 @@ CATCH = list(
   C_hake_shoreside_true = C_hake_shoreside_true,
   C_pollock_GOA_true =C_pollock_GOA_true,
   C_rockfish_AK_true = C_rockfish_AK_true,
-  C_ocean_total = C_ocean_total)
+  C_ocean_total = C_ocean_total,
+  )
+
+FRESH = list(
+  PIT.dat.fin = PIT.dat.fin,
+  
+)
+
+
 
 save(file=paste0(base.dir,"/spring-chinook-distribution/Processed Data/Effort ",RUN.TYPE," ",GROUP,".RData"),EFFORT)
 save(file=paste0(base.dir,"/spring-chinook-distribution/Processed Data/Catch ",RUN.TYPE," ",GROUP,".RData"),CATCH )

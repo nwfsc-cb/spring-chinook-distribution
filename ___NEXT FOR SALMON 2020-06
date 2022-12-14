@@ -71,14 +71,158 @@ Receive the complete dataset from the CTC.  Will look at it next week to determi
 Requested additional data from the shoreside hake fleets. Hope to get ASHOP and shoreside data updates back soon.
 Started to work on the heatmap scripts and am planning make additional updates to them soon.
 
-10-07-2022
+10/7/2022
 Spent much of the week on other things but did create a progress report for the regional office.  It forced me to look carefully at a lot of the plots of ocean recoveries for different runs.  They are very illuminating. They emphasize the importance of being able to deal with the different catchability for different runs and for being able to look at spawn timing and accessibility to fisheries for different runs.
 Will work on the AWG stocks next (and the in-river data in particular) and think about size-at-age.
 
 
+10/25-31/2022
+Received AWG from the CTC.  Have been extensively processing the data.
+Parsed the various net recoveries to try and come up with a defensible set of choices about who qualifies as in-river.
+In script 01...
+Move fishery code 20 to freshwater (they are all terminal gillnets in AK or CAN)
+
+I compiled all of the FW recoveries, merged in the AWG data and made a bunch of plots of the recoveries by region and
+
+CA - Chat with Will Sat...
+no run reconstructions for spring run in CV (SFB_butte_spr, SFB_feather_spr)
+Winter run work for management is not strictly from RMIS... but actually getting this raw data seems unlikely.
+We know that the Trinity spring has missing data.
+There is good information suggesting these stocks don't go on walk about offshore.  So assuming they all stay in-bounds is ok/
+Conclusion: Scale the river recoveries by their proportional abundance, but do not include their raw FW recoveries in the estimation model.
+
+OR Coast-
+SOR, COR both have not- great patterns on FW recoveries but I do not have any direct information about the quality of FW information. Hope to get some info from the OR folk for the listing criteria later this week.
+
+COL basin.
+This is the first place that auxiliary AWG data comes into play.  It is important for WILL_spr but not for upriver stock.  This includes stocks which are in the CTC model like UCOL_sum as well as others that are not.  There were virtually no auxiliary recoveries from the URB stock as well.
+
+11/30/22 - 12/2
+Talked to Alan Byrne this week about Idaho data and figured out where to get teh PIT data from Columbia river dam tagging.  I think they will flesh out the needed survival information for
+
+Here are the years of PIT survival data.
+
+Up Col PIT data.  outmigrant years: 2000-19: Release to Bonneville
+Combined Hatch_Wild Spring Chinook tagged at Rock Island Dam
+Combined Hatch_Wild Summer Chinook tagged at Rock Island Dam
+Entiat and Methow River Wild Spring Chinook
+Entiat Hatchery Summer Chinook
+Leavenworth Hatchery Spring Chinook
+Upper Columbia River (above Wells Dam) Wild Summer Chinook
+Wenatchee River Wild Spring Chinook
+Winthrop Hatchery Spring Chinook
+
+Mid Col PIT data.  outmigrant years: 2000-19 Release to Bonneville
+Carson Hatchery Spring Chinook
+Cle Elum Hatchery Spring Chinook
+Deschutes River Wild Fall Chinook
+Hanford Reach Wild Fall Chinook
+John Day River Wild Spring Chinook
+Little White Salmon Hatchery Fall Chinook
+Spring Creek Hatchery Fall Chinook (April Release)
+Spring Creek Hatchery Fall Chinook (March Release)
+Spring Creek Hatchery Fall Chinook (May Release)
+Warm Springs Hatchery Spring Chinook
+Yakima River Wild Spring Chinook
+>>>>>>> 316dda92093840c815134017db18f13c6aff0a80
+
+Snake River PIT DATA:2000-19.  Lower Granite to Bonneville
+Catherine Creek Hatchery Spring Chinook
+Clearwater Hatchery Spring Chinook
+Clearwater Hatchery Summer Chinook
+Dworshak Hatchery Fall Chinook at Snake River (Surrogates)
+Dworshak Hatchery Spring Chinook
+Grande Ronde River Hatchery Fall Chinook
+Imnaha Hatchery Summer Chinook
+Kooskia Hatchery Spring Chinook
+Lyons Ferry Hatchery Fall Chinook at Big Canyon Creek AP
+Lyons Ferry Hatchery Fall Chinook at Captain John Rapids AP
+Lyons Ferry Hatchery Fall Chinook at Pittsburg Landing AP
+Lyons Ferry Hatchery Fall Chinook at Snake River
+McCall Hatchery Summer Chinook
+Nez Perce Hatchery Fall Chinook at Cedar Flats AP
+Nez Perce Hatchery Fall Chinook at Lukes Gulch AP
+Oxbow Hatchery Fall Chinook below Hells Canyon Dam
+Pahsimeroi Hatchery Summer Chinook
+Rapid River Hatchery Spring Chinook
+Sawtooth Hatchery Spring Chinook
+Umatilla_Irrigon Hatchery Fall Chinook below Hells Canyon Dam
+
+Which leads me to look at the files for freshwater recoveries and make decisions on which groups to include based on FW recoveries.
+
+ALL THE Details are presented in "rel_groups.xlsx" about which runs too keep.
+
+I trimmed the releases based on in-river data, AWG, and PIT data. I ended up moving from about 2900 groups to 1900 groups.  All of the info on culling is in the rel_groups.xlsx and in the Output plots/FW_plots/12-1-22 Cull recoveries plots.
+
+
+DROP based on zero or negligable FW CWT recoveries:
+COPP_spr (Copper river AK)
+COOK_spr (Cook Inlet AK)
+NSEAK_W_spr (Medvejie, Hidden Falls SITKA)
+FRAS_L_spr
+FRAS_L_sum
+FRAS_U_sum
+HAIDA_sum
+
+
+DROP some
+NSEAK_spr (KEEP all hatch with CWT from the AWG database)
+NSEAK_Taku_spr (KEEP all hatch with CWT from the AWG database)
+SSEAK_Stikine_spr (KEEP all hatch with CWT from the AWG database)
+SSEAK_S_spr (KEEP all hatch with CWT from the AWG database)
+SSEAK_N_spr (KEEP all hatch with CWT from the AWG database)
+NBC_sum (KEEP Kitsumkalum_sum_awg)
+CBC_sum (KEEP all hatch with CWT from the AWG database)
+SGEO_S_sum (KEEP all hatch with CWT from the AWG database)
+FRAS_TH_sum (KEEP all hatch with CWT from the AWG database)
+FRAS_TH_spr (KEEP all hatch with CWT from the AWG database)
+FRAS_U_spr (KEEP all hatch with CWT from the AWG database)
+
+Uncertain:
+NBC_spr (keep Bulkley_spr, Kitimat_spr.  Drop others)
 
 
 
+NEXT
+ASHOP data additions
+PIT data read in and prep for use
+Write likelihoods for FW data
+  CWT recoveries.
+  PIT data
+  Indicators for which kind of data shows up where.
+
+Selectivity
+  - by run (spring vs. summer vs. winter)?
+  - by number of months before model start?
+
+#########
+12/2/2022
+In-River Data scenarios:
+  Age-structure Proportions only (all fish are in fishery areas; SOR and south).
+  Age-structure Proportions + cumulative SAR data (Columbia Basin)
+    - Part of time series is age-structure proportions only, remainder is both.
+  Actual tag recoveries (RMIS + AWG; all WAC and north). Do not use age-structure proportions.
+
+  Open question about what to do with COR, NOR... which have uncertain in-river data.
+
+12/5/2022
+Mapped PIT tag data onto existing Columbia survival data.
+Had to make some choices about which
+In general, I used release site to Bonneville survival whenever possible. I only used hatchery releases (as all CWT are hatchery).
+I don't know what to do about release = BY+1 vs. BY+2.
+
+
+
+
+
+
+
+
+
+
+
+
+########################################
 
 Fisheries and Effort:
 New AK troll effot data

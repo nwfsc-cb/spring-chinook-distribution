@@ -1,0 +1,575 @@
+---
+title: "Spring Chinook Progress (2022-10-03)"
+author: "Ole Shelton"
+date: "12/1/2022"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Spring Chinook Distribution
+
+```{r echo=FALSE, warnings=FALSE,include=FALSE}
+# This runs the data prep scripts.
+REL <-readRDS("../Processed Data/REL matrix spring-summer FRAM_2022_12.rds")
+load("../Processed Data/Effort spring-summer FRAM_2022_12.rData")
+load("../Processed Data/Catch spring-summer FRAM_2022_12.rData")
+source("../_R code for processing raw data/Make heatmap functions.R")
+LOCATIONS <- EFFORT$LOCATIONS
+LOCATIONS$location.name[LOCATIONS$location.name=="PUSO_out"] = "SJDF"
+YEARS.RECOVER <- EFFORT$YEARS.RECOVER
+```
+
+```{r }
+#EFFORT$K_hake_shoreside_flat
+```
+
+```{r echo=TRUE, warnings=FALSE,include=FALSE}
+# This runs the data prep scripts.
+library(tidyverse)
+library(lattice)
+library(gridExtra)
+library(grid)
+dat <- REL %>% 
+        group_by(ocean.region,loc.numb,release_year,n.year) %>% 
+        summarise(N=length(brood_year),SUM = sum(N.released))
+
+x.lab <- dat %>% ungroup() %>% 
+        distinct(loc.numb,ocean.region) %>% arrange(loc.numb)
+
+dat$ocean.region <- factor(dat$ocean.region,levels=x.lab$ocean.region)
+
+dat.all  <- dat %>% ungroup() %>% group_by(ocean.region,loc.numb,release_year) %>%
+                        summarise(N = sum(N),SUM= sum(SUM)) %>% full_join(x.lab,.)
+dat.fing <- dat %>% filter(n.year==1) %>% full_join(x.lab,.)
+dat.year <- dat %>% filter(n.year==2) %>% full_join(x.lab,.)
+
+dat.all$ocean.region <- factor(dat.all$ocean.region,levels=x.lab$ocean.region)
+dat.fing$ocean.region <- factor(dat.fing$ocean.region,levels=x.lab$ocean.region)
+dat.year$ocean.region <- factor(dat.year$ocean.region,levels=x.lab$ocean.region)
+
+BREAKS <- seq(1:10)
+p.fing <- ggplot(dat.fing) +
+                geom_tile(aes(x=release_year,y=ocean.region,fill=N)) +
+                ggtitle("Unique hatcheries releasing Fingerlings (BY+1 release)")+ 
+                scale_fill_viridis_c(breaks=BREAKS)+
+                scale_y_discrete("Stock (south to north)")+
+                scale_x_continuous("Release year")+
+                theme_bw()
+p.year <- ggplot(dat.year) +
+                geom_tile(aes(x=release_year,y=ocean.region,fill=N)) +
+                ggtitle("Unique hatcheries releasing Yearlings (BY+2 release)")+ 
+                scale_y_discrete("Stock (south to north)")+
+                scale_x_continuous("Release year")+
+                scale_fill_viridis_c(breaks=BREAKS)+
+                theme_bw()
+BREAKS <- seq(1,20,by=2)
+p.all <- ggplot(dat.all) +
+                geom_tile(aes(x=release_year,y=ocean.region,fill=N)) +
+                ggtitle("Unique hatcheries releasing Fingerlings + Yearlings")+ 
+                scale_y_discrete("Stock (south to north)")+
+                scale_x_continuous("Release year")+
+                scale_fill_viridis_c(breaks=BREAKS)+
+                theme_bw()
+
+BREAKS=c(1000,3000,10000,30000,100000,300000,1000000,3000000)
+p.N.fing <- ggplot(dat.fing) +
+                geom_tile(aes(x=release_year,y=ocean.region,fill=SUM)) +
+                ggtitle("Number of Chinook Fingerlings (BY+1 release)")+ 
+                scale_y_discrete("Stock (south to north)")+
+                scale_x_continuous("Release year")+
+                scale_fill_viridis_c(trans="log",
+                              breaks=BREAKS) +              
+                theme_bw()
+p.N.year <- ggplot(dat.year) +
+                geom_tile(aes(x=release_year,y=ocean.region,fill=SUM)) +
+                ggtitle("Number of Chinook Yearlings (BY+2 release)")+ 
+                scale_y_discrete("Stock (south to north)")+
+                scale_x_continuous("Release year")+
+                scale_fill_viridis_c(trans="log",
+                              breaks=BREAKS) + 
+                theme_bw()
+  
+####
+# Some plots of yearling and fingerling releases by origin
+####
+
+dat.n.month <- REL %>% dplyr::select(ID,ocean.region,brood_year,n.year,n.month,loc.numb) 
+dat.A <- dat.n.month %>% group_by(ID,ocean.region,n.year,loc.numb) #%>% 
+                #summarise(mean.month=mean(n.month),n.rel = length(n.month))
+dat.A$ocean.region <-factor(dat.A$ocean.region,levels=x.lab$ocean.region)
+
+q.month <- ggplot(dat.A) + geom_point(aes(x=n.month,y=ocean.region,color=n.year)) +
+                  scale_x_continuous("Release timing(Months before March BY+2)",breaks=-6:15,labels=-6:15) + 
+                  scale_y_discrete("Stock") +
+                    geom_vline(xintercept =0, col="red",linetype="dashed") +theme_bw()
+
+
+
+```
+
+## Spatial and Temporal Scales
+
+For this new model, we have expanded the spatial scope of them model into the Gulf of Alaska (Fig. \ref{fig:map}).  We have added four new regions in the Gulf of Alaska (WAPEN, EAPEN, NWGOA, NEGOA).  The boundaries for westerly regions (WAPEN,EAPEN,NWGOA) fall along groundfish reporting areas, because virtually all non-terminal recoveries for CWT Chinook salmon in these areas occur in groundfish bycatch. We have data from the shoreside pollock fleets and rockfish trawl fleets in these areas. NEGOA contains a few groundfish recoveries but include the northern-most troll fleet catches (predominantly boats near Yakutat and boats traveling to the Fairweather grounds).  In past work NWGOA troll catches were included in the NSEAK region. All of the other areas are as in Shelton et al. 2021. The total area included in these northerly areas is somewhat larger than the areas off CA and OR, though due to the map projection, not as large as it appears on the plot (Fig. \ref{fig:map}).
+
+
+```{r fig.map,echo=FALSE,warning=FALSE,fig.cap="\\label{fig:map} Map of recovery areas for use with Spring and Summer Chinook salmon ",out.width='75%'}
+knitr::include_graphics("All_regions_map.pdf")
+```
+
+\clearpage
+
+## CWT Releases
+
+I am currently using `r nrow(REL)` releases (one release corresponds to a single hatchery-brood year-release stage combination and may include multiple CWT tag codes) representing `r nrow(x.lab)` distinct groups. I have generally kept the number of groups large thus far and will likely combine them to reduce their number soon. Groups have varying numbers of releases and the number of releases change over time. 
+
+```{r fig.all.releases, echo=FALSE,warning=FALSE,fig.cap="\\label{fig:all.releases} Number of releases from each origin by year (BY+1 and BY+2)",out.width='100%'}
+print(p.all)
+```
+
+
+This suggests that generally I have pretty good coverage for different stocks, but that I should look for a few more PUSO springs, WAC springs and summers, Juan de Fuca springs, lower Fraser springs and summers, and upper Fraser springs (if they exist). Other question marks: HAIDA_sum?
+
+There is also a lot more variability in the release age for these stocks relative to the fall run.  Fish released at BY+1 and BY+2 each make up about half of the releases, and releases have a distinct geographic pattern (Fig. \ref{fig:fing.year.releases})
+
+```{r fig.fing.year.releases, echo=FALSE,warning=FALSE,,fig.cap="\\label{fig:fing.year.releases} Number of releases from each origin by year (Fingerlings)",fig.dim = c(6,8.5)}
+grid.arrange(p.fing,p.year,ncol=1,heights=c(2,2),widths=0.5)
+
+```
+
+Additionally, there are substantial timing differences in when individual runs are released.  Particularly among the yearling releases, more northerly stocks are released later in the spring and after when the ocean model actually starts keeping track of fish (March 1 of BY+2).  This is a minor problem but I think ignorable because all of the releases actually occur during the first season (spring of BY+2).  I want to keep spring of BY+2 because as will be shown below some stocks from the south actually get caught and recovered during those first few months (specifically SFB_winter stocks).
+
+
+
+```{r fig.month.release, echo=FALSE,fig.cap="\\label{fig:month.release} Months before ocean model start (red line) CWT releases occur in BY+1 and BY+2",fig.dim=c(6.5,6)}
+print(q.month)
+```
+
+\clearpage
+### Fleets and recoveries
+
+We have added a number of new fleets to the analysis and updated all of the data to include through 2018.
+
+Fleets:
+
+1. **Troll** (recoveries and effort: 1979-2018)
+  + Alaska (NEGOA, NSEAK, SSEAK): effort units: landings (different than previous analyses)
+  + BC, WA, OR, CA; effort units: boat-days.
+  + No troll in western GOA or in Puget Sound (PUSO), no troll in SGEO since 1995.
+2. **Treaty Troll** (recoveries and effort: 1979-2018)
+  + WAC and SJDF only; effort units: landings
+3. **Recreational** (recoveries: 1979 - 2018, effort availability varies)
+  + Alaska: no effort data
+  + BC: limited / varied effort data until ~ 2002 (units: boat-trips).  Canadian iRec system online starting 2012 (units: license holder trips)
+  + WA, OR, CA; effort: angler trips (1979-2018)
+4. **At-Sea Hake (ASHOP)** (recoveries and effort: 1991- 2017)
+  + WA, OR, CA coast (effort unit: boat-days))
+  + Working on updating to 2018
+5. **Shoreside Hake** (US recoveries: 2011-2018, effort: 1981-2016)
+  + WA, OR, CA (mostly WA, OR; units: boat-days)
+  + Working on updating these data
+  + BC; effort compiled, but zero recoveries reported for this fleet in RMIS. Canada has CWT recoveries but has never submitted them to RMIS.
+6. **GOA Shoreside Pollock** (AK recoveries and effort: 1997 - 2018)
+  + WAPEN, EAPEN, NWGOA
+  + Very low sampling fractions for this fleet (generally < 10%, many < 5%)
+7. **Alaska Shoreside Rockfish** (recoveries and effort: 2011 - 2018)
+  + NWGOA and EAPEN only
+  + Complete census of Chinook bycatch!
+8. **Seine, Gillnet, and Setnet fisheries** (recoveries 1979 - 2018)
+  + No effort for any net fisheries.
+  + Excluded from analysis.  Mostly very nearshore, mostly terminal fisheries
+
+\clearpage
+**PLOTS OF EACH FLEET AND EFFORT**
+
+```{r echo=FALSE,out.width='70%'}
+ plot.heatmap( temp=log(t(as.matrix(EFFORT$K_troll_flat))+1e-15,10),
+                "Troll Effort (Boat Days or Landings (AK))")
+```
+```{r echo=FALSE,out.width='70%'}
+  plot.heatmap( log(t(as.matrix(EFFORT$K_treaty_flat))+1e-15,10),
+                  "Treaty Troll Effort (Deliveries)")
+```
+```{r echo=FALSE,out.width='70%'}
+plot.heatmap( log(t(as.matrix(EFFORT$K_rec_flat +EFFORT$K_rec_PUSO_flat ))+1e-15,10),
+              "Rec Effort, US (Angler-Days)")
+```
+```{r echo=FALSE,out.width='70%'}
+  plot.heatmap( log(t(as.matrix(EFFORT$K_rec_can_flat))+1e-15,10),
+                "Rec Effort, Canada (Boat Trips)")
+```
+```{r echo=FALSE,out.width='70%'}
+  plot.heatmap( log(t(as.matrix(EFFORT$K_rec_can_irec_flat))+1e-15,10),
+                "Rec Effort, iRec, Canada (license holder trips)")
+```
+```{r echo=FALSE,out.width='70%'}
+ plot.heatmap( log(t(as.matrix(EFFORT$K_hake_ashop_flat))+1e-15,10),
+                  "ASHOP Trawl effort (boat days proxy)")
+```
+```{r echo=FALSE,out.width='70%'}
+ plot.heatmap( log(t(as.matrix(EFFORT$K_hake_shoreside_flat))+1e-15,10),
+                   "Shoreside Trawl effort (boat days proxy)")
+```
+```{r echo=FALSE,out.width='70%'}
+  plot.heatmap( log(t(as.matrix(EFFORT$K_pollock_shoreside_flat))+1e-15,10),
+                   "Pollock Shoreside Trawl effort (boat days proxy)")
+```
+```{r echo=FALSE,out.width='70%'}
+   plot.heatmap( log(t(as.matrix(EFFORT$K_rockfish_AK_shoreside_flat))+1e-15,10),
+                   "AK Rockfish Trawl effort (boat days proxy)") 
+```
+
+\clearpage
+
+## Plots of recoveries for selected releases
+
+OK. Let's look at a few representative releases from focal stocks just to get a feel for different ocean distributions.  Plots on the following pages are organized south to north and are pulled at semi-random.  Most are from the 2010 brood year, but some groups don't have a 2010 brood year.  These are raw releases for all gear types included above so they do not explicitly account for fishing effort or catch sampling effort.
+
+For all plots, grey means zero observed recoveries.  Colors mean non-zero recoveries with warmer colors = more recoveries. Note that the colors differe among the panels (so red for the California is not the same as red for one of the upper Columbia stocks)
+
+Short thoughts on results.  
+
+1. You can see massive differences in the recovery locations among stocks. This is not suprising.
+2. You can also see massive differences in the overall number of recoveries for stocks (e.g. compare the summer and spring runs for the Upper Columbia (pg. 15))
+  + This means we likely have to either implement a new "offshore" box where fish are not susceptible to fisheries or play with selectivity functions.
+  + I now have CTC data for many in-river CWT recoveries for some of these stocks and am looking at how to use this info to help inform selectivity and an offshore box.
+3. You can see a general trend of older recoveries from south to north.  This is driven by both Chinook retention rules (minimum sizes are larger in the north), size-at-age (fish in the south grow somewhat faster), and later maturation schedules in the north.
+  + Will Satterthwaite and I have started looking at including stock-specific size-at-age information for changing the vulnerability to fisheries
+4.
+
+\clearpage
+
+### Central Valley Stocks
+
+```{r echo=FALSE,out.width='100%'}
+  # CV winter BY =2000
+  A <- REL %>% filter(brood_year==2010,grepl("SFB_wint",ocean.region)) %>% 
+          arrange(desc(N.released)) %>% pull(ID_numb)
+
+   plot.heatmap.nolog( temp.all=CATCH$C_ocean_total,id=A[1])
+```
+
+```{r echo=FALSE,out.width='100%'}
+  # CV spring BY =2000
+  A <- REL %>% filter(brood_year==2010,grepl("SFB_spr",ocean.region)) %>% 
+          arrange(desc(N.released)) %>% pull(ID_numb)
+   plot.heatmap.nolog( temp.all=CATCH$C_ocean_total,id=A[1])
+```
+
+### N. California / S. Oregon 
+
+```{r echo=FALSE,out.width='100%'}
+  # NCA spring BY =2000
+  A <- REL %>% filter(brood_year==2010,grepl("NCA_spr",ocean.region)) %>% 
+          arrange(desc(N.released)) %>% pull(ID_numb)
+   plot.heatmap.nolog( temp.all=CATCH$C_ocean_total,id=A[1])
+```
+
+
+```{r echo=FALSE,out.width='100%'}
+  # SOR spring BY =2000
+  A <- REL %>% filter(brood_year==2010,grepl("SOR_spr",ocean.region)) %>% 
+          arrange(desc(N.released)) %>% pull(ID_numb)
+   plot.heatmap.nolog( temp.all=CATCH$C_ocean_total,id=A[1])
+```
+
+### Central and Northern Oregon coast 
+
+```{r echo=FALSE,out.width='100%'}
+  # COR spring BY =2000
+  A <- REL %>% filter(brood_year==2008,grepl("COR_spr",ocean.region)) %>% 
+          arrange(desc(N.released)) %>% pull(ID_numb)
+   plot.heatmap.nolog( temp.all=CATCH$C_ocean_total,id=A[2])
+```
+
+```{r echo=FALSE,out.width='100%'}
+  # NOR spring BY =2000
+  A <- REL %>% filter(brood_year==2010,grepl("NOR_spr",ocean.region)) %>% 
+          arrange(desc(N.released)) %>% pull(ID_numb)
+   plot.heatmap.nolog( temp.all=CATCH$C_ocean_total,id=A[1])
+```
+
+### Lower Columbia + Willamette
+
+```{r echo=FALSE,out.width='100%'}
+  # LCOL spring BY =2000
+  A <- REL %>% filter(brood_year==2010,grepl("LCOL_spr",ocean.region)) %>% 
+          arrange(desc(N.released)) %>% pull(ID_numb)
+   plot.heatmap.nolog( temp.all=CATCH$C_ocean_total,id=A[1])
+```
+
+```{r echo=FALSE,out.width='100%'}
+  # WILL_spr spring BY =2000
+  A <- REL %>% filter(brood_year==2010,grepl("WILL_spr",ocean.region)) %>% 
+          arrange(desc(N.released)) %>% pull(ID_numb)
+   plot.heatmap.nolog( temp.all=CATCH$C_ocean_total,id=A[1])
+```
+
+\clearpage
+### Middle Columbia
+
+Two examples (both yearling releases)
+
+```{r echo=FALSE,out.width='100%'}
+  # MCOL spring BY =2000
+  A <- REL %>% filter(brood_year==2010,grepl("MCOL_spr",ocean.region)) %>% 
+          arrange(desc(N.released)) %>% pull(ID_numb)
+   plot.heatmap.nolog( temp.all=CATCH$C_ocean_total,id=A[1])
+```
+
+```{r echo=FALSE,out.width='100%'}
+  # MCOL spring BY =2000
+   plot.heatmap.nolog( temp.all=CATCH$C_ocean_total,id=A[2])
+```
+
+\clearpage
+### Upper Columbia
+
+Two examples (one spring, one summer, both yearling releases)
+
+```{r echo=FALSE,out.width='100%'}
+  # UCOL spring BY =2000
+  A <- REL %>% filter(brood_year==2010,grepl("UCOL_spr",ocean.region)) %>% 
+          arrange(desc(N.released)) %>% pull(ID_numb)
+   plot.heatmap.nolog( temp.all=CATCH$C_ocean_total,id=A[1])
+```
+
+```{r echo=FALSE,out.width='100%'}
+  # UCOL summer BY =2000
+  A <- REL %>% filter(brood_year==2010,grepl("UCOL_sum",ocean.region)) %>% 
+          arrange(desc(N.released)) %>% pull(ID_numb)
+   plot.heatmap.nolog( temp.all=CATCH$C_ocean_total,id=A[1])
+```
+
+\clearpage
+### Snake
+
+Two examples (one lower spring, one upper, both yearling releases)
+
+```{r echo=FALSE,out.width='100%'}
+  # SNAK_low_spr spring BY =2000
+  A <- REL %>% filter(brood_year==2009,grepl("SNAK_low_spr",ocean.region)) %>% 
+          arrange(desc(N.released)) %>% pull(ID_numb)
+   plot.heatmap.nolog( temp.all=CATCH$C_ocean_total,id=A[1])
+```
+
+```{r echo=FALSE,out.width='100%'}
+  # SNAK_up_spr spring BY =2000
+  A <- REL %>% filter(brood_year==2009,grepl("SNAK_up_spr",ocean.region)) %>% 
+          arrange(desc(N.released)) %>% pull(ID_numb)
+  
+   plot.heatmap.nolog( temp.all=CATCH$C_ocean_total,id=A[1])
+```
+
+\clearpage
+### Washington Coast + Juan de Fuca
+
+
+```{r echo=FALSE,out.width='100%'}
+  # WAC_spr spring BY =1995
+  A <- REL %>% filter(brood_year==1990,grepl("WAC_spr",ocean.region)) %>% 
+          arrange(desc(N.released)) %>% pull(ID_numb)
+   plot.heatmap.nolog( temp.all=CATCH$C_ocean_total,id=A[2])
+```
+<!--
+```{r echo=FALSE,out.width='100%'}
+  # Juan_spr spring BY =1995
+  # A <- REL %>% filter(brood_year==2000,grepl("JUAN_spr",ocean.region)) %>% 
+  #         arrange(desc(N.released)) %>% pull(ID_numb)
+  #  plot.heatmap.nolog( temp.all=CATCH$C_ocean_total,id=A[1])
+```
+-->
+
+\clearpage
+### Puget Sound
+
+North and South examples (both spring)
+
+```{r echo=FALSE,out.width='100%'}
+  # PUSO_S_spr spring BY =1995
+  A <- REL %>% filter(brood_year==1995,grepl("PUSO_S_spr",ocean.region)) %>% 
+          arrange(desc(N.released)) %>% pull(ID_numb)
+   plot.heatmap.nolog( temp.all=CATCH$C_ocean_total,id=A[1])
+```
+
+```{r echo=FALSE,out.width='100%'}
+  # PUSO_N_spr spring BY =2000
+  A <- REL %>% filter(brood_year==2010,grepl("PUSO_N_spr",ocean.region)) %>% 
+          arrange(desc(N.released)) %>% pull(ID_numb)
+   plot.heatmap.nolog( temp.all=CATCH$C_ocean_total,id=A[1])
+```
+
+
+\clearpage
+<!--
+### Lower Fraser
+
+Spring and Summer
+
+```{r echo=FALSE,out.width='100%'}
+  # FRAS_L_spr spring BY =1990
+  # A <- REL %>% filter(brood_year==1990,grepl("FRAS_L_spr",ocean.region)) %>% 
+  #         arrange(desc(N.released)) %>% pull(ID_numb)
+  #  plot.heatmap.nolog( temp.all=CATCH$C_ocean_total,id=A[1])
+```
+
+```{r echo=FALSE,out.width='100%'}
+  # FRAS_L_spr spring BY =1990
+  #A <- REL %>% filter(brood_year==1990,grepl("FRAS_L_sum",ocean.region)) %>% 
+  #        arrange(desc(N.released)) %>% pull(ID_numb)
+  # plot.heatmap.nolog( temp.all=CATCH$C_ocean_total,id=A[1])
+```
+-->
+
+\clearpage
+### Fraser - Thompson
+
+Spring and Summer
+
+```{r echo=FALSE,out.width='100%'}
+  # FRAS_TH_spr spring BY =2000
+  A <- REL %>% filter(brood_year==2010,grepl("FRAS_TH_spr",ocean.region)) %>% 
+          arrange(desc(N.released)) %>% pull(ID_numb)
+   plot.heatmap.nolog( temp.all=CATCH$C_ocean_total,id=A[1])
+```
+
+```{r echo=FALSE,out.width='100%'}
+  # FRAS_TH_spr spring BY =1990
+  A <- REL %>% filter(brood_year==2010,grepl("FRAS_TH_sum",ocean.region)) %>% 
+          arrange(desc(N.released)) %>% pull(ID_numb)
+   plot.heatmap.nolog( temp.all=CATCH$C_ocean_total,id=A[1])
+```
+
+\clearpage
+
+### Upper Fraser
+
+Spring and Summer
+
+```{r echo=FALSE,out.width='100%'}
+  # FRAS_U_spr spring BY =2000
+  A <- REL %>% filter(brood_year==2000,grepl("FRAS_U_spr",ocean.region)) %>% 
+          arrange(desc(N.released)) %>% pull(ID_numb)
+   plot.heatmap.nolog( temp.all=CATCH$C_ocean_total,id=A[2])
+```
+<!--
+```{r echo=FALSE,out.width='100%'}
+  # FRAS_U_sum spring BY =1990
+  #A <- REL %>% filter(brood_year==1990,grepl("FRAS_U_sum",ocean.region)) %>% 
+  #        arrange(desc(N.released)) %>% pull(ID_numb)
+  # plot.heatmap.nolog( temp.all=CATCH$C_ocean_total,id=A[1])
+```
+--> 
+
+\clearpage
+
+### Strait of Georgia and Central BC
+
+Summer runs
+```{r echo=FALSE,out.width='100%'}
+  # SGEO_S_sum spring BY =2000
+  A <- REL %>% filter(brood_year==2010,grepl("SGEO_S_sum",ocean.region)) %>% 
+          arrange(desc(N.released)) %>% pull(ID_numb)
+   plot.heatmap.nolog( temp.all=CATCH$C_ocean_total,id=A[1])
+```
+
+```{r echo=FALSE,out.width='100%'}
+  # CBC_sum  BY =200
+  A <- REL %>% filter(brood_year==2010,grepl("CBC_sum",ocean.region)) %>% 
+          arrange(desc(N.released)) %>% pull(ID_numb)
+   plot.heatmap.nolog( temp.all=CATCH$C_ocean_total,id=A[1])
+```
+\clearpage
+
+### Northern BC
+
+Spring and summer runs
+
+```{r echo=FALSE,out.width='100%'}
+  # NBC_spr spring BY =2000
+  A <- REL %>% filter(brood_year==2010,grepl("NBC_spr",ocean.region)) %>% 
+          arrange(desc(N.released)) %>% pull(ID_numb)
+   plot.heatmap.nolog( temp.all=CATCH$C_ocean_total,id=A[1])
+```
+
+```{r echo=FALSE,out.width='100%'}
+  # NBC_sum  BY =200
+  A <- REL %>% filter(brood_year==2010,grepl("NBC_sum",ocean.region)) %>% 
+          arrange(desc(N.released)) %>% pull(ID_numb)
+   plot.heatmap.nolog( temp.all=CATCH$C_ocean_total,id=A[1])
+```
+
+\clearpage
+
+### Southern SE Alaska 
+
+Spring run 
+
+```{r echo=FALSE,out.width='100%'}
+  # SSEAK_S spring BY =2000
+  A <- REL %>% filter(brood_year==2010,grepl("SSEAK_S_spr",ocean.region)) %>% 
+          arrange(desc(N.released)) %>% pull(ID_numb)
+   plot.heatmap.nolog( temp.all=CATCH$C_ocean_total,id=A[1])
+```
+
+```{r echo=FALSE,out.width='100%'}
+  # SSEAK_N BY =200
+  A <- REL %>% filter(brood_year==2010,grepl("SSEAK_N_spr",ocean.region)) %>% 
+          arrange(desc(N.released)) %>% pull(ID_numb)
+   plot.heatmap.nolog( temp.all=CATCH$C_ocean_total,id=A[1])
+```
+
+\clearpage
+
+### Northern SE Alaska 
+
+Spring run 
+<!--
+```{r echo=FALSE,out.width='100%'}
+  # SSEAK_S spring BY =2000
+  #A <- REL %>% filter(brood_year==2010,grepl("NSEAK_W_spr",ocean.region)) %>% 
+  #        arrange(desc(N.released)) %>% pull(ID_numb)
+  # plot.heatmap.nolog( temp.all=CATCH$C_ocean_total,id=A[1])
+```
+-->
+
+```{r echo=FALSE,out.width='100%'}
+  # SSEAK_N BY =2000
+  A <- REL %>% filter(brood_year==2010,grepl("NSEAK_N_spr",ocean.region)) %>% 
+          arrange(desc(N.released)) %>% pull(ID_numb)
+   plot.heatmap.nolog( temp.all=CATCH$C_ocean_total,id=A[1])
+```
+
+\clearpage
+### Transboundary SE Alaska 
+
+Taku and Stikine
+
+```{r echo=FALSE,out.width='100%'}
+  # NSEAK_Taku spring BY =2000
+  A <- REL %>% filter(brood_year==2010,grepl("NSEAK_Taku_spr",ocean.region)) %>% 
+          arrange(desc(N.released)) %>% pull(ID_numb)
+   plot.heatmap.nolog( temp.all=CATCH$C_ocean_total,id=A[1])
+```
+
+```{r echo=FALSE,out.width='100%'}
+  # NSEAK_Stikine BY =2002
+  A <- REL %>% filter(brood_year==2002,grepl("SSEAK_Stikine_spr",ocean.region)) %>% 
+          arrange(desc(N.released)) %>% pull(ID_numb)
+   plot.heatmap.nolog( temp.all=CATCH$C_ocean_total,id=A[1])
+```
+
+\clearpage
+<!--
+###  Cook Inlet, Alaska
+
+```{r echo=FALSE,out.width='100%'}
+  # NSEAK_Stikine BY =2002
+  #A <- REL %>% filter(brood_year==2008,grepl("COOK_spr",ocean.region)) %>% 
+  #        arrange(desc(N.released)) %>% pull(ID_numb)
+  # plot.heatmap.nolog( temp.all=CATCH$C_ocean_total,id=A[1])
+```
+
+-->
