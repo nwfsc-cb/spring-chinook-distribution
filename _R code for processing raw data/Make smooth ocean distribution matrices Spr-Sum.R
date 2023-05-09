@@ -10,7 +10,7 @@ N_pred_loc_salish <- as.numeric(k.pred.index.salish %>% summarize(length(locatio
 
 # user Defined number of knots to smooth over.
 N_knot_sf    <- 8 #round( (2/3)* N_pred_loc) # Summer-Fall
-N_knot_ws    <- 4 #round( (2/3)* N_pred_loc) # Winter-Spring
+N_knot_ws    <- 5 #round( (2/3)* N_pred_loc) # Winter-Spring
 
 # Prediction locations 
 pred.loc <- k.pred.index$knot.idex
@@ -41,8 +41,14 @@ V     = 1
 cov.knot.to.knot <- exp(- d_knot_knot_sf2 / theta^2) * V^2
 cov.knot.to.pred <- exp(- d_pred_knot_sf2 / theta^2) * V^2
 w_star <- mvrnorm(1,rep(0,N_knot_sf),cov.knot.to.knot)
+A<- t(cov.knot.to.pred) %*% solve(cov.knot.to.knot) %*% w_star
 
+cov.knot.to.knot <- exp(- d_knot_knot_ws2 / theta^2) * V^2
+cov.knot.to.pred <- exp(- d_pred_knot_ws2 / theta^2) * V^2
+w_star <- mvrnorm(1,rep(0,N_knot_ws),cov.knot.to.knot)
+B<- t(cov.knot.to.pred) %*% solve(cov.knot.to.knot) %*% w_star
 
 # This it the matrix algebra that makes the projection from knots to locations.
-A<- t(cov.knot.to.pred) %*% solve(cov.knot.to.knot) %*% w_star
+par(mfrow=c(2,1))
 plot(A~pred.loc)
+plot(B~pred.loc)

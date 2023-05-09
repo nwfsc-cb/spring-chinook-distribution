@@ -5,6 +5,7 @@ library(tidyverse)
 library(dplyr)
 library(gplots)
 library(DataCombine)
+library(lubridate)
 ###################################################################################################################################################################
 
 #Step 1: LOAD ASHOP AND ASSIGN DATA INTO REGIONS
@@ -16,6 +17,49 @@ write.dir <- paste0(base.dir,"/spring-chinook-distribution/Processed Data/Effort
 setwd(data.dir)
 
 ashop = read.csv("all_hauls_1979-2017_AOS.csv", stringsAsFactors = FALSE)
+
+ashop_new<- NULL
+for(i in 2018:2021){
+  temp <- read.csv(paste0("A-SHOP_Shelton_hauls_",i,".csv"))
+  ashop_new <- bind_rows(ashop_new,temp)
+}
+
+# synonymize the names between the pre-2017 data and the 2018-21 data
+
+ashop_new_relab <- ashop_new %>% 
+                        mutate(X=1:nrow(.),
+                               VESSEL=NA,
+                               Date= as.Date(DEPLOYMENT_DATE,"%m/%d/%y"),
+                               Year=year(Date),
+                               Month=month(Date),
+                               Day=day(Date),
+                               n.tows=1,
+                               FISHING_DEPTH_M = FISHING_DEPTH_FATHOMS * 1.8288,
+                               BOTTOM_DEPTH_M = BOTTOM_DEPTH_FATHOMS * 1.8288,
+                               period = NA,
+                               hauls_expansion = 0,
+                               weight_expansion = 1.001,
+                               expansion.rate = weight_expansion) %>%
+                        dplyr::select(CRUISE,
+                                      VESSEL,
+                                      PERMIT,
+                                      HAUL,
+                                      Year,
+                                      Month,
+                                      Day,
+                                      n.tows,
+                                      DURATION = DURATION_IN_MIN,
+                                      FISHING_DEPTH_M,
+                                      BOTTOM_DEPTH_M,
+                                      OFFICIAL_TOTAL_CATCH_MT,
+                                      lat.end = LATDD_END,
+                                      lon.end = LONDD_END,
+                                      period,
+                                      hauls_expansion,
+                                      weight_expansion,
+                                      expansion.rate)
+
+ashop <- bind_rows(ashop,ashop_new_relab)
 
 ashop$region <- cut(ashop$lat.end,breaks=c(-Inf,
                                            37.1833,
@@ -76,8 +120,8 @@ sum1 <- left_join(sum_tows_weight, observed_effort, by = c("Year", "Month", "reg
 
 total_effort <- sum1 %>%
   dplyr::mutate(tow_sum = as.numeric(tow_sum),
-                unobs_haul = tow_sum * hauls_expansion,
-                unobs_wt = wt_sum * weight_expansion,
+                unobs_haul = (tow_sum * hauls_expansion) - tow_sum,
+                unobs_wt = (wt_sum * weight_expansion) - wt_sum,
                 unobserved_haul_or_wt = unobs_wt + unobs_haul,
                 observed_haul_or_wt = case_when(period == 1 ~ tow_sum,
                                                 period == 2  ~ wt_sum,
@@ -93,7 +137,7 @@ total_effort <- sum1 %>%
 #Step 3A: PLOT OBSERVED EFFORT IN HEATMAP
 ###################################################################################################################################################################
 #do year.month combo to merge in
-temp.year <- as.character(c(1979:2017))
+temp.year <- as.character(c(1979:2020))
 temp.month <- as.character(c(01:12))
 year.month<- expand.grid(temp.year, temp.month) #fully factorial match between month and year
 year.month$Var2<- str_pad(year.month$Var2, width= 2, pad = "0", side="left") #add a zero before month 1-9 so that I can keep months in order

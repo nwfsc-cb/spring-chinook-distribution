@@ -9,7 +9,7 @@ A$ID_numb <- REL$ID_numb
 REL.mod <- REL %>% left_join(.,A) %>% 
   mutate(z.ind = ifelse(Tot ==0,"zero","pos"))
 REL.sum <-  REL.mod %>% group_by(ocean.region) %>% 
-  summarise(N.tot= length(z.ind),N.zero = Tot)
+  reframe(N.tot= length(z.ind),N.zero = length(z.ind[z.ind=="zero"]))
 REL.sum <- full_join(REL.sum,REL.mod)
 
 
@@ -36,20 +36,20 @@ B$ID_numb <- REL$ID_numb
 REL.mod.ocean <- REL %>% left_join(.,B) %>% 
   mutate(z.ind = ifelse(Tot ==0,"zero","pos"))
 REL.sum.ocean <-  REL.mod.ocean %>% group_by(ocean.region) %>% 
-  summarise(N.tot= length(z.ind),N.zero = Tot)
+  summarise(N.tot= length(z.ind),N.zero = length(z.ind[z.ind=="zero"]))
 REL.sum.ocean <- full_join(REL.sum.ocean,REL.mod.ocean)
 
 BREAKS <- c(100,1000,10000,100000,1000000)
 ggplot(REL.mod.ocean) + 
   geom_histogram(aes(N.released),bins=100) +
-  scale_x_continuous(trans="log",breaks=BREAKS) +
+  scale_x_continuous(trans="log",breaks= BREAKS,labels = BREAKS) +
   geom_vline(xintercept=5000)
 
-BREAKS <- c(10,100,1000,10000,100000,1000000)
+BREAKS <- round(c(10,100,1000,10000,100000,1000000),0)
 ggplot(REL.mod.ocean) + 
   geom_point(aes(y=Tot,x=N.released,color=release_year)) +
-  scale_x_continuous(trans="log",breaks= BREAKS) +
-  scale_y_continuous(trans="log",breaks= BREAKS) +
+  scale_x_continuous(trans="log",breaks= BREAKS,labels = BREAKS) +
+  scale_y_continuous(trans="log",breaks= BREAKS,labels = BREAKS) +
   #  scale_color_continuous()
   facet_wrap(~ocean.region) +
   ggtitle("Select ocean recoveries (no nets, no terminal)")

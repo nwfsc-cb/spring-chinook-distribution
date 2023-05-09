@@ -9,8 +9,32 @@ data.dir <- "/Users/ole.shelton/Github/Orca_Salmon_DATA/Effort info/Trawl-US/Sho
 setwd(data.dir)
 
 load("trawl_fish_tix_81_16.RData")
+load("trawl_fish_tix_14_21.RData")
+#Raw CSV for 2014-21 is here:
+#trawl_fish_tix_14_21 <- read.csv("shelton_pf_ft_2014_2021.csv")
 
-dat <- trawl_fish_tix_81_16[[1]]
+dat.1 <- trawl_fish_tix_81_16[[1]]
+dat.2 <- trawl_fish_tix_14_21
+
+dat.1 <- dat.1 %>% filter(LANDING_YEAR<=2013)
+
+dat <- rbind(dat.1,dat.2)
+
+# I don't have fishery sectors for 2017 and on, so base this on 
+# This section is redundant with what is done in "Process shoreside CA OR WA.R"
+
+# A <- dat %>% filter(grepl("WHITING",PACFIN_SPECIES_COMMON_NAME)) %>%
+#                 filter(LANDING_YEAR>=2017)
+# IDS <- A %>% filter(PACFIN_GEAR_CODE %in% c("GFT","MDT","OTW","RLT")) %>% pull(FTID)
+# 
+# dat.2017.on <- dat %>% filter(FTID %in% IDS) %>% ungroup() %>%
+#                 group_by(FTID) %>%
+#                 mutate(tot.wgt= sum(LANDED_WEIGHT_LBS),
+#                        frac=LANDED_WEIGHT_LBS / tot.wgt) %>%
+#                 filter(grepl("WHITING",PACFIN_SPECIES_COMMON_NAME))%>%
+#                 filter(frac>0.5)
+              
+
 fish.sectors <- read.csv("FT_sct_def_Shelton_2018-11-13.csv")
                          
 dat <- left_join(dat,fish.sectors)

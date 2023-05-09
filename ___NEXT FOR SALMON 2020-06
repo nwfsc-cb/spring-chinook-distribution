@@ -206,14 +206,35 @@ In-River Data scenarios:
 
 12/5/2022
 Mapped PIT tag data onto existing Columbia survival data.
-Had to make some choices about which
+Had to make some choices about which stocks mapped onto which PIT groups.
 In general, I used release site to Bonneville survival whenever possible. I only used hatchery releases (as all CWT are hatchery).
-I don't know what to do about release = BY+1 vs. BY+2.
+I don't know what to do about release = BY+1 vs. BY+2... so I decided that if there were releases in by+1 they were migration year BY+2.  I used the available hatchery data from the geographically most proximate source.  In some cases there were limited data for some PIT data for some stocks.... so I used the longer time series whereever  possible.  The code for processing PIT data is at the end of the "01..." script and the mapping of PIT data to particular stocks is in "02..." under the subscript "Make PIT survival files Spr-Sum.R". Out of 1950 or so CWT groups. I was able to match about 240-ish to PIT recoveries.
 
 
+1/1/2023
+New year.  Over the past month I have shored up the 02 script and think it is good to go.  I am down to ~1850 release groups.  I have created and compiled the catch data for all seven of the fleets (troll, treaty, rec, hake ashop, hake shoreside, pollock GOA, rockfish AK).
+
+1/6/2023
+Worked on data and objects for in-river recoveries.
+Added index and data for AWG data. This data will be used instead of the Dirichlet data.
+Defined, added index and data for PIT data. This will be used in combination with the Dirichlet data.
+Discovered that one the AWG and PIT data were added there were a series of runs that had neither AWG, nor PIT data, and I wasn't comfortable making an assumption that all of the fish were not in the "offshore" spatial box.
+
+The runs assumed to have zero for the offshore were everything south of SOR (SOR_spr, NCA_spr,SFB_spr and SFB_wint)
+
+Runs without AWG or PIT data: COR, NOR, LCOL, WAC, NBC.
+  Solutions: Look at recovery data, presume NOR, LCOL data from RMIS are ok.  Use RMIS data for NOR, LCOL.
+  COR, WAC, NBC clearly do not have good recovery information.  Resolve this by asserting that nearby stocks that have ok recoveries share the same value for the offshore box.  Offshore fraction for COR == NOR.  Offshore WAC= LCOL, Offshore NBC_spr = offshore NBC_sum.  This was determined by looking at the spatial and temporal patterns in raw recoveries of
 
 
+Checked for data in all combinations. Made some choices about combining data.
+emailed about Updated data from Shoreside hake
+Made work around for fish that start are released after the model starts.
 
+
+1/8/2023
+I entered the ASHOP effort data. Found a mistake (I think) in Genoa's code (sigh).  Realized that I don't have the necessary sampling information for all of ASHOP and requested it from Vanessa Tuttle.  Hopefully that will get resolved soon.
+Incorporated the new effort data from shoreside hake as well and fixed a few resulting bug. Requested all of the CWT recoveries from Shoreside (2017-21).
 
 
 

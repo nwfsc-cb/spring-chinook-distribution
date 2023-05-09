@@ -12,6 +12,7 @@ library(here)
 
 # These are needed for the end of this script to match up with ASHOP and SHORESIDE DATA
 shoreside_chinook = read.csv(paste0(base.dir,"/Orca_Salmon_DATA/Recoveries/Shoreside_CWT/Final_Dataset/shoreside_chinook_tagcode_FTID.csv"))
+shoreside_chinook_17_21 = read.csv(paste0(base.dir,"/Orca_Salmon_DATA/Recoveries/Shoreside_CWT/Final_Dataset/shoreside_chinook_tagcode_2017_2021.csv"))
 ashop_all_salmon = read.csv(paste0(base.dir,"/Orca_Salmon_DATA/Hake Trawl/ASHOP/final_datasets/ashop_chinook.csv"))
 ashop_chinook_CWT1 = read.csv(paste0(base.dir,"/Orca_Salmon_DATA/Recoveries/ASHOP/snoutbase/A-SHOP_Snoutbase_122118.csv"))
 ashop_chinook_CWT2 = read.csv(paste0(base.dir,"/Orca_Salmon_DATA/Recoveries/ASHOP/snoutbase/A-SHOP_ChinookBio_2012-2021_Matson_061622 for Ole.csv"))
@@ -351,7 +352,28 @@ B <- A %>% group_by(ID_UNIQUE,DRVID,sector,gear,FTID,LANDING_MONTH,LANDING_DAY,
                                                                    "WAC"))) %>%
             rename(Lat=Lat.fin,Long=Long.fin)
             
-shoreside_chinook_reduced <- shoreside_chinook_reduced %>% filter(!ID_UNIQUE %in% shoreside_chinook_new_area$ID_UNIQUE) %>% bind_rows(.,B)
+shoreside_chinook_reduced <- shoreside_chinook_reduced %>% 
+                            filter(!ID_UNIQUE %in% shoreside_chinook_new_area$ID_UNIQUE) %>% 
+                            bind_rows(.,B)
+
+# Add leading zeros to Tag_code for 2017 on.
+shoreside_chinook_17_21 <- shoreside_chinook_17_21 %>% 
+                              mutate(Tag_Code = as.character(Tag_Code),
+                                     Tag_Code = ifelse(nchar(Tag_Code)==5,paste0("0",Tag_Code),Tag_Code))
+
+shoreside_chinook2 <- shoreside_chinook_17_21 %>% 
+                        mutate(DATE = as.Date(LANDING_DATE,"%m/%d/%y"),
+                               rec.year = year(DATE),
+                               rec.month = month(DATE)) %>%
+                        mutate(rec.area.code=case_when(PORT=="ASTORIA" ~ "A",
+                                                       PORT=="ILWACO" ~ "B",
+                                                       PORT=="WESTPORT" ~ "C",
+                                                       PORT=="NEWPORT" ~ "D",
+                                                       TRUE ~ PORT))
+                               
+
+
+
 
 shoreside_chinook1 <- shoreside_chinook_reduced %>%  #this is data that kayleigh gave me. 
   mutate(tag.code = as.character(Tag.Code)) %>%  

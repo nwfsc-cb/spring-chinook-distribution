@@ -26,6 +26,8 @@ write.dir <- paste0(base.dir,"spring-chinook-distribution/Processed Data/Effort 
 setwd(base.dir)
 source("spring-chinook-distribution/_R code for processing raw data/Process trawl fish tickets.R")
 
+YEAR.STOP = 2021 # Include data through 2021
+
 C <- dat %>% 
   filter(PACFIN_GEAR_CODE %in% c("GFT","MDT","OTW","RLT")) %>%
   dplyr::select(c(LANDING_YEAR, 
@@ -332,6 +334,25 @@ B2 <- B1 %>%
   mutate(assign_region = new_region) %>%
   dplyr::select(-c(assign_region.y, assign_region.x, new_region)) 
 
+# Try and fix the missing area codes for 2017 and later
+
+B3 <- B2 %>% filter(is.na(assign_region)) %>% 
+        mutate(assign_region = case_when(
+          PACFIN_CATCH_AREA_DESCRIPTION =="SOUTHERN PORTION OF AREA 3C (UNITED STATES ONLY)" ~ "WAC",
+          grepl("CAPE FALCON TO CAPE ELIZABETH",PACFIN_CATCH_AREA_DESCRIPTION) ~ "COL", 
+          PACFIN_CATCH_AREA_DESCRIPTION == "47 20' N TO 220(T.)" ~ "WAC",
+          grepl("CAPE LOOKOUT TO CAPE FALCON",PACFIN_CATCH_AREA_DESCRIPTION) ~ "NOR",
+          grepl("CAPE PERPETUA TO CAPE LOOKOUT",PACFIN_CATCH_AREA_DESCRIPTION) ~ "NOR",
+          PACFIN_CATCH_AREA_DESCRIPTION =="42 50' N TO 44 18' N; CAPE BLANCO TO CAPE PERPETUA"~"COR",
+          PACFIN_CATCH_AREA_DESCRIPTION =="42 00' N TO 42 50' N; OREGON-CALIFORNIA BORDER TO CAPE BLANCO"~"SOR",
+          PACFIN_CATCH_AREA_DESCRIPTION == "40 30' N TO 42 00' N; CAPE MENDOCINO TO OREGON-CALIFORNIA BORDER"~"NCA",
+          TRUE ~ "NA")) %>%
+          filter(!assign_region == "NA") # Get rid of 4 rows with < 100lbs caught total
+
+# Replace the relevant rows from 2017 on 
+B2 <- B2 %>% filter(!is.na(assign_region)) %>%
+          bind_rows(.,B3)
+
 ####################################################################################################################################################################################
 
 ####################################################################################################################################################################################
@@ -471,7 +492,7 @@ chinook = read.csv(paste0(base.dir,"Orca_Salmon_DATA/Hake Trawl/Shoreside_CWT/Ch
 #  group_by(LANDING_YEAR, FTID, PORT_NAME, AVG_LAT, AVG_LONG, Tag.Code) %>%
 #  dplyr::count(Tag.Code)
 
-#DIDNT ASSIGN TO PUSO OR SGEO BC NO BYCATCH THERE, ALSO NO FISHING THERE BETWEEN 2011- 2016
+#DIDNT ASSIGN TO PUSO OR SGEO BC NO BYCATCH THERE, ALSO NO FISHING THERE BETWEEN 2011- YEAR.STOP
 chinook$assign_region <- cut(chinook$AVG_LAT, breaks=c(-Inf,
                                                        36, 
                                                        37.1833, 
@@ -549,7 +570,7 @@ p
                                                                                         #PLOT FISHING EFFORT IN A HEATMAP 
 ##########################################################################################################################################################################################################
 #do year.month combo to merge in
-temp.year <- as.character(c(1981:2016))
+temp.year <- as.character(c(1981:YEAR.STOP))
 temp.month <- as.character(c(01:12))
 year.month<- expand.grid(temp.year, temp.month) #fully factorial match between month and year 
 year.month$Var2<- str_pad(year.month$Var2, width= 2, pad = "0", side="left") #add a zero before month 1-9 so that I can keep months in order
@@ -565,7 +586,7 @@ merge <- merge(year.month, G1, all = TRUE)
 merge$region.use <- recode(merge$assign_region, 'SGEO' = 1, 'WAC'= 2, 'PUSO'=3, 'COL'= 4, 'NOR'=5, 'COR' =6, 'SOR'=7, 'NCA'= 8, 'MEN'=9, 'SFB' =10, 'MONT' = 11, 'SCAL'=12)
 
 #create an label for x axis with blanks so you can see years 
-temp.lab = as.data.frame(c(1981:2016)) #create df with all years
+temp.lab = as.data.frame(c(1981:YEAR.STOP)) #create df with all years
 temp <- as.data.frame(temp.lab[rep(1:nrow(temp.lab),1,each=12),]) #duplicate each row 12 times
 temp$`temp.lab[rep(1:nrow(temp.lab), 1, each = 12), ]`[duplicated(temp$`temp.lab[rep(1:nrow(temp.lab), 1, each = 12), ]`)] <- " " #fill duplicates with a space
 temp$label<-  temp$`temp.lab[rep(1:nrow(temp.lab), 1, each = 12), ]`  #change column name and remove old column
@@ -654,7 +675,7 @@ ggplot(F4, aes(effort_sum, n)) +
                                                                                     #BYCATCH HEATMAP
 ##########################################################################################################################################################################################################
 #year.month combo to merge in
-temp.year <- as.character(c(2011:2016))
+temp.year <- as.character(c(2011:YEAR.STOP))
 temp.month <- as.character(c(01:12))
 year.month<- expand.grid(temp.year, temp.month) #fully factorial match between month and year 
 year.month$Var2<- str_pad(year.month$Var2, width= 2, pad = "0", side="left") #add a zero before month 1-9 so that I can keep months in order
@@ -669,7 +690,7 @@ merge <- merge(year.month, chinook1, all = TRUE)
 merge$region.use <- recode(merge$assign_region, 'SGEO' = 1, 'WAC'= 2, 'PUSO'=3, 'COL'= 4, 'NOR'=5, 'COR' =6, 'SOR'=7, 'NCA'= 8, 'MEN'=9, 'SFB' =10, 'MONT' = 11, 'SCAL'=12)
 
 #create an label for x axis with blanks so you can see years 
-temp.lab = as.data.frame(c(2011:2016)) #create df with all years
+temp.lab = as.data.frame(c(2011:YEAR.STOP)) #create df with all years
 temp <- as.data.frame(temp.lab[rep(1:nrow(temp.lab),1,each=12),]) #duplicate each row 12 times
 temp$`temp.lab[rep(1:nrow(temp.lab), 1, each = 12), ]`[duplicated(temp$`temp.lab[rep(1:nrow(temp.lab), 1, each = 12), ]`)] <- " " #fill duplicates with a space
 temp$label<-  temp$`temp.lab[rep(1:nrow(temp.lab), 1, each = 12), ]`  #change column name and remove old column

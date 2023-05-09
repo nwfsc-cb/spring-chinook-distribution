@@ -40,9 +40,10 @@ shoreside.eff <- shoreside.eff %>%
   group_by(year,month.use,region) %>% summarise(effort.boat.days=sum(effort.boat.days)) %>%
   dplyr::select(c("year", "region", "month.use", "effort.boat.days")) %>%
   spread(month.use, effort.boat.days) %>%
-  replace(., is.na(.), 0) %>%
   mutate(month.01 = 0) %>%
   as.data.frame()
+
+shoreside.eff[is.na(shoreside.eff)] <- 0
 
 #can do this if we want to use a different grouping than how it is set: ashop.eff$area.code <- locations_gs$area.code[match(ashop.eff$area.code,locations_gs$ ### INSERT CATEGORY ###)]
 #may not need this bc I changed it? 

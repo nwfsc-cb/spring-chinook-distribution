@@ -17,8 +17,11 @@ rm(list=ls())
 gc()
 
 base.dir  <- "/Users/ole.shelton/GitHub"
-#print(base.dir)
-#mn
+# 
+if(getwd()!=paste0(base.dir,"/spring-chinook-distribution")){
+  setwd(paste0(base.dir,"/spring-chinook-distribution"))
+}#mn
+  
 NAME <- "FINAL"
 MOD.NAME  <- 'climate model GAMMA - quadratic V LOCVAR2 NO SST.stan'
 
@@ -38,8 +41,7 @@ TRAWL.BC  <- "FALSE"
 
 TRAWL_VULN_QUADRATIC <- "TRUE"
 
-
-# CLOGLOG   <- "FALSE" # This is a new option for making the vulnerability function a complementary log-log function as opposed to a logit link
+CLOGLOG   <- "FALSE" # This is a new option for making the vulnerability function a complementary log-log function as opposed to a logit link
   
 # GROUPINGS FOR MONTHS
 MONTH.STRUCTURE <- "SPRING" # Options: "FOUR"(original structure) or 
@@ -47,9 +49,9 @@ MONTH.STRUCTURE <- "SPRING" # Options: "FOUR"(original structure) or
                           #          "SPRING" (follows the FOUR model schedule but includes March in the spring season)
 
 # These are are the determining factors for defining the years and locations
-YEARS.RELEASE     <- 1978:2013#2010
+YEARS.RELEASE     <- 1978:2012#2010
 YEARS.RECOVER     <- 1979:2018#2015
-YEARS.BROOD       <- 1977:2012#2009
+YEARS.BROOD       <- 1977:2011#2009
 
 N_years_recover <- length(YEARS.RECOVER)
 N_years_release <- length(YEARS.RELEASE)
@@ -206,9 +208,9 @@ if(MONTH.STRUCTURE=="FOUR"){
 }
 if(MONTH.STRUCTURE=="SPRING"){
   REL.ALL$n.month <- 0
-  REL.ALL$n.month[REL.ALL$n.year == 2] <- 2 - REL.ALL$Median.month.release[REL.ALL$n.year == 2] ## Start keeping track of fish in MArch (spring) of year following release.
-  REL.ALL$n.month[REL.ALL$n.year == 1] <- 12 - REL.ALL$Median.month.release[REL.ALL$n.year == 1] + 2 ## Start keeping track of fish in MArch (spring) of year following release.
-  REL.ALL$n.month[REL.ALL$n.year == 0] <- 12 + 12 - REL.ALL$Median.month.release[REL.ALL$n.year == 0] + 2 ## Start keeping track of fish in MArch (spring) of year following release.
+  REL.ALL$n.month[REL.ALL$n.year == 2] <- 3 - REL.ALL$Median.month.release[REL.ALL$n.year == 2] ## Start keeping track of fish in MArch (spring) of year following release.
+  REL.ALL$n.month[REL.ALL$n.year == 1] <- 12 - REL.ALL$Median.month.release[REL.ALL$n.year == 1] + 3 ## Start keeping track of fish in MArch (spring) of year following release.
+  REL.ALL$n.month[REL.ALL$n.year == 0] <- 12 + 12 - REL.ALL$Median.month.release[REL.ALL$n.year == 0] + 3 ## Start keeping track of fish in MArch (spring) of year following release.
 }
 if(MONTH.STRUCTURE=="FRAM"){
   REL.ALL$n.month <- 0
@@ -358,7 +360,6 @@ source("./_R code for processing raw data/Trim releases based on recoveries Spr-
 source("./_R code for processing raw data/Make catch files Spr-Sum.r",local=T)
 source("./_R code for processing raw data/Make in-river recovery files Spr-Sum.r",local=T)
 
-  
 # This is where C, Z_catch, Lambda2, and E arrays are created.
 # They all have the form C[model.month,location,release.id,gear.type]
 # This also creates the E matrix (fish that make it into the river (both to hatchery and caught in fisheries))
@@ -501,6 +502,7 @@ if(MONTH.STRUCTURE == "FOUR"){
 if(MONTH.STRUCTURE == "SPRING"){
   # For fall. time_fraction = 0.33 is September 1 migration
   # For spring run, time_fraction = 0 is March 1, time_fraction = 0.33 is April 1, 0.667 is May 1 
+  # For summer run, time_fraction = 0 is June 1, time_fraction = 0.5 is July 1
   REL <- REL %>% ungroup() %>% left_join(., ORIGIN.LAB %>% dplyr::select(ocean.region=origin.code,spawn_time_fraction) )
 }
 
@@ -606,8 +608,8 @@ spawn_loc <- escape_diri[,c("ocean.region","number","init.loc")]
 source("./_R code for processing raw data/Make river entry matrices.R",local=T)
 
 #### MAKE A DATA FILE FOR log_n_fin_ratio_data to ensure very few fish are left in the ocean at the end of the simulation
-REL$log_N_ratio_mean <- -7
-REL$log_N_ratio_sd   <- 1.5
+# REL$log_N_ratio_mean <- -7
+# REL$log_N_ratio_sd   <- 1.5
 
 #### READ IN SIZE LIMITS THAT DETERMINE VULNERABILITY
 
@@ -663,10 +665,12 @@ vuln_rec_mat    <- vuln.rec.mat %>% dplyr::select(-Year,-Season) * 0.01
 ############################################################################################################
 source("./_R code for processing raw data/Make smooth ocean distribution matrices Spr-Sum.R",local=T)
 
+LOCATIONS.plot <- LOCATIONS %>% 
+  mutate(location.name2=location.name) %>% 
+  mutate(location.name = ifelse(location.name=="PUSO_out","SJDF",location.name))
 
 ######## PLOT EFFORT AND CPUE FILES
 source("./_R code for processing raw data/Make heatmap functions.R",local=T)
-
 source("./_R code for processing raw data/Plot effort, CPUE heatmaps Spr-Sum.R",local=T)
 ############# MAKE A PDF of the various hatchery and release attributes.
 #write REL to file:
@@ -704,18 +708,18 @@ CATCH = list(
   C_hake_shoreside_true = C_hake_shoreside_true,
   C_pollock_GOA_true =C_pollock_GOA_true,
   C_rockfish_AK_true = C_rockfish_AK_true,
-  C_ocean_total = C_ocean_total,
+  C_ocean_total = C_ocean_total
   )
 
 FRESH = list(
   PIT.dat.fin = PIT.dat.fin,
-  
+  dat.cwt.fresh = dat.sum,
+  E_true_lab = E_true_lab 
 )
-
-
 
 save(file=paste0(base.dir,"/spring-chinook-distribution/Processed Data/Effort ",RUN.TYPE," ",GROUP,".RData"),EFFORT)
 save(file=paste0(base.dir,"/spring-chinook-distribution/Processed Data/Catch ",RUN.TYPE," ",GROUP,".RData"),CATCH )
+save(file=paste0(base.dir,"/spring-chinook-distribution/Processed Data/Fresh ",RUN.TYPE," ",GROUP,".RData"),FRESH)
 
 
 #setwd(paste(base.dir,"/GSI_CWT_Chinook/Output plots/  __Markdown",sep=""))
