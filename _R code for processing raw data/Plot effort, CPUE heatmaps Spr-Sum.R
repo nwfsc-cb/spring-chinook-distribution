@@ -235,7 +235,7 @@ dev.off()
 #############################################################################
 #############################################################################
 #############################################################################
-### Prettier Pub Plots
+### Prettier Pub Plots - Vestigal from earlier version
 #############################################################################
 #############################################################################
 #############################################################################
@@ -255,59 +255,59 @@ library(RColorBrewer)
 
 
 # Coleman plots
-setwd("/Users/ole.shelton/GitHub/Orca_Salmon/Output plots/")
-quartz(file=paste0(base.dir,"/spring-chinook-distribution/Heatmaps/CPUE Troll observations heatmap PUB Coleman 1980.pdf"),height=4,width=5,dpi=600,type="pdf")
-      plot.CPUE.heatmap2( temp.all=C_troll_true,effort.all= K_troll_flat,id=235)
-dev.off()
+# setwd("/Users/ole.shelton/GitHub/Orca_Salmon/Output plots/")
+# quartz(file=paste0(base.dir,"/spring-chinook-distribution/Heatmaps/CPUE Troll observations heatmap PUB Coleman 1980.pdf"),height=4,width=5,dpi=600,type="pdf")
+#       plot.CPUE.heatmap2( temp.all=C_troll_true,effort.all= K_troll_flat,id=235)
+# dev.off()
 
-quartz(file=paste0(base.dir,"/spring-chinook-distribution/Heatmaps/CPUE Troll observations heatmap PUB Coleman 1999.pdf"),height=4,width=5,dpi=600,type="pdf")
-  plot.CPUE.heatmap2( temp.all=C_troll_true,effort.all= K_troll_flat,id=254)
-dev.off()
+# quartz(file=paste0(base.dir,"/spring-chinook-distribution/Heatmaps/CPUE Troll observations heatmap PUB Coleman 1999.pdf"),height=4,width=5,dpi=600,type="pdf")
+#   plot.CPUE.heatmap2( temp.all=C_troll_true,effort.all= K_troll_flat,id=254)
+# dev.off()
 
 # read in files combine into side by side figures
-p1 <- ggdraw() + draw_image(magick::image_read_pdf(paste0(base.dir,"/spring-chinook-distribution/Heatmaps/CPUE Troll observations heatmap PUB Coleman 1980.pdf"), 
-                                                   density = 600))
-p2 <- ggdraw() + draw_image(magick::image_read_pdf(paste0(base.dir,"/spring-chinook-distribution/Heatmaps/CPUE Troll observations heatmap PUB Coleman 1999.pdf"), 
-                                                   density = 600))
-
-quartz(file=paste0(base.dir,"/spring-chinook-distribution/Heatmaps/CPUE Troll observations heatmap PUB Coleman Combined.pdf"),height=4,width=10,dpi=600,type="pdf")
-  print(plot_grid(p1,p2))
-dev.off()
+# p1 <- ggdraw() + draw_image(magick::image_read_pdf(paste0(base.dir,"/spring-chinook-distribution/Heatmaps/CPUE Troll observations heatmap PUB Coleman 1980.pdf"), 
+#                                                    density = 600))
+# p2 <- ggdraw() + draw_image(magick::image_read_pdf(paste0(base.dir,"/spring-chinook-distribution/Heatmaps/CPUE Troll observations heatmap PUB Coleman 1999.pdf"), 
+#                                                    density = 600))
+# 
+# quartz(file=paste0(base.dir,"/spring-chinook-distribution/Heatmaps/CPUE Troll observations heatmap PUB Coleman Combined.pdf"),height=4,width=10,dpi=600,type="pdf")
+#   print(plot_grid(p1,p2))
+# dev.off()
 
 # LCOL "Big Creek_small" 1980 and 1999 are ID = 34,48
-quartz(file=paste0(base.dir,"/spring-chinook-distribution/Heatmaps/CPUE Troll observations heatmap PUB Big Creek 1980.pdf"),height=4,width=5,dpi=600,type="pdf")
-  plot.CPUE.heatmap2( temp.all=C_troll_true,effort.all= K_troll_flat,id=34)
-dev.off()
-
-quartz(file=paste0(base.dir,"/spring-chinook-distribution/Heatmaps/CPUE Troll observations heatmap PUB Big Creek 1999.pdf"),height=4,width=5,dpi=600,type="pdf")
-  plot.CPUE.heatmap2( temp.all=C_troll_true,effort.all= K_troll_flat,id=48)
-dev.off()
-
-# read in files combine into side by side figures
-p1 <- ggdraw() + draw_image(magick::image_read_pdf(paste0(base.dir,"/spring-chinook-distribution/Heatmaps/CPUE Troll observations heatmap PUB Big Creek 1980.pdf"), 
-                                                   density = 600))
-p2 <- ggdraw() + draw_image(magick::image_read_pdf(paste0(base.dir,"/spring-chinook-distribution/Heatmaps/CPUE Troll observations heatmap PUB Big Creek 1999.pdf"), 
-                                                   density = 600))
-
-quartz(file=paste0(base.dir,"/spring-chinook-distribution/Heatmaps/CPUE Troll observations heatmap PUB Big Creek Combined.pdf"),height=4,width=10,dpi=600,type="pdf")
-  print(plot_grid(p1,p2))
-dev.off()
-
-# URB "Priest" 1980 and 1999 are ID = 34,48
-quartz(file=paste0(base.dir,"/spring-chinook-distribution/Heatmaps/CPUE Troll observations heatmap PUB Priest 1980.pdf"),height=4,width=5,dpi=600,type="pdf")
-  plot.CPUE.heatmap2( temp.all=C_troll_true,effort.all= K_troll_flat,id=901)
-dev.off()
-
-quartz(file=paste0(base.dir,"/spring-chinook-distribution/Heatmaps/CPUE Troll observations heatmap PUB Priest 1999.pdf"),height=4,width=5,dpi=600,type="pdf")
-  plot.CPUE.heatmap2( temp.all=C_troll_true,effort.all= K_troll_flat,id=920)
-dev.off()
-
-# read in files combine into side by side figures
-p1 <- ggdraw() + draw_image(magick::image_read_pdf(paste0(base.dir,"/spring-chinook-distribution/Heatmaps/CPUE Troll observations heatmap PUB Priest 1980.pdf"), 
-                                                   density = 600))
-p2 <- ggdraw() + draw_image(magick::image_read_pdf(paste0(base.dir,"/spring-chinook-distribution/Heatmaps/CPUE Troll observations heatmap PUB Priest 1999.pdf"), 
-                                                   density = 600))
-
-quartz(file=paste0(base.dir,"/spring-chinook-distribution/Heatmaps/CPUE Troll observations heatmap PUB Priest Combined.pdf"),height=4,width=10,dpi=600,type="pdf")
-print(plot_grid(p1,p2))
-dev.off()
+# quartz(file=paste0(base.dir,"/spring-chinook-distribution/Heatmaps/CPUE Troll observations heatmap PUB Big Creek 1980.pdf"),height=4,width=5,dpi=600,type="pdf")
+#   plot.CPUE.heatmap2( temp.all=C_troll_true,effort.all= K_troll_flat,id=34)
+# dev.off()
+# 
+# quartz(file=paste0(base.dir,"/spring-chinook-distribution/Heatmaps/CPUE Troll observations heatmap PUB Big Creek 1999.pdf"),height=4,width=5,dpi=600,type="pdf")
+#   plot.CPUE.heatmap2( temp.all=C_troll_true,effort.all= K_troll_flat,id=48)
+# dev.off()
+# 
+# # read in files combine into side by side figures
+# p1 <- ggdraw() + draw_image(magick::image_read_pdf(paste0(base.dir,"/spring-chinook-distribution/Heatmaps/CPUE Troll observations heatmap PUB Big Creek 1980.pdf"), 
+#                                                    density = 600))
+# p2 <- ggdraw() + draw_image(magick::image_read_pdf(paste0(base.dir,"/spring-chinook-distribution/Heatmaps/CPUE Troll observations heatmap PUB Big Creek 1999.pdf"), 
+#                                                    density = 600))
+# 
+# quartz(file=paste0(base.dir,"/spring-chinook-distribution/Heatmaps/CPUE Troll observations heatmap PUB Big Creek Combined.pdf"),height=4,width=10,dpi=600,type="pdf")
+#   print(plot_grid(p1,p2))
+# dev.off()
+# 
+# # URB "Priest" 1980 and 1999 are ID = 34,48
+# quartz(file=paste0(base.dir,"/spring-chinook-distribution/Heatmaps/CPUE Troll observations heatmap PUB Priest 1980.pdf"),height=4,width=5,dpi=600,type="pdf")
+#   plot.CPUE.heatmap2( temp.all=C_troll_true,effort.all= K_troll_flat,id=901)
+# dev.off()
+# 
+# quartz(file=paste0(base.dir,"/spring-chinook-distribution/Heatmaps/CPUE Troll observations heatmap PUB Priest 1999.pdf"),height=4,width=5,dpi=600,type="pdf")
+#   plot.CPUE.heatmap2( temp.all=C_troll_true,effort.all= K_troll_flat,id=920)
+# dev.off()
+# 
+# # read in files combine into side by side figures
+# p1 <- ggdraw() + draw_image(magick::image_read_pdf(paste0(base.dir,"/spring-chinook-distribution/Heatmaps/CPUE Troll observations heatmap PUB Priest 1980.pdf"), 
+#                                                    density = 600))
+# p2 <- ggdraw() + draw_image(magick::image_read_pdf(paste0(base.dir,"/spring-chinook-distribution/Heatmaps/CPUE Troll observations heatmap PUB Priest 1999.pdf"), 
+#                                                    density = 600))
+# 
+# quartz(file=paste0(base.dir,"/spring-chinook-distribution/Heatmaps/CPUE Troll observations heatmap PUB Priest Combined.pdf"),height=4,width=10,dpi=600,type="pdf")
+# print(plot_grid(p1,p2))
+# dev.off()

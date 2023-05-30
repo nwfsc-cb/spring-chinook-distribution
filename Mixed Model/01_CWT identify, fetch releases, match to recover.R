@@ -10,7 +10,6 @@ base.dir <- "/Users/ole.shelton/GitHub"
 
 RUN.TYPE = "spring-summer" ### options: fall, spring-summer, south, case_study, case_study_south, spring-summer-fall
 
-
 #GROUP <- "OR_ESA"
 GROUP <- "FRAM_2022_12"  ### Options "CA", "CA+" "COL" "CA+COL" "CA+COL_AWG" "CA+COL+PUSO" , FRAM_v1, FRAM_v2 # THIS IS WHAT YOU READ IN WITH
                      ###  "FRAM_EXP" is an experimental one for looking at                 
@@ -47,7 +46,6 @@ if(RUN.TYPE=="spring-summer"){
 if(RUN.TYPE=="OR_ESA"){
   NOM <- paste(base.dir,"/Orca_Salmon_DATA/Releases/OR_ESA/river releases chinook ",GROUP," 2023_04.csv",sep="")
 }
-
 
 chosen.release	<-	read.csv(NOM)
 chosen.release$hatchery_location_code	<- as.character(chosen.release$hatchery_location_code)
@@ -876,7 +874,7 @@ if(RUN.TYPE=="OR_ESA"){
 # This reads in the dates of rockfish fisheries effort from fish tickets 
 source(paste0(base.dir,"/spring-chinook-distribution/_R code for processing raw data/Process ALASKA rockfish effort.R"))
 
-trawl.rockfish.AK <- read.csv(paste0(data.cwt.dir,"/Rockfish CWT.csv")) %>%
+trawl.rockfish.AK <- read.csv(paste0(base.dir,"/Orca_Salmon_DATA/Recoveries/Alaska Trawl/Rockfish CWT.csv")) %>%
   dplyr::mutate(Long=-1*Long, tag_code= str_pad(tag_code, pad = "0", width = 6, side = c("left"))) %>%
   tidyr::separate(recovery_date, into =c("rec.year", "rec_monthrec_day"), sep = 4) %>%
   tidyr::separate(rec_monthrec_day, into =c("rec.month", "rec.day"), sep = 2) %>%
@@ -887,7 +885,7 @@ trawl.rockfish.AK <- read.csv(paste0(data.cwt.dir,"/Rockfish CWT.csv")) %>%
   dplyr::mutate(rec.area.code = case_when(Area == 620 ~ "EAPEN",   
                                           Area == 630 ~ "NWGOA",
                                           Long <= -147 & Long > -154 ~ "NWGOA", #"X630",
-                                          Long <= -154 & Long > -159  ~ "WAPEN", #"X620",
+                                          Long <= -154 & Long > -159  ~ "EAPEN", #"X620",
                                           TRUE~ "FIX" )) %>%  # 5 fish from 2013 from ship Cape Kiwanda that do not have any location info. 
   filter(#!Missing_Fins %in% c("None", "none"), 
          !rec.area.code=="FIX", 
@@ -909,7 +907,7 @@ dat.trawl.rockfish.AK <- trawl.rockfish.AK %>%
 ## Write to File
 ocean.recover.rockfish.AK.shoreside = list(dat=dat.trawl.rockfish.AK)
 
-save(ocean.recover.rockfish.AK.shoreside,file=paste0(base.dir,"/spring-chinook-distribution/Processed Data/Ocean Recoveries Rockfish AK Shoreside ",RUN.TYPE," ",GROUP,loc_18,".RData"))	    
+#save(ocean.recover.rockfish.AK.shoreside,file=paste0(base.dir,"/spring-chinook-distribution/Processed Data/Ocean Recoveries Rockfish AK Shoreside ",RUN.TYPE," ",GROUP,loc_18,".RData"))	    
 
 if(RUN.TYPE=="spring-summer"){
   save(ocean.recover.rockfish.AK.shoreside,file=paste0(base.dir,"/spring-chinook-distribution/Processed Data/Ocean Recoveries Rockfish AK Shoreside ",RUN.TYPE," ",GROUP,loc_18,".RData"))	    

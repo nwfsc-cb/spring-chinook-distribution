@@ -3,8 +3,8 @@ print(SAMP.FILE)
 
 MODEL    = "Joint"
 
-Warm        = 400
-Iter        = 2800
+Warm        = 1
+Iter        = 1
 N_CHAIN     = 1
 Treedepth   = 9
 Adapt_delta = 0.5
@@ -24,17 +24,21 @@ COV <- REL[,c("ID","ocean.region","brood_year",
 COV$year.reg <- paste(COV$ocean.region,COV$release_year,sep=".")
 
 # Combine Oregon and combine Van Is.x  
-COV$year.reg[substr(COV$year.reg,2,3)=="OR "] <- substr(COV$year.reg[substr(COV$year.reg,2,3)=="OR"],2,8)
-COV$year.reg[substr(COV$year.reg,3,4)=="VI"] <- substr(COV$year.reg[substr(COV$year.reg,3,4)=="VI"],3,9)
+# COV$year.reg[substr(COV$year.reg,2,3)=="OR "] <- substr(COV$year.reg[substr(COV$year.reg,2,3)=="OR"],2,8)
+# COV$year.reg[substr(COV$year.reg,3,4)=="VI"] <- substr(COV$year.reg[substr(COV$year.reg,3,4)=="VI"],3,9)
 
 dat.troll <- NULL
 dat.rec <- NULL
 dat.treaty <- NULL
 dat.hake.ashop <- NULL
 dat.hake.shoreside <- NULL
+dat.pollock.GOA <- NULL 
+dat.rockfish.AK <- NULL
 
+#### MAKE LONG FORM TRAWL DATA.
 for(i in 1:N.REL){
-  troll <- t(as.matrix(C_troll_true[i,,]))
+  troll <- data.table(t(C_troll_true[i,,]),keep.rownames = TRUE)
+  
   if(MONTH.STRUCTURE == "FOUR"){
     e.start <- grep(paste(REL$brood_year[i]+2,".month.spring",sep=""),rownames(K_troll_flat))
     if(REL$brood_year[i] == REL$release_year[i]){
@@ -48,25 +52,41 @@ for(i in 1:N.REL){
     }
   }
 
+  if(MONTH.STRUCTURE == "SPRING"){
+    e.start <- grep(paste(REL$brood_year[i]+2,".month.spring",sep=""),rownames(K_troll_flat))
+    if(REL$brood_year[i] == REL$release_year[i]){
+      e.start <- grep(paste(REL$brood_year[i]+1,".month.spring",sep=""),rownames(K_troll_flat))
+    }
+  }
+  
   e.stop  <- e.start + N.mod.month -1
-  effort <- t(as.matrix(K_troll_flat[e.start:e.stop,]))
+  effort <- data.table(t(K_troll_flat[e.start:e.stop,]),keep.rownames = TRUE)
   
-  frac_samp <- t(as.matrix(Lambda_troll_flat_int[e.start:e.stop,]))
-  time_id <- data.frame(year.season=colnames(frac_samp),time=1:ncol(frac_samp))
+  frac_samp <- data.table(t(Lambda_troll_flat_int[e.start:e.stop,]),keep.rownames = TRUE)
+  time_id <- data.frame(year.season=colnames(frac_samp)[2:ncol(frac_samp)],time=1:N.mod.month)
   
-  dat.temp <- data.frame(melt(troll))
+  these <- colnames(troll)[2:ncol(troll)]
+  dat.temp <- melt(troll,id.vars= c("rn"),
+                measure.vars= c(these) )
   colnames(dat.temp) <- c("loc","time","catch")
+  dat.temp$time <- as.integer(substr(dat.temp$time,2,nchar(as.character(dat.temp$time))))
+  
   dat.temp$rel <- COV$ID_numb[i]
   
-  dat.effort            <- data.frame(melt(effort))
+  these <- colnames(effort)[2:ncol(effort)]
+  dat.effort <- melt(effort,id.vars= c("rn"),
+                   measure.vars= c(these) )
   colnames(dat.effort) <- c("loc","year.season","effort")
   
-  dat.frac_samp        <- data.frame(melt(frac_samp))
+  these <- colnames(frac_samp)[2:ncol(frac_samp)]
+  dat.frac_samp  <- melt(frac_samp,id.vars= c("rn"),
+                               measure.vars= c(these) )
   colnames(dat.frac_samp) <- c("loc","year.season","frac_samp")
-  dat.frac_samp$time   <- time_id$time[match(dat.frac_samp$year.season,time_id$year.season)]
+  dat.frac_samp <- left_join(dat.frac_samp, time_id,by = "year.season") 
 
-  A <- merge(dat.frac_samp,dat.effort)
-  dat.temp <- merge(dat.temp,A)
+  #merge
+  dat.temp <- left_join(dat.temp,dat.frac_samp,by=c("loc","time")) %>% 
+                  left_join(.,dat.effort,by=c("loc", "year.season"))
   
   dat.temp$effort.type  <- "troll"
   dat.temp$brood_year <- COV$brood_year[i]
@@ -76,13 +96,18 @@ for(i in 1:N.REL){
   dat.temp$year.reg     <- COV$year.reg[i]
   dat.temp$ocean.reg    <- COV$ocean.region[i]
   
-  dat.troll <- bind_rows(dat.troll,dat.temp)
+  dat.troll <- rbind(dat.troll,dat.temp)
+
+  if(i %in% seq(100,N.REL,by=100)){  print(paste("TROLL",i,"of", N.REL))}
 }
 
 #### GET RID OF OBSERVATIONS WITHOUT OBSERVED CATCHES or EFFORT (times when no one caught anything or no one was fishing)
 #### GET RID OF OBSERVATIONS WITH FISHING OBSERVATIONS:
 A_troll_flat$mod.time <- 1:nrow(A_troll_flat)
-A_troll_melt <-melt(A_troll_flat,id.vars=c("rec.year","lab","month.lab","mod.time"),variable.name = "loc")
+A_troll_melt <-melt(data.table(A_troll_flat),
+                    id.vars=c("rec.year","lab","month.lab","mod.time"),
+                    measure.vars = as.character(c(1:N.mod.month)),
+                    variable.name = "loc")
 A_troll_melt <- A_troll_melt %>% mutate(year.season = paste(rec.year,lab,sep="."))
 A_troll_melt$loc <- as.numeric(as.character(A_troll_melt$loc))
 A_troll_melt <- A_troll_melt %>% dplyr::rename(indicator = value)
@@ -90,14 +115,15 @@ A_troll_melt <- A_troll_melt %>% dplyr::rename(indicator = value)
 dat.troll$loc.2  <- as.numeric(as.character(substr(dat.troll$loc,5,6)))
 
 dat.troll <- left_join(dat.troll, A_troll_melt[,c("year.season","indicator","loc")], 
-                     by = c("year.season" = "year.season", "loc.2" = "loc")) %>% dplyr::select(-loc.2)
+                     by = c("year.season" = "year.season", "loc.2" = "loc")) %>% 
+                    dplyr::select(-loc.2)
 
 dat.troll$indicator[dat.troll$effort>0] <- 1
 dat.troll <- dat.troll %>% filter(dat.troll$indicator ==1) %>% dplyr::select(-indicator)
 
 ##### REPEAT FOR RECREATIONAL FISHERIES 
 for(i in 1:N.REL){
-  rec <- t(as.matrix(C_rec_true[i,,]))
+  rec <- data.table(t(C_rec_true[i,,]),keep.rownames = TRUE)
   if(MONTH.STRUCTURE == "FOUR"){
     e.start <- grep(paste(REL$brood_year[i]+2,".month.spring",sep=""),rownames(K_rec_flat))
     if(REL$brood_year[i] == REL$release_year[i]){
@@ -110,40 +136,61 @@ for(i in 1:N.REL){
       e.start <- grep(paste(REL$brood_year[i]+1,".month.summer",sep=""),rownames(K_rec_flat))
     }
   }
+  if(MONTH.STRUCTURE == "SPRING"){
+    e.start <- grep(paste(REL$brood_year[i]+2,".month.spring",sep=""),rownames(K_rec_flat))
+    if(REL$brood_year[i] == REL$release_year[i]){
+      e.start <- grep(paste(REL$brood_year[i]+1,".month.spring",sep=""),rownames(K_rec_flat))
+    }
+  }
+  ####
   e.stop  <- e.start + N.mod.month -1
-  effort <- t(as.matrix(K_rec_all_flat[e.start:e.stop,]))
+  effort <- data.table(t(K_rec_flat[e.start:e.stop,]),keep.rownames = TRUE)
   
-  frac_samp <- t(as.matrix(Lambda_rec_flat_int[e.start:e.stop,]))
-  time_id <- data.frame(year.season=colnames(frac_samp),time=1:ncol(frac_samp))
+  frac_samp <- data.table(t(Lambda_rec_flat_int[e.start:e.stop,]),keep.rownames = TRUE)
+  time_id <- data.frame(year.season=colnames(frac_samp)[2:ncol(frac_samp)],time=1:N.mod.month)
   
-  dat.temp <- data.frame(melt(rec))
+  these <- colnames(rec)[2:ncol(rec)]
+  dat.temp <- melt(rec,id.vars= c("rn"),
+                   measure.vars= c(these) )
   colnames(dat.temp) <- c("loc","time","catch")
+  dat.temp$time <- as.integer(substr(dat.temp$time,2,nchar(as.character(dat.temp$time))))
+  
   dat.temp$rel <- COV$ID_numb[i]
   
-  dat.effort            <- data.frame(melt(effort))
+  these <- colnames(effort)[2:ncol(effort)]
+  dat.effort <- melt(effort,id.vars= c("rn"),
+                     measure.vars= c(these) )
   colnames(dat.effort) <- c("loc","year.season","effort")
   
-  dat.frac_samp        <- data.frame(melt(frac_samp))
+  these <- colnames(frac_samp)[2:ncol(frac_samp)]
+  dat.frac_samp  <- melt(frac_samp,id.vars= c("rn"),
+                         measure.vars= c(these) )
   colnames(dat.frac_samp) <- c("loc","year.season","frac_samp")
-  dat.frac_samp$time   <- time_id$time[match(dat.frac_samp$year.season,time_id$year.season)]
+  dat.frac_samp <- left_join(dat.frac_samp, time_id,by = "year.season") 
   
-  A <- merge(dat.frac_samp,dat.effort)
-  dat.temp <- merge(dat.temp,A)
+  #merge
+  dat.temp <- left_join(dat.temp,dat.frac_samp,by=c("loc","time")) %>% 
+    left_join(.,dat.effort,by=c("loc", "year.season"))
   
   dat.temp$effort.type  <- "rec"
-  dat.temp$brood_year   <- COV$brood_year[i]
+  dat.temp$brood_year <- COV$brood_year[i]
   dat.temp$release_year <- COV$release_year[i]
   dat.temp$N.release    <- COV$N.released[i]
   dat.temp$N.month      <- COV$n.month[i]
   dat.temp$year.reg     <- COV$year.reg[i]
   dat.temp$ocean.reg    <- COV$ocean.region[i]
   
-  dat.rec <- bind_rows(dat.rec,dat.temp)
+  dat.rec <- rbind(dat.rec,dat.temp)
+  
+  if(i %in% seq(100,N.REL,by=100)){  print(paste("REC",i,"of", N.REL))}
 }
 
 #### GET RID OF OBSERVATIONS WITH FISHING OBSERVATIONS:
 A_rec_flat$mod.time <- 1:nrow(A_rec_flat)
-A_rec_melt <-melt(A_rec_flat,id.vars=c("rec.year","lab","month.lab","mod.time"),variable.name = "loc")
+A_rec_melt <-melt(data.table(A_rec_flat),
+                    id.vars=c("rec.year","lab","month.lab","mod.time"),
+                    measure.vars = as.character(c(1:N.mod.month)),
+                    variable.name = "loc")
 A_rec_melt <- A_rec_melt %>% mutate(year.season = paste(rec.year,lab,sep="."))
 A_rec_melt$loc <- as.numeric(as.character(A_rec_melt$loc))
 A_rec_melt <- A_rec_melt %>% dplyr::rename(indicator = value)
@@ -151,14 +198,18 @@ A_rec_melt <- A_rec_melt %>% dplyr::rename(indicator = value)
 dat.rec$loc.2  <- as.numeric(as.character(substr(dat.rec$loc,5,6)))
 
 dat.rec <- left_join(dat.rec, A_rec_melt[,c("year.season","indicator","loc")], 
-                        by = c("year.season" = "year.season", "loc.2" = "loc")) %>% dplyr::select(-loc.2)
+                       by = c("year.season" = "year.season", "loc.2" = "loc")) %>% 
+  dplyr::select(-loc.2)
 
 dat.rec$indicator[dat.rec$effort>0] <- 1
 dat.rec <- dat.rec %>% filter(dat.rec$indicator ==1) %>% dplyr::select(-indicator)
 
 ###########################  Do the same for Treaty Troll 
 for(i in 1:N.REL){
-  treaty <- t(as.matrix(C_treaty_true[i,,]))
+  COLS <- LOCATIONS %>% 
+    filter(location.name %in% c("COL","WAC","PUSO_out","PUSO")) %>% 
+    pull(location.number)
+  treaty <- data.table(t(C_treaty_true[i,,COLS]),keep.rownames = TRUE)
   if(MONTH.STRUCTURE == "FOUR"){
     e.start <- grep(paste(REL$brood_year[i]+2,".month.spring",sep=""),rownames(K_treaty_flat))
     if(REL$brood_year[i] == REL$release_year[i]){
@@ -171,26 +222,41 @@ for(i in 1:N.REL){
       e.start <- grep(paste(REL$brood_year[i]+1,".month.summer",sep=""),rownames(K_treaty_flat))
     }
   }
+  if(MONTH.STRUCTURE == "SPRING"){
+    e.start <- grep(paste(REL$brood_year[i]+2,".month.spring",sep=""),rownames(K_treaty_flat))
+    if(REL$brood_year[i] == REL$release_year[i]){
+      e.start <- grep(paste(REL$brood_year[i]+1,".month.spring",sep=""),rownames(K_treaty_flat))
+    }
+  }
   
   e.stop  <- e.start + N.mod.month -1
-  effort <- t(as.matrix(K_treaty_flat[e.start:e.stop,]))
+  effort <- data.table(t(K_treaty_flat[e.start:e.stop,COLS]),keep.rownames = TRUE)
   
-  frac_samp <- t(as.matrix(Lambda_treaty_flat_int[e.start:e.stop,]))
-  time_id <- data.frame(year.season=colnames(frac_samp),time=1:ncol(frac_samp))
+  frac_samp <- data.table(t(Lambda_treaty_flat_int[e.start:e.stop,COLS]),keep.rownames = TRUE)
+  time_id <- data.frame(year.season=colnames(frac_samp)[2:ncol(frac_samp)],time=1:N.mod.month)
   
-  dat.temp <- data.frame(melt(treaty))
+  these <- colnames(treaty)[2:ncol(treaty)]
+  dat.temp <- melt(treaty,id.vars= c("rn"),
+                   measure.vars= c(these) )
   colnames(dat.temp) <- c("loc","time","catch")
+  dat.temp$time <- as.integer(substr(dat.temp$time,2,nchar(as.character(dat.temp$time))))
+  
   dat.temp$rel <- COV$ID_numb[i]
   
-  dat.effort            <- data.frame(melt(effort))
+  these <- colnames(effort)[2:ncol(effort)]
+  dat.effort <- melt(effort,id.vars= c("rn"),
+                     measure.vars= c(these) )
   colnames(dat.effort) <- c("loc","year.season","effort")
   
-  dat.frac_samp        <- data.frame(melt(frac_samp))
+  these <- colnames(frac_samp)[2:ncol(frac_samp)]
+  dat.frac_samp  <- melt(frac_samp,id.vars= c("rn"),
+                         measure.vars= c(these) )
   colnames(dat.frac_samp) <- c("loc","year.season","frac_samp")
-  dat.frac_samp$time   <- time_id$time[match(dat.frac_samp$year.season,time_id$year.season)]
+  dat.frac_samp <- left_join(dat.frac_samp, time_id,by = "year.season") 
   
-  A <- merge(dat.frac_samp,dat.effort)
-  dat.temp <- merge(dat.temp,A)
+  #merge
+  dat.temp <- left_join(dat.temp,dat.frac_samp,by=c("loc","time")) %>% 
+    left_join(.,dat.effort,by=c("loc", "year.season"))
   
   dat.temp$effort.type  <- "treaty"
   dat.temp$brood_year <- COV$brood_year[i]
@@ -200,11 +266,17 @@ for(i in 1:N.REL){
   dat.temp$year.reg     <- COV$year.reg[i]
   dat.temp$ocean.reg    <- COV$ocean.region[i]
   
-  dat.treaty <- bind_rows(dat.treaty,dat.temp)
+  dat.treaty <- rbind(dat.treaty,dat.temp)
+  
+  if(i %in% seq(100,N.REL,by=100)){  print(paste("TREATY",i,"of", N.REL))}
 }
 
+#### GET RID OF OBSERVATIONS WITH FISHING OBSERVATIONS:
 A_treaty_flat$mod.time <- 1:nrow(A_treaty_flat)
-A_treaty_melt <-melt(A_treaty_flat,id.vars=c("rec.year","lab","month.lab","mod.time"),variable.name = "loc")
+A_treaty_melt <-melt(data.table(A_treaty_flat),
+                  id.vars=c("rec.year","lab","month.lab","mod.time"),
+                  measure.vars = as.character(c(1:N.mod.month)),
+                  variable.name = "loc")
 A_treaty_melt <- A_treaty_melt %>% mutate(year.season = paste(rec.year,lab,sep="."))
 A_treaty_melt$loc <- as.numeric(as.character(A_treaty_melt$loc))
 A_treaty_melt <- A_treaty_melt %>% dplyr::rename(indicator = value)
@@ -212,22 +284,25 @@ A_treaty_melt <- A_treaty_melt %>% dplyr::rename(indicator = value)
 dat.treaty$loc.2  <- as.numeric(as.character(substr(dat.treaty$loc,5,6)))
 
 dat.treaty <- left_join(dat.treaty, A_treaty_melt[,c("year.season","indicator","loc")], 
-                     by = c("year.season" = "year.season", "loc.2" = "loc")) %>% dplyr::select(-loc.2)
+                     by = c("year.season" = "year.season", "loc.2" = "loc")) %>% 
+                      dplyr::select(-loc.2)
 
 dat.treaty$indicator[dat.treaty$effort>0] <- 1
-dat.treaty <- dat.treaty %>% filter(dat.treaty$indicator ==1)
-dat.treaty <- dat.treaty %>% dplyr::select(-indicator)
-
+dat.treaty <- dat.treaty %>% filter(dat.treaty$indicator ==1) %>% dplyr::select(-indicator)
 
 ############################################################
 ### Add Trawl Fisheries data to the mix.  First ASHOP
 ############################################################
 
-
-if(TRAWL.US==T){
-
+#if(TRAWL.US==T){
 for(i in 1:N.REL){
-  hake_ashop <- t(as.matrix(C_hake_ashop_true[i,,]))
+  COLS <- LOCATIONS %>% 
+    filter(location.name %in% c("MONT",  "SFB",  "MEN",  "NCA",  
+                                "SOR",  "NOR",  "COL",  "WAC",  
+                                "PUSO",  "PUSO_out")) %>% 
+    pull(location.number)
+  
+  hake_ashop <- data.table(t(C_hake_ashop_true[i,,COLS]),keep.rownames = TRUE)
   if(MONTH.STRUCTURE == "FOUR"){
     e.start <- grep(paste(REL$brood_year[i]+2,".month.spring",sep=""),rownames(K_hake_ashop_flat))
     if(REL$brood_year[i] == REL$release_year[i]){
@@ -240,62 +315,80 @@ for(i in 1:N.REL){
       e.start <- grep(paste(REL$brood_year[i]+1,".month.summer",sep=""),rownames(K_hake_ashop_flat))
     }
   }
-  
+  if(MONTH.STRUCTURE == "SPRING"){
+    e.start <- grep(paste(REL$brood_year[i]+2,".month.spring",sep=""),rownames(K_hake_ashop_flat))
+    if(REL$brood_year[i] == REL$release_year[i]){
+      e.start <- grep(paste(REL$brood_year[i]+1,".month.spring",sep=""),rownames(K_hake_ashop_flat))
+    }
+  }
   e.stop  <- e.start + N.mod.month -1
-  effort <- t(as.matrix(K_hake_ashop_flat[e.start:e.stop,]))
+  effort <- data.table(t(K_hake_ashop_flat[e.start:e.stop,COLS]),keep.rownames = TRUE)
   
-  frac_samp <- t(as.matrix(Lambda_hake_ashop_flat_int[e.start:e.stop,]))
-  time_id <- data.frame(year.season=colnames(frac_samp),time=1:ncol(frac_samp))
+  frac_samp <- data.table(t(Lambda_hake_ashop_flat_int[e.start:e.stop,COLS]),keep.rownames = TRUE)
+  time_id <- data.frame(year.season=colnames(frac_samp)[2:ncol(frac_samp)],time=1:N.mod.month)
   
-  dat.temp <- data.frame(melt(hake_ashop))
+  these <- colnames(hake_ashop)[2:ncol(hake_ashop)]
+  dat.temp <- melt(hake_ashop,id.vars= c("rn"),
+                   measure.vars= c(these) )
   colnames(dat.temp) <- c("loc","time","catch")
+  dat.temp$time <- as.integer(substr(dat.temp$time,2,nchar(as.character(dat.temp$time))))
+  
   dat.temp$rel <- COV$ID_numb[i]
   
-  dat.effort            <- data.frame(melt(effort))
+  these <- colnames(effort)[2:ncol(effort)]
+  dat.effort <- melt(effort,id.vars= c("rn"),
+                     measure.vars= c(these) )
   colnames(dat.effort) <- c("loc","year.season","effort")
   
-  dat.frac_samp        <- data.frame(melt(frac_samp))
+  these <- colnames(frac_samp)[2:ncol(frac_samp)]
+  dat.frac_samp  <- melt(frac_samp,id.vars= c("rn"),
+                         measure.vars= c(these) )
   colnames(dat.frac_samp) <- c("loc","year.season","frac_samp")
-  dat.frac_samp$time   <- time_id$time[match(dat.frac_samp$year.season,time_id$year.season)]
+  dat.frac_samp <- left_join(dat.frac_samp, time_id,by = "year.season") 
   
-  A <- merge(dat.frac_samp,dat.effort)
-  dat.temp <- merge(dat.temp,A)
+  #merge
+  dat.temp <- left_join(dat.temp,dat.frac_samp,by=c("loc","time")) %>% 
+    left_join(.,dat.effort,by=c("loc", "year.season"))
   
-  dat.temp$effort.type  <- "ashop"
-  dat.temp$brood_year   <- COV$brood_year[i]
+  dat.temp$effort.type  <- "hake_ashop"
+  dat.temp$brood_year <- COV$brood_year[i]
   dat.temp$release_year <- COV$release_year[i]
   dat.temp$N.release    <- COV$N.released[i]
   dat.temp$N.month      <- COV$n.month[i]
   dat.temp$year.reg     <- COV$year.reg[i]
   dat.temp$ocean.reg    <- COV$ocean.region[i]
   
-  dat.hake.ashop <- bind_rows(dat.hake.ashop,dat.temp)
+  dat.hake.ashop <- rbind(dat.hake.ashop,dat.temp)
+  
+  if(i %in% seq(100,N.REL,by=100)){  print(paste("hake_ashop",i,"of", N.REL))}
 }
-
-#### GET RID OF OBSERVATIONS WITHOUT OBSERVED CATCHES or EFFORT or SAMPLING (times when no one caught anything or no one was fishing)
-#### GET RID OF OBSERVATIONS WITH FISHING OBSERVATIONS:
-A_hake_ashop_flat$mod.time <- 1:nrow(A_hake_ashop_flat)
-A_hake_ashop_melt <-melt(A_hake_ashop_flat,id.vars=c("rec.year","lab","month.lab","mod.time"),variable.name = "loc")
-A_hake_ashop_melt <- A_hake_ashop_melt %>% mutate(year.season = paste(rec.year,lab,sep="."))
-A_hake_ashop_melt$loc <- as.numeric(as.character(A_hake_ashop_melt$loc))
-A_hake_ashop_melt <- A_hake_ashop_melt %>% dplyr::rename(indicator = value)
-
-dat.hake.ashop$loc.2  <- as.numeric(as.character(substr(dat.hake.ashop$loc,5,6)))
-
-dat.hake.ashop <- left_join(dat.hake.ashop, A_hake_ashop_melt[,c("year.season","indicator","loc")], 
-                       by = c("year.season" = "year.season", "loc.2" = "loc")) %>% dplyr::select(-loc.2)
-
-dat.hake.ashop$indicator[dat.hake.ashop$effort>0] <- 1
-dat.hake.ashop$indicator[dat.hake.ashop$effort>0 & dat.hake.ashop$frac_samp==0 ] <- 0
-dat.hake.ashop <- dat.hake.ashop %>% filter(indicator == 1) %>% dplyr::select(-indicator)
-# Get rid of all observations on or before the year TRIM.ASHOP
-dat.hake.ashop <- dat.hake.ashop %>% mutate(YYY= substr(dat.hake.ashop$year.season,1,4) %>% as.numeric())
-dat.hake.ashop <- dat.hake.ashop %>% filter(YYY>TRIM.ASHOP) %>% dplyr::select(-YYY) 
-
+  #### GET RID OF OBSERVATIONS WITH FISHING OBSERVATIONS:
+  A_hake_ashop_flat$mod.time <- 1:nrow(A_hake_ashop_flat)
+  A_hake_ashop_melt <-melt(data.table(A_hake_ashop_flat),
+                       id.vars=c("rec.year","lab","month.lab","mod.time"),
+                       measure.vars = as.character(c(1:N.mod.month)),
+                       variable.name = "loc")
+  A_hake_ashop_melt <- A_hake_ashop_melt %>% mutate(year.season = paste(rec.year,lab,sep="."))
+  A_hake_ashop_melt$loc <- as.numeric(as.character(A_hake_ashop_melt$loc))
+  A_hake_ashop_melt <- A_hake_ashop_melt %>% dplyr::rename(indicator = value)
+  
+  dat.hake.ashop$loc.2  <- as.numeric(as.character(substr(dat.hake.ashop$loc,5,6)))
+  
+  dat.hake.ashop <- left_join(dat.hake.ashop, A_hake_ashop_melt[,c("year.season","indicator","loc")], 
+                          by = c("year.season" = "year.season", "loc.2" = "loc")) %>% 
+                         dplyr::select(-loc.2)
+  
+  dat.hake.ashop$indicator[dat.hake.ashop$effort>0] <- 1
+  dat.hake.ashop <- dat.hake.ashop %>% filter(dat.hake.ashop$indicator ==1) %>% dplyr::select(-indicator)
 
 ##### Shoreside
 for(i in 1:N.REL){
-  hake_shoreside <- t(as.matrix(C_hake_shoreside_true[i,,]))
+  COLS <- LOCATIONS %>% 
+    filter(location.name %in% c("MONT",  "SFB",  "MEN",  "NCA",  
+                                "SOR",  "NOR",  "COL",  "WAC",  
+                                "PUSO",  "PUSO_out")) %>% 
+    pull(location.number)
+  hake_shoreside <- data.table(t(C_hake_shoreside_true[i,,COLS]),keep.rownames = TRUE)
   if(MONTH.STRUCTURE == "FOUR"){
     e.start <- grep(paste(REL$brood_year[i]+2,".month.spring",sep=""),rownames(K_hake_shoreside_flat))
     if(REL$brood_year[i] == REL$release_year[i]){
@@ -308,61 +401,281 @@ for(i in 1:N.REL){
       e.start <- grep(paste(REL$brood_year[i]+1,".month.summer",sep=""),rownames(K_hake_shoreside_flat))
     }
   }
-  
+  if(MONTH.STRUCTURE == "SPRING"){
+    e.start <- grep(paste(REL$brood_year[i]+2,".month.spring",sep=""),rownames(K_hake_shoreside_flat))
+    if(REL$brood_year[i] == REL$release_year[i]){
+      e.start <- grep(paste(REL$brood_year[i]+1,".month.spring",sep=""),rownames(K_hake_shoreside_flat))
+    }
+  }
+
   e.stop  <- e.start + N.mod.month -1
-  effort <- t(as.matrix(K_hake_shoreside_flat[e.start:e.stop,]))
+  effort <- data.table(t(K_hake_shoreside_flat[e.start:e.stop,COLS]),keep.rownames = TRUE)
   
-  frac_samp <- t(as.matrix(Lambda_hake_shoreside_flat_int[e.start:e.stop,]))
-  time_id <- data.frame(year.season=colnames(frac_samp),time=1:ncol(frac_samp))
+  frac_samp <- data.table(t(Lambda_hake_shoreside_flat_int[e.start:e.stop,COLS]),keep.rownames = TRUE)
+  time_id <- data.frame(year.season=colnames(frac_samp)[2:ncol(frac_samp)],time=1:N.mod.month)
   
-  dat.temp <- data.frame(melt(hake_shoreside))
+  these <- colnames(hake_shoreside)[2:ncol(hake_shoreside)]
+  dat.temp <- melt(hake_shoreside,id.vars= c("rn"),
+                   measure.vars= c(these) )
   colnames(dat.temp) <- c("loc","time","catch")
+  dat.temp$time <- as.integer(substr(dat.temp$time,2,nchar(as.character(dat.temp$time))))
+  
   dat.temp$rel <- COV$ID_numb[i]
   
-  dat.effort            <- data.frame(melt(effort))
+  these <- colnames(effort)[2:ncol(effort)]
+  dat.effort <- melt(effort,id.vars= c("rn"),
+                     measure.vars= c(these) )
   colnames(dat.effort) <- c("loc","year.season","effort")
   
-  dat.frac_samp        <- data.frame(melt(frac_samp))
+  these <- colnames(frac_samp)[2:ncol(frac_samp)]
+  dat.frac_samp  <- melt(frac_samp,id.vars= c("rn"),
+                         measure.vars= c(these) )
   colnames(dat.frac_samp) <- c("loc","year.season","frac_samp")
-  dat.frac_samp$time   <- time_id$time[match(dat.frac_samp$year.season,time_id$year.season)]
+  dat.frac_samp <- left_join(dat.frac_samp, time_id,by = "year.season") 
   
-  A <- merge(dat.frac_samp,dat.effort)
-  dat.temp <- merge(dat.temp,A)
+  #merge
+  dat.temp <- left_join(dat.temp,dat.frac_samp,by=c("loc","time")) %>% 
+    left_join(.,dat.effort,by=c("loc", "year.season"))
   
-  dat.temp$effort.type  <- "shoreside"
-  dat.temp$brood_year   <- COV$brood_year[i]
+  dat.temp$effort.type  <- "hake_shoreside"
+  dat.temp$brood_year <- COV$brood_year[i]
   dat.temp$release_year <- COV$release_year[i]
   dat.temp$N.release    <- COV$N.released[i]
   dat.temp$N.month      <- COV$n.month[i]
   dat.temp$year.reg     <- COV$year.reg[i]
   dat.temp$ocean.reg    <- COV$ocean.region[i]
   
-  dat.hake.shoreside <- bind_rows(dat.hake.shoreside,dat.temp)
+  dat.hake.shoreside <- rbind(dat.hake.shoreside,dat.temp)
+  
+  if(i %in% seq(100,N.REL,by=100)){  print(paste("hake_shoreside",i,"of", N.REL))}
 }
+  #### GET RID OF OBSERVATIONS WITH FISHING OBSERVATIONS:
+  A_hake_shoreside_flat$mod.time <- 1:nrow(A_hake_shoreside_flat)
+  A_hake_shoreside_melt <-melt(data.table(A_hake_shoreside_flat),
+                           id.vars=c("rec.year","lab","month.lab","mod.time"),
+                           measure.vars = as.character(c(1:N.mod.month)),
+                           variable.name = "loc")
+  A_hake_shoreside_melt <- A_hake_shoreside_melt %>% mutate(year.season = paste(rec.year,lab,sep="."))
+  A_hake_shoreside_melt$loc <- as.numeric(as.character(A_hake_shoreside_melt$loc))
+  A_hake_shoreside_melt <- A_hake_shoreside_melt %>% dplyr::rename(indicator = value)
+  
+  dat.hake.shoreside$loc.2  <- as.numeric(as.character(substr(dat.hake.shoreside$loc,5,6)))
+  
+  dat.hake.shoreside <- left_join(dat.hake.shoreside, A_hake_shoreside_melt[,c("year.season","indicator","loc")], 
+                              by = c("year.season" = "year.season", "loc.2" = "loc")) %>% 
+    dplyr::select(-loc.2)
+  
+  dat.hake.shoreside$indicator[dat.hake.shoreside$effort>0] <- 1
+  dat.hake.shoreside <- dat.hake.shoreside %>% filter(dat.hake.shoreside$indicator ==1) %>% dplyr::select(-indicator)
+  ########################################################################
+  TRIM.SHORESIDE <- 2011 # Get rid of data from before this year because there are no reliable recoveries from earlier years.
+  
+  YYY <- as.numeric(substr(dat.hake.shoreside$year.season,1,4)) 
+  dat.hake.shoreside <- dat.hake.shoreside %>% filter(YYY >= TRIM.SHORESIDE) 
+  #####################################################################
+  # POLLOCK SHORESIDE GULF OF ALASKA
+  #####################################################################
+  
+  for(i in 1:N.REL){
+    COLS <- LOCATIONS %>% 
+      filter(location.name %in% c("NEGOA","NWGOA","EAPEN","WAPEN")) %>% 
+      pull(location.number)
+    pollock_GOA <- data.table(t(C_pollock_GOA_true[i,,COLS]),keep.rownames = TRUE)
+    if(MONTH.STRUCTURE == "FOUR"){
+      e.start <- grep(paste(REL$brood_year[i]+2,".month.spring",sep=""),rownames(K_pollock_shoreside_flat))
+      if(REL$brood_year[i] == REL$release_year[i]){
+        e.start <- grep(paste(REL$brood_year[i]+1,".month.spring",sep=""),rownames(K_pollock_shoreside_flat))
+      }
+    }
+    if(MONTH.STRUCTURE == "FRAM"){
+      e.start <- grep(paste(REL$brood_year[i]+2,".month.summer",sep=""),rownames(K_pollock_shoreside_flat))
+      if(REL$brood_year[i] == REL$release_year[i]){
+        e.start <- grep(paste(REL$brood_year[i]+1,".month.summer",sep=""),rownames(K_pollock_shoreside_flat))
+      }
+    }
+    if(MONTH.STRUCTURE == "SPRING"){
+      e.start <- grep(paste(REL$brood_year[i]+2,".month.spring",sep=""),rownames(K_pollock_shoreside_flat))
+      if(REL$brood_year[i] == REL$release_year[i]){
+        e.start <- grep(paste(REL$brood_year[i]+1,".month.spring",sep=""),rownames(K_pollock_shoreside_flat))
+      }
+    }
+    
+    
+    e.stop  <- e.start + N.mod.month -1
+    effort <- data.table(t(K_pollock_shoreside_flat[e.start:e.stop,COLS]),keep.rownames = TRUE)
+    
+    frac_samp <- data.table(t(Lambda_pollock_GOA_flat[e.start:e.stop,COLS]),keep.rownames = TRUE)
+    time_id <- data.frame(year.season=colnames(frac_samp)[2:ncol(frac_samp)],time=1:N.mod.month)
+    
+    these <- colnames(pollock_GOA)[2:ncol(pollock_GOA)]
+    dat.temp <- melt(pollock_GOA,id.vars= c("rn"),
+                     measure.vars= c(these) )
+    colnames(dat.temp) <- c("loc","time","catch")
+    dat.temp$time <- as.integer(substr(dat.temp$time,2,nchar(as.character(dat.temp$time))))
+    
+    dat.temp$rel <- COV$ID_numb[i]
+    
+    these <- colnames(effort)[2:ncol(effort)]
+    dat.effort <- melt(effort,id.vars= c("rn"),
+                       measure.vars= c(these) )
+    colnames(dat.effort) <- c("loc","year.season","effort")
+    
+    these <- colnames(frac_samp)[2:ncol(frac_samp)]
+    dat.frac_samp  <- melt(frac_samp,id.vars= c("rn"),
+                           measure.vars= c(these) )
+    colnames(dat.frac_samp) <- c("loc","year.season","frac_samp")
+    dat.frac_samp <- left_join(dat.frac_samp, time_id,by = "year.season") 
+    
+    #merge
+    dat.temp <- left_join(dat.temp,dat.frac_samp,by=c("loc","time")) %>% 
+      left_join(.,dat.effort,by=c("loc", "year.season"))
+    
+    dat.temp$effort.type  <- "pollock_GOA"
+    dat.temp$brood_year <- COV$brood_year[i]
+    dat.temp$release_year <- COV$release_year[i]
+    dat.temp$N.release    <- COV$N.released[i]
+    dat.temp$N.month      <- COV$n.month[i]
+    dat.temp$year.reg     <- COV$year.reg[i]
+    dat.temp$ocean.reg    <- COV$ocean.region[i]
+    
+    dat.pollock.GOA <- rbind(dat.pollock.GOA,dat.temp)
+    
+    if(i %in% seq(100,N.REL,by=100)){  print(paste("pollock.GOA",i,"of", N.REL))}
+  }
+  #### GET RID OF OBSERVATIONS WITH FISHING OBSERVATIONS:
+  A_pollock_shoreside_flat$mod.time <- 1:nrow(A_pollock_shoreside_flat)
+  A_pollock_shoreside_melt <-melt(data.table(A_pollock_shoreside_flat),
+                               id.vars=c("rec.year","lab","month.lab","mod.time"),
+                               measure.vars = as.character(c(1:N.mod.month)),
+                               variable.name = "loc")
+  A_pollock_shoreside_melt <- A_pollock_shoreside_melt %>% mutate(year.season = paste(rec.year,lab,sep="."))
+  A_pollock_shoreside_melt$loc <- as.numeric(as.character(A_pollock_shoreside_melt$loc))
+  A_pollock_shoreside_melt <- A_pollock_shoreside_melt %>% dplyr::rename(indicator = value)
+  
+  dat.pollock.GOA$loc.2  <- as.numeric(as.character(substr(dat.pollock.GOA$loc,5,6)))
+  
+  dat.pollock.GOA <- left_join(dat.pollock.GOA, A_pollock_shoreside_melt[,c("year.season","indicator","loc")], 
+                                  by = c("year.season" = "year.season", "loc.2" = "loc")) %>% 
+                      dplyr::select(-loc.2)
+  
+  # This is for effort present.
+  dat.pollock.GOA$indicator2<- 0
+  dat.pollock.GOA$indicator2[dat.pollock.GOA$effort>0] <- 1
+  
+  # This is for non-zero sample fractions.
+  dat.pollock.GOA$indicator3 <- 0
+  dat.pollock.GOA$indicator3[dat.pollock.GOA$frac_samp>0] <- 1
 
-#### GET RID OF OBSERVATIONS WITHOUT OBSERVED CATCHES or EFFORT (times when no one caught anything or no one was fishing)
-#### GET RID OF OBSERVATIONS WITH FISHING OBSERVATIONS:
-A_hake_shoreside_flat$mod.time <- 1:nrow(A_hake_shoreside_flat)
-A_hake_shoreside_melt <-melt(A_hake_shoreside_flat,id.vars=c("rec.year","lab","month.lab","mod.time"),variable.name = "loc")
-A_hake_shoreside_melt <- A_hake_shoreside_melt %>% mutate(year.season = paste(rec.year,lab,sep="."))
-A_hake_shoreside_melt$loc <- as.numeric(as.character(A_hake_shoreside_melt$loc))
-A_hake_shoreside_melt <- A_hake_shoreside_melt %>% dplyr::rename(indicator = value)
+  A <- dat.pollock.GOA %>% filter(indicator ==1)
+  B <- dat.pollock.GOA %>% filter(indicator ==0) %>% filter(indicator2 ==1,indicator3==1)
+  
+  dat.pollock.GOA <- bind_rows(A,B) %>% dplyr::select(-indicator,-indicator2,-indicator3)
+  
+  # TRIM OUT ALL pollock recoveries from 1996 and earlier.
+  TRIM.POLLOCK <- 1997 # Get rid of data from before this year because there are no reliable recoveries from earlier years.
+  
+  YYY <- as.numeric(substr(dat.pollock.GOA$year.season,1,4)) 
+  dat.pollock.GOA <- dat.pollock.GOA %>% filter(YYY >= TRIM.POLLOCK) 
+  # Trim Spring 1997 out
+  dat.pollock.GOA <- dat.pollock.GOA %>% filter(!year.season == "1997.month.spring")
 
-dat.hake.shoreside$loc.2  <- as.numeric(as.character(substr(dat.hake.shoreside$loc,5,6)))
-
-dat.hake.shoreside <- left_join(dat.hake.shoreside, A_hake_shoreside_melt[,c("year.season","indicator","loc")], 
-                            by = c("year.season" = "year.season", "loc.2" = "loc")) %>% dplyr::select(-loc.2)
-
-dat.hake.shoreside$indicator[dat.hake.shoreside$effort>0] <- 1
-dat.hake.shoreside <- dat.hake.shoreside %>% filter(dat.hake.shoreside$indicator ==1) %>% dplyr::select(-indicator)
-
-########################################################################
-TRIM.SHORESIDE <- 2011 # Get rid of data from before this year because there are no reliable recoveries from earlier years.
-
-YYY <- as.numeric(substr(dat.hake.shoreside$year.season,1,4)) 
-dat.hake.shoreside <- dat.hake.shoreside %>% filter(YYY >= TRIM.SHORESIDE) 
-#####################################################################
-} # end TRAWL.US if statement
+  #####################################################################
+  # ROCKFISH SHORESIDE GULF OF ALASKA
+  #####################################################################
+  for(i in 1:N.REL){
+    COLS <- LOCATIONS %>% 
+      filter(location.name %in% c("NEGOA","NWGOA","EAPEN","WAPEN")) %>% 
+      pull(location.number)
+    rockfish_AK <- data.table(t(C_rockfish_AK_true[i,,COLS]),keep.rownames = TRUE)
+    if(MONTH.STRUCTURE == "FOUR"){
+      e.start <- grep(paste(REL$brood_year[i]+2,".month.spring",sep=""),rownames(K_rockfish_AK_shoreside_flat))
+      if(REL$brood_year[i] == REL$release_year[i]){
+        e.start <- grep(paste(REL$brood_year[i]+1,".month.spring",sep=""),rownames(K_rockfish_AK_shoreside_flat))
+      }
+    }
+    if(MONTH.STRUCTURE == "FRAM"){
+      e.start <- grep(paste(REL$brood_year[i]+2,".month.summer",sep=""),rownames(K_rockfish_AK_shoreside_flat))
+      if(REL$brood_year[i] == REL$release_year[i]){
+        e.start <- grep(paste(REL$brood_year[i]+1,".month.summer",sep=""),rownames(K_rockfish_AK_shoreside_flat))
+      }
+    }
+    if(MONTH.STRUCTURE == "SPRING"){
+      e.start <- grep(paste(REL$brood_year[i]+2,".month.spring",sep=""),rownames(K_rockfish_AK_shoreside_flat))
+      if(REL$brood_year[i] == REL$release_year[i]){
+        e.start <- grep(paste(REL$brood_year[i]+1,".month.spring",sep=""),rownames(K_rockfish_AK_shoreside_flat))
+      }
+    }
+    
+    
+    e.stop  <- e.start + N.mod.month -1
+    effort <- data.table(t(K_rockfish_AK_shoreside_flat[e.start:e.stop,COLS]),keep.rownames = TRUE)
+    
+    frac_samp <- data.table(t(Lambda_rockfish_AK_flat[e.start:e.stop,COLS]),keep.rownames = TRUE)
+    time_id <- data.frame(year.season=colnames(frac_samp)[2:ncol(frac_samp)],time=1:N.mod.month)
+    
+    these <- colnames(rockfish_AK)[2:ncol(rockfish_AK)]
+    dat.temp <- melt(rockfish_AK,id.vars= c("rn"),
+                     measure.vars= c(these) )
+    colnames(dat.temp) <- c("loc","time","catch")
+    dat.temp$time <- as.integer(substr(dat.temp$time,2,nchar(as.character(dat.temp$time))))
+    
+    dat.temp$rel <- COV$ID_numb[i]
+    
+    these <- colnames(effort)[2:ncol(effort)]
+    dat.effort <- melt(effort,id.vars= c("rn"),
+                       measure.vars= c(these) )
+    colnames(dat.effort) <- c("loc","year.season","effort")
+    
+    these <- colnames(frac_samp)[2:ncol(frac_samp)]
+    dat.frac_samp  <- melt(frac_samp,id.vars= c("rn"),
+                           measure.vars= c(these) )
+    colnames(dat.frac_samp) <- c("loc","year.season","frac_samp")
+    dat.frac_samp <- left_join(dat.frac_samp, time_id,by = "year.season") 
+    
+    #merge
+    dat.temp <- left_join(dat.temp,dat.frac_samp,by=c("loc","time")) %>% 
+      left_join(.,dat.effort,by=c("loc", "year.season"))
+    
+    dat.temp$effort.type  <- "rockfish_AK"
+    dat.temp$brood_year <- COV$brood_year[i]
+    dat.temp$release_year <- COV$release_year[i]
+    dat.temp$N.release    <- COV$N.released[i]
+    dat.temp$N.month      <- COV$n.month[i]
+    dat.temp$year.reg     <- COV$year.reg[i]
+    dat.temp$ocean.reg    <- COV$ocean.region[i]
+    
+    dat.rockfish.AK <- rbind(dat.rockfish.AK,dat.temp)
+    
+    if(i %in% seq(100,N.REL,by=100)){  print(paste("rockfish.AK",i,"of", N.REL))}
+  }
+  #### GET RID OF OBSERVATIONS WITH FISHING OBSERVATIONS:
+  A_rockfish_AK_shoreside_flat$mod.time <- 1:nrow(A_rockfish_AK_shoreside_flat)
+  A_rockfish_AK_shoreside_melt <-melt(data.table(A_rockfish_AK_shoreside_flat),
+                                  id.vars=c("rec.year","lab","month.lab","mod.time"),
+                                  measure.vars = as.character(c(1:N.mod.month)),
+                                  variable.name = "loc")
+  A_rockfish_AK_shoreside_melt <- A_rockfish_AK_shoreside_melt %>% mutate(year.season = paste(rec.year,lab,sep="."))
+  A_rockfish_AK_shoreside_melt$loc <- as.numeric(as.character(A_rockfish_AK_shoreside_melt$loc))
+  A_rockfish_AK_shoreside_melt <- A_rockfish_AK_shoreside_melt %>% dplyr::rename(indicator = value)
+  
+  dat.rockfish.AK$loc.2  <- as.numeric(as.character(substr(dat.rockfish.AK$loc,5,6)))
+  
+  dat.rockfish.AK <- left_join(dat.rockfish.AK, A_rockfish_AK_shoreside_melt[,c("year.season","indicator","loc")], 
+                               by = c("year.season" = "year.season", "loc.2" = "loc")) %>% 
+                        dplyr::select(-loc.2)
+  
+  # This is for effort present.
+  dat.rockfish.AK$indicator2<- 0
+  dat.rockfish.AK$indicator2[dat.rockfish.AK$effort>0] <- 1
+  
+  # This is for non-zero sample fractions.
+  dat.rockfish.AK$indicator3 <- 0
+  dat.rockfish.AK$indicator3[dat.rockfish.AK$frac_samp>0] <- 1
+  
+  A <- dat.rockfish.AK %>% filter(indicator ==1)
+  B <- dat.rockfish.AK %>% filter(indicator ==0) %>% filter(indicator2 ==1,indicator3==1)
+  
+  dat.rockfish.AK <- bind_rows(A,B) %>% dplyr::select(-indicator,-indicator2,-indicator3)
 
 #####################################################################
 #####################################################################
@@ -382,6 +695,8 @@ dat.all   <- rbind(dat.troll,dat.rec)
 dat.all   <- rbind(dat.all,dat.treaty)
 dat.all   <- rbind(dat.all,dat.hake.ashop)
 dat.all   <- rbind(dat.all,dat.hake.shoreside)
+dat.all   <- rbind(dat.all,dat.pollock.GOA)
+dat.all   <- rbind(dat.all,dat.rockfish.AK)
 
 dat.all.raw <- dat.all
 ############################################ 
@@ -397,6 +712,7 @@ dat.all <- dat.bin
 
 ## This section adds indexes to the data frame.
 dat.all$location <- as.numeric( substr(dat.all$loc,5,6))
+# year is for model year.
 # "time" is in terms of calendar years
 if(MONTH.STRUCTURE=="FOUR"){
   dat.all$year[dat.all$time <=3] <- 1
@@ -414,8 +730,16 @@ if(MONTH.STRUCTURE=="FRAM"){
     dat.all$year[dat.all$time >15 & dat.all$time <= 19] <- 5
     dat.all$year <- as.numeric(dat.all$year)
 }
-  
-  
+if(MONTH.STRUCTURE=="SPRING"){  
+  dat.all$year[dat.all$time <=3] <- 1
+  dat.all$year[dat.all$time >3  & dat.all$time <= 7]   <- 2
+  dat.all$year[dat.all$time >7  & dat.all$time <= 11]  <- 3
+  dat.all$year[dat.all$time >11 & dat.all$time <= 15] <- 4
+  dat.all$year[dat.all$time >15 & dat.all$time <= 20] <- 5
+  dat.all$year[dat.all$time == 21] <- 6
+  dat.all$year <- as.numeric(dat.all$year)
+} 
+
 AGE <- data.frame(time=1:N.mod.month,age=cumsum(Trans_month))
 dat.all$age.month <- AGE$age[match(dat.all$time,AGE$time)]
 
@@ -429,7 +753,8 @@ AGE$year[AGE$time <=3] <- 1
 AGE$year[AGE$time >3  & AGE$time <= 7]   <- 2
 AGE$year[AGE$time >7  & AGE$time <= 11]  <- 3
 AGE$year[AGE$time >11 & AGE$time <= 15] <- 4
-AGE$year[AGE$time >15 & AGE$time <= 19] <- 5
+AGE$year[AGE$time >15 & AGE$time <= 20] <- 5
+AGE$year[AGE$time >=21] <- 6
 AGE$year <- as.numeric(AGE$year)
 
 # Make a indicator variable for identifying what model time the fish enter the river to spawn
@@ -449,6 +774,39 @@ if(MONTH.STRUCTURE=="FRAM"){
   AGE$spawn_time[AGE$time==14] <- 4
   AGE$spawn_time[AGE$time==18] <- 5
 }
+if(MONTH.STRUCTURE=="SPRING"){
+  AGE$spawn_time_spr <- 0
+  AGE$spawn_time_spr[AGE$time==1]  <- 1
+  AGE$spawn_time_spr[AGE$time==5]  <- 2
+  AGE$spawn_time_spr[AGE$time==9]  <- 3
+  AGE$spawn_time_spr[AGE$time==13] <- 4
+  AGE$spawn_time_spr[AGE$time==17] <- 5
+  AGE$spawn_time_spr[AGE$time==21] <- 6
+  
+  AGE$spawn_time_sum <- 0
+  AGE$spawn_time_sum[AGE$time==2]  <- 1
+  AGE$spawn_time_sum[AGE$time==6]  <- 2
+  AGE$spawn_time_sum[AGE$time==10]  <- 3
+  AGE$spawn_time_sum[AGE$time==14] <- 4
+  AGE$spawn_time_sum[AGE$time==18] <- 5
+  
+  AGE$spawn_time_wint <- 0
+  AGE$spawn_time_wint[AGE$time==4]  <- 1
+  AGE$spawn_time_wint[AGE$time==8]  <- 2
+  AGE$spawn_time_wint[AGE$time==12]  <- 3
+  AGE$spawn_time_wint[AGE$time==16] <- 4
+  AGE$spawn_time_wint[AGE$time==20] <- 5
+  }
+
+# Make spawn_time_array [N_rel x N_time_mod]
+spawn_time_array <- matrix(0,N_time_mod,N.REL)
+
+  spawn_time_array[,grep("spr",REL$ID)] <- AGE$spawn_time_spr   
+  spawn_time_array[,grep("sum",REL$ID)] <- AGE$spawn_time_sum
+  spawn_time_array[,grep("wint",REL$ID)] <- AGE$spawn_time_wint
+
+spawn_time_array <- t(spawn_time_array)
+
 # Create cumulative adult mortality values to be read into the program
 # M2 is in terms of monthly mortality
 # cum_M2 <- rep(0,length(AGE$month_leng))
@@ -475,7 +833,10 @@ dat.all$effort.idx[dat.all$effort.type =="rec"]   <- 2
 dat.all$effort.idx[dat.all$effort.type =="treaty"]      <- 3
 dat.all$effort.idx[dat.all$effort.type =="ashop"]       <- 4
 dat.all$effort.idx[dat.all$effort.type =="shoreside"]   <- 5
+dat.all$effort.idx[dat.all$effort.type =="pollock"]       <- 6
+dat.all$effort.idx[dat.all$effort.type =="rockfish.AK"]   <- 7
 
+###### DO I NEED THESE?
 dat.all$effort.idx.rec <- 0
 dat.all$effort.idx.rec[dat.all$effort.type =="rec"] <- 1
 dat.all$effort.idx.treaty <- 0
@@ -487,13 +848,16 @@ dat.all$gear.idx[dat.all$effort.type =="rec"]    <- 2
 dat.all$gear.idx[dat.all$effort.type =="treaty"] <- 3
 dat.all$gear.idx[dat.all$effort.type =="ashop"]  <- 4
 dat.all$gear.idx[dat.all$effort.type =="shoreside"] <- 5
+dat.all$gear.idx[dat.all$effort.type =="pollock"] <- 6
+dat.all$gear.idx[dat.all$effort.type =="rockfish.AK"] <- 7
 
 N_gear <- length(unique(dat.all$gear.idx))
 
 #### DEFINE VULNERABILIY SCHEDULE.
 # For directed fisheries, vulnerability increases with age
 MONTH.vuln <- 36
-dat.all$age.vuln <- dat.all$age.month - MONTH.vuln # Make it so that all fish are vulnerable by spring (April if "FOUR", May if "FRAM") of their MONTH.vuln time in the model ()
+dat.all$age.vuln <- dat.all$age.month - MONTH.vuln 
+# Make it so that all fish are vulnerable by spring (April if "FOUR", May if "FRAM") of their MONTH.vuln time in the model ()
 #dat.all$age.vuln[dat.all$age.vuln>0] <- 0
 temp <- data.frame(age.month=sort(as.numeric(unique(dat.all$age.month))),age.vuln.idx = 1:length(unique(dat.all$age.month)))
 temp$vuln.age <- temp$age.month - MONTH.vuln
@@ -501,8 +865,7 @@ temp$vuln.age <- temp$age.month - MONTH.vuln
 vuln_age <- temp$vuln.age 
 dat.all$age.vuln.idx <- match(dat.all$age.month,temp$age.month)
 
-
-# For hake fisheries, allow for different vulnerability schedule
+# For hake, pollok and AK rockfish fisheries, allow for different vulnerability schedule
 MONTH.vuln.trawl <- 24
 dat.all$age.vuln.hake <- dat.all$age.month - MONTH.vuln.trawl  # Make it so that all fish are invulnerable by (April if "FOUR", May if "FRAM") of their MONTH.vuln time in the model ()
 #dat.all$age.vuln[dat.all$age.vuln>0] <- 0
@@ -521,12 +884,12 @@ vuln_age_trawl <- temp$vuln.age.trawl / 10  ## Change the scale of the age in mo
 # vuln_int_idx      <- c(rep(1,7),rep(2,10))
 # vuln_int_rec_idx  <- c(rep(3,7),rep(4,10))
 
-# Ocean distribution for each spawning vulnarea
+# Ocean distribution for each spawning area
 dat.all$origin.loc     <- paste(dat.all$ocean.reg,dat.all$loc,sep=".")
 ORIGIN.LOC             <- sort(unique(dat.all$origin.loc))
 temp                   <- data.frame(location.name=unique(dat.all$ocean.reg))
 temp.loc               <- LOCATIONS
-temp.loc$location.name <- as.character( temp.loc$location.name)
+temp.loc$location.name <- as.character(temp.loc$location.name)
 
 temp.loc <-  REL %>% group_by(ocean.region,loc.numb) %>% summarize(n=length(loc.numb)) %>% 
               dplyr::select(-n) %>% as.data.frame() %>%
@@ -539,24 +902,47 @@ temp$origin.idx        <- 1:nrow(temp)
 dat.all$origin.idx     <- match(dat.all$ocean.reg,temp$location.name)
 COV$origin.idx         <- match(COV$ocean.reg,temp$location.name)
 
-# This section combines maturity curves for Oregon and Van Is.
+### This is useful for keeping track of which stocks are from which origin.
+ORIGIN.GROUPS <-  dat.all %>% distinct(ocean.reg, origin.idx) %>% arrange(origin.idx)
+###
+
+# This section is where you could combine spawn timing into fewer groups.
 dat.all$loc.spawn     <- move_id$loc.spawn[match(dat.all$ocean.reg,move_id$ocean_region)]
 temp                  <- data.frame(cbind(sort(unique(dat.all$loc.spawn)),1:length(sort(unique(dat.all$loc.spawn)))))
-#temp[temp[,1]>=5 & temp[,1]<=7,2] <- 3 # THIS LINE MAKES IT SO OREGON REGIONS HAVE IDENTICAL SPAWNING
-#temp[temp[,1]>=12 ,2] <- 12             # THIS LINE MAKES IT SO VAN IS. REGIONS HAVE IDENTICAL SPAWNING
-
 temp.lab <- data.frame(a=unique(temp$X2),b=1:length(unique(temp$X2)))
 temp$loc.spawn.idx <- temp.lab$b[match(temp$X2,temp.lab$a)]
 spawn_loc_2 <- merge(spawn_loc,temp,by.x="number",by.y="X1")
 spawn_loc_2$indicator_move <- 0
-#spawn_loc_2$indicator_move[spawn_loc_2$number<9] <- 1
 
 dat.all$loc.spawn.idx <- spawn_loc_2$loc.spawn.idx[match(dat.all$loc.spawn,spawn_loc_2$number)]
 COV$loc.spawn.idx     <- spawn_loc_2$loc.spawn.idx[match(COV$ocean.region,spawn_loc_2$ocean.region)]
 
-#dat.all$log_effort    <- log(dat.all$effort)
+# This makes an index as to whether to to ignore the first few time steps because of late release
+if(MONTH.STRUCTURE=="SPRING"){
+  COV <- left_join(COV,REL %>% dplyr::select(ID_numb,n.month))
+  COV$start_month_idx <- 0
+  COV <- COV %>% mutate(start_month_idx=0) %>% 
+                  mutate(start_month_idx = ifelse(n.month <= 0,1,start_month_idx)) %>%
+                  mutate(start_month_idx = ifelse(n.month <= -2.5,2,start_month_idx))
+}
+# IF there are any instances where the start_month_idx > 0, 
+# get rid of those observations in dat.all for times before their release.
+absent <- COV %>% distinct(start_month_idx) %>% filter(start_month_idx >0) %>% pull(start_month_idx)
+for(i in 1:length(absent)){
+  
+  these <- COV %>% filter(start_month_idx == absent[i]) %>% 
+              distinct(ID_numb) %>%
+              pull(ID_numb)
+  
+  dat.all.temp <- dat.all %>% 
+                    filter(rel %in% these) %>%
+                    filter(time > absent[i])  
+  
+  dat.all <- dat.all %>% filter(! rel %in% these) %>%
+                bind_rows(.,dat.all.temp)
+}
 
-# MAke an index for seasons.
+# Make an index for seasons.
 dat.all$season.idx    <- 0
 if(MONTH.STRUCTURE=="FOUR"){
   wint.spring <- sort(c(seq(1,N_time_mod,by=4),seq(4,N_time_mod,by=4)))
@@ -568,6 +954,12 @@ if(MONTH.STRUCTURE=="FRAM"){
   wint.spring <- sort(c(seq(3,N_time_mod,by=4),seq(4,N_time_mod,by=4)))
   summer      <- seq(1,N_time_mod,by=4)
   fall        <- seq(2,N_time_mod,by=4)
+  N_season = 3
+}
+if(MONTH.STRUCTURE=="SPRING"){
+  wint.spring <- sort(c(seq(1,N_time_mod,by=4),seq(4,N_time_mod,by=4)))
+  summer      <- seq(2,N_time_mod,by=4)
+  fall        <- seq(3,N_time_mod,by=4)
   N_season = 3
 }
 
@@ -592,22 +984,121 @@ AGE$season_idx <- season_idx
 
 dat.all$start_year <- REL$start_year[match(dat.all$rel,REL$ID_numb)]
 dat.all$temp_dat_season_idx <- (dat.all$start_year -1 )* N_month + dat.all$time
+##############################
+############ THIS SECTION DEFINES THE IN-RIVER RECOVERIES
 
-############################## THIS SECTION DEFINE THE DIRICHLET ESCAPEMENT PARAMETERS
-## Make E_alpha with 
-E_temp<- merge(temp,escape_diri,by.y="number",by.x="X1")
-E_alpha <- E_temp[match(unique(E_temp$loc.spawn.idx),E_temp$loc.spawn.idx),grep("age",colnames(E_temp))]
-#E_alpha[,6] <- E_alpha[,1]
-# Adjust E_alpha so that it has reasonable levels of certainty on the distribution of maturing adults for all locations
-
-E_alpha <- E_alpha[,2:6]
-E_prop <- as.matrix(E_alpha / rowSums(E_alpha))
+# First  Deal with DIRICHLET ESCAPEMENT PARAMETERS.  
+# Create for all runs.... but there may not be available data for all runs.
+E_prop <- as.matrix(escape_diri[,grep("mod.year",colnames(escape_diri))] / rowSums(escape_diri[,grep("mod.year",colnames(escape_diri))]))
 # diri_constant is defined in the Prep raw data script.
 E_alpha <- E_prop * diri_constant
-E_alpha <- as.matrix(E_alpha)
+E_alpha <- as.data.frame(E_alpha)
+rownames(E_alpha) <- paste0(escape_diri$ocean.region,".",escape_diri$init.loc)
 
-#E_alpha <- data.frame(E_alpha[,1]*0,E_alpha)
-#E_alpha[6,] <- E_alpha[6,]*2
+E_alpha$number <- escape_diri$number
+E_alpha$init.loc <- escape_diri$init.loc
+## Make E_alpha with 
+#E_temp<- merge(temp,escape_diri,by.y="number",by.x="X1")
+#E_alpha <- E_temp[match(unique(E_temp$loc.spawn.idx),E_temp$loc.spawn.idx),grep("mod.year",colnames(E_temp))]
+
+#######################
+## THERE IS SOME LACK OF CLARITY ON WHAT THE immediate above does
+#######################
+
+# Adjust E_alpha so that it has reasonable levels of certainty on the distribution of maturing adults for all locations
+
+####### NEXT.
+##### Make data for each release group for use with actual numbers of recoveries.
+# Make index for the multiple kinds of FW data.
+COV <- COV %>% 
+          # All releases use for DIRICHLET proportions (proportions in freshwater) == 0
+          mutate(fresh_idx = 0) %>% 
+          # This is for AWG data (use AWG only) (fw catch at age for each release) == 1
+          mutate(fresh_idx = ifelse(grepl("awg",COV$ID),1,fresh_idx)) %>%
+          # This is for PIT data for the Columbia (survival proportions) == 2
+          # Use Dirichlet and PIT data simultaneously.
+          mutate(fresh_idx = ifelse(ID_numb %in% PIT.dat.fin$ID_numb,2,fresh_idx))
+
+# Pull out the data from AWG and make an appropriate index 
+COV <-  REL %>% filter(grepl("awg",ID) | # PULL THE AWG data used for the CTC
+                       grepl("NOR_spr",ocean.region) | # add NOR_spr
+                       grepl("LCOL_spr",ocean.region) # add LCOL_spr
+                       ) %>% 
+        mutate(awg_idx = 1:nrow(.)) %>%
+        dplyr::select(ID_numb,awg_idx) %>% left_join(COV,.) %>% 
+        mutate(awg_idx = ifelse(is.na(awg_idx),0,awg_idx))
+      
+
+AWG_dat <- dat.E %>% 
+  dplyr::select(mod.year,est.numb.sum,ID_numb) %>% 
+  mutate(lab=paste0("mod.year.",mod.year)) %>%
+  pivot_wider(.,id_cols = "ID_numb",names_from = "lab",values_from="est.numb.sum") %>%
+  filter(ID_numb %in% (COV %>% filter(awg_idx>0) %>% pull(ID_numb))) %>%
+              left_join(.,COV %>% filter(awg_idx>0) %>% dplyr::select(ID_numb,awg_idx)) %>%
+              arrange(awg_idx)
+
+N_AWG = nrow(AWG_dat)
+  
+# Make a unique index for the dimensions of the PIT data.
+PIT.dat.fin$pit_idx <- 1:nrow(PIT.dat.fin)
+N_PIT = nrow(PIT.dat.fin)
+
+# Add PIT data to the COV matrix
+COV <- COV %>% 
+  left_join(.,PIT.dat.fin %>% dplyr::select(ID_numb,pit_idx)) %>%
+  mutate(pit_idx=ifelse(is.na(pit_idx),0,pit_idx)) 
+
+# Check how many releases have pit or awg data
+A <- COV %>% mutate(awg_or_pit = awg_idx + pit_idx,
+                    awg_or_pit =ifelse(awg_or_pit>0,1,0)) %>%
+       group_by(awg_idx,pit_idx,awg_or_pit) %>% summarise(sum(pit_idx),sum(awg_idx),sum(awg_or_pit))
+
+# Derive values that can feed the PIT tag likelihood.
+# find a N (sample size) and a K (successes) that match the 
+# mean, and lower and upper 90CI for a binomial.
+
+# Loop over the rows in 
+# PIT.dat.fin
+PIT.dat.fin$best.N <- NA
+PIT.dat.fin$best.K <- NA
+
+for(i in 1:nrow(PIT.dat.fin)){
+
+Mean = PIT.dat.fin$SARwJacks[i] / 100
+q05  = PIT.dat.fin$SARwJacks_LCI[i] /100
+q95  = PIT.dat.fin$SARwJacks_UCI[i] /100
+
+#fit_binom <- function(Mean,q05,q95 ){
+  
+      N <- seq(1,100000)
+      K = round(Mean * N,0)
+      A.prob <- pbinom(K,N,q05)
+      B.prob <- pbinom(K,N,q95)
+      
+      val <- ((A.prob-.95)^2 + (B.prob-0.05)^2)
+      dat <- bind_cols(N=N,val=val)
+      #plot(log(val)~N,data=dat,pch=".")  
+      #(N[which.min(val)])
+best.N <- dat$N[which.min(dat$val)]
+best.K <- round(Mean*best.N,0)
+PIT.dat.fin$best.N[i] <- best.N
+PIT.dat.fin$best.K[i] <- best.K
+
+print(paste0(i," ",dat$N[which.min(dat$val)]))
+# pbinom(best.K,best.N,q05)
+# pbinom(best.K,best.N,q95)
+# pbinom(best.K,best.N,Mean)
+}
+
+  # USEFUL FOR LOOKING AT DATA COVERARGE FW
+# A <- COV %>% 
+#         mutate(awg = ifelse(awg_idx>0,1,awg_idx), pit=ifelse(pit_idx>0,1,0)) %>%
+#         group_by(ID,ocean.region,origin.idx,awg,pit) %>%
+#         summarise(N=length(ID),min.yr=min(brood_year),max.yr = max(brood_year)) %>%
+#         arrange(origin.idx) %>%
+#         as.data.frame()
+#         
+# write.csv(A,file="data cover.csv")
 
 # Modify the sections that are unique to the positive model
 ############# specifically, zero out effort.idx 
@@ -625,11 +1116,9 @@ dat.all[(N_obs_neg-1):(N_obs_neg+3),]
 dat.bin.fin <- dat.all[dat.all$indicator == 0,]
 dat.pos.fin <- dat.all[dat.all$indicator == 1,]
 
-
 ############## CALCULATE NUMBER OF OBSERVATIONS FOR EACH FISHING TYPE
 
 # Helper vector defining the year for time-varying q.
-
 if(MONTH.STRUCTURE=="FOUR" ){
   q_year_vec <- sort(c(rep(YEARS.RECOVER[1],4),
                      rep(YEARS.RECOVER[2:(length(YEARS.RECOVER)-1)],4),
@@ -640,12 +1129,17 @@ if(MONTH.STRUCTURE=="FRAM" ){
                      rep(YEARS.RECOVER[2:(length(YEARS.RECOVER)-1)],4),
                      rep(YEARS.RECOVER[length(YEARS.RECOVER)],3)))
 }
+if(MONTH.STRUCTURE=="SPRING"){
+  q_year_vec <- sort(c(rep(YEARS.RECOVER[1],4),
+                       rep(YEARS.RECOVER[2:(length(YEARS.RECOVER)-1)],4),
+                       rep(YEARS.RECOVER[length(YEARS.RECOVER)],1)))
+}
+
   q_year_vec <- q_year_vec - min(q_year_vec)
   log_q_year_vec <- log(q_year_vec + 1)
 
   q_year_vec <- q_year_vec / 10
 
-  
 # make an index for allowing catchability to vary for troll fisheries and us rec fisheries.
   # Make 4 levels - CA, OR & WA, BC, AK
   if(loc_18 == "TWO_OR" | loc_18 == "NCA_SOR_PUSO") { 
@@ -661,6 +1155,20 @@ if(MONTH.STRUCTURE=="FRAM" ){
     N_sigma_cv_idx <- length(unique(sigma_cv_idx));
   }
   
+# make an index for allowing catchability to vary for troll fisheries and us rec fisheries.
+  # Make 4 levels - CA, OR & WA, BC, AK
+  if(loc_18 == "_two_OR_PUSO_AK") { 
+    troll_idx <- c(rep(1,4),rep(2,6),rep(3,5),rep(4,6))
+    N_troll_idx <- length(unique(troll_idx)) #cbind(LOCATIONS,troll_idx)
+    
+    #rec_us_idx <- c(rep(1,4),rep(2,13))
+    rec_us_idx <- c(rep(1,4),rep(2,13))
+    N_rec_us_idx <- length(unique(rec_us_idx)) #cbind(LOCATIONS,troll_idx)
+    
+    # Make index for observation CV
+    sigma_cv_idx <- c(rep(1,4),rep(2,6),rep(3,5),rep(4,2));
+    N_sigma_cv_idx <- length(unique(sigma_cv_idx));
+  }
   
   
 #############################################################################################
@@ -726,18 +1234,18 @@ gamma_slope_prior       = c(0,0.25)  # lognormal prior for slope of maturity cur
 log_q_troll_prior       = c(-11,1) # prior for troll catchability.
 log_q_treaty_prior      = c(-8,1) # prior for troll catchability.
 log_q_rec_prior         = c(-13,2) # prior for rec catchability.
-log_q_hake_prior        = c(-15,2) # prior for rec catchability.
+log_q_hake_prior        = c(-15,2) # prior for hake catchability.
+log_q_pollock_prior     = c(-15,2) # prior for pollock catchability.
 log_q_slope_prior       = c(12,8) # gamma dist for slope parameter (restricted to be positive)
 q_int_prior             = c(-5,2) # prior on intercept for log_q_slope
 phi_space_prior         = c(3,1) # gamma prior on spatial sd for smoothing
 theta_space_prior       = c(3,1) # gamma prior on spatial decay parameter (gaussian correlation)
 spawn_smooth_prior      = c(12,2) # gamma prior on spawn smooth
 
-
 ##### W_STAR PARAMETERIZATION
 ### ALL BASED ON knots at present.
-VAL <- 0
-MIN <- -3
+VAL   <-  0
+MIN   <- -3
 MIN.2 <- -3
 w_star_prior_mean_sf <- matrix(VAL,N_origin,N_knot_sf)
 w_star_prior_mean_ws <- matrix(VAL,N_origin,N_knot_ws)
@@ -754,7 +1262,6 @@ origin_sea_slope_prior_mean <- matrix(VAL,N_origin,N.LOC)
 
 VAL = 2
 origin_sea_slope_prior_sd <- matrix(VAL,N_origin,N.LOC) 
-
 
 # Create two indicator vectors for modifying the movement and distribution (connected to calculation of origin_loc)
 origin_vec <- c(rep(1,9),0,rep(1,7))
@@ -789,14 +1296,17 @@ PRIORS <- list(E_alpha=E_alpha,
                # tau_process_prod_prior = tau_process_prod_prior,
                # tau_q_dev_prior  = tau_q_dev_prior,
                log_q_troll_prior = log_q_troll_prior,
+               log_q_treaty_prior = log_q_treaty_prior,
                log_q_rec_prior = log_q_rec_prior,
+               log_q_hake_prior = log_q_hake_prior,
+               log_q_pollock_prior = log_q_pollock_prior,
                log_q_slope_prior = log_q_slope_prior,
                phi_space_prior = phi_space_prior,
                theta_space_prior = theta_space_prior,
                spawn_smooth_prior = spawn_smooth_prior
 )
 
-phi_space_fix = 3
+phi_space_fix = 1
 
 #####################################################################################################
 #####################################################################################################
@@ -805,17 +1315,30 @@ phi_space_fix = 3
 #####################################################################################################
 
 stan_data = list(
+    # CWT data and sampling fraction
     "bin_catch"       = dat.all$catch_bin,
     "pos_catch"       = dat.pos.fin$catch,
     "inv_frac_samp"       = dat.all$frac_samp_mod^(-1),
     "log_frac_samp"       = log(dat.all$frac_samp_mod),
     "log_inv_frac_samp_pos"   = log(dat.pos.fin$frac_samp_mod^(-1)),
+    
+    # PIT data from the Columbia... derived 
+    "PIT_idx" = PIT.dat.fin$ID_numb,
+    "PIT_N"   = PIT.dat.fin$best.N,
+    "PIT_k"   = PIT.dat.fin$best.K,
+    
+    # this is number of observered data for model years (columns)
+    "AWG_dat" = round(AWG_dat[,grepl("mod.year",colnames(AWG_dat))],0), 
+    "AWG_idx" = AWG_dat$ID_numb,
+    
     #"inv_frac_samp_pos"       = dat.pos.fin$frac_samp_mod^(-1),
     #"pos_idx" = dat.all$pos_idx, # indexes the positive observations.
     # "log_frac_samp_comp"       = log(1-dat.bin.fin$frac_samp_mod),
     # "log_frac_samp"   = log(dat.bin.fin$frac_samp_mod),
     # "log_frac_samp_pos"   = dat.pos.fin$frac_samp_log,
     # "logit_offset_int" = dat.bin.fin$logit_offset_int,
+    
+    # Counters and numbers of observation.
     
     "spawn_time_fraction" = REL$spawn_time_fraction,
     "N_rel"           = N.REL,
@@ -824,7 +1347,7 @@ stan_data = list(
     "N_loc"           = N.LOC,
     "N_loc_spawn"     = N_loc_spawn,
     "N_obs_bin"       = N_obs_bin,
-    "N_obs_neg"       = N_obs_neg,
+    #"N_obs_neg"       = N_obs_neg,
     "N_obs_pos"       = N_obs_pos,
     "N_effort"        = N_effort ,
     "N_vuln"          = N_vuln ,
@@ -846,6 +1369,8 @@ stan_data = list(
     "N_month"         = N_month,
     "age_year"        = 1:N_year,
     "N_season_total"  = N_season_total,
+    "N_PIT"           = N_PIT,
+    "N_AWG"           = N_AWG,
     
     # Effort data in matrix form
     "K_troll"        = K_troll_flat, 
@@ -856,6 +1381,8 @@ stan_data = list(
     "K_rec_PUSO"     = K_rec_PUSO_flat,
     "K_hake_ashop"   = K_hake_ashop_flat,
     "K_hake_shoreside" = K_hake_shoreside_flat,
+    "K_pollock_GOA"  = K_pollock_shoreside_flat,
+    "K_rockfish_AK"  = K_rockfish_AK_shoreside_flat,
     
     "ashop_year_break" = ashop_year_break, # season (in terms of model seasons) in which the q changes for the ashop fleet. C
                                             # Could elaborate to make multiple breaks as desired.
@@ -880,6 +1407,8 @@ stan_data = list(
     # Matrices for ensuring smooth ocean distributions.
     "N_pred_loc"   = N_pred_loc,
     "N_pred_loc_salish" = N_pred_loc_salish,
+    "N_pred_loc_offshore" = 1,
+    
     "N_knot_sf"     = N_knot_sf,
     "d_knot_knot_sf2" = d_knot_knot_sf2,
     "d_pred_knot_sf2" = d_pred_knot_sf2,
@@ -890,9 +1419,11 @@ stan_data = list(
     
     "knot_idex"    = k.pred.index[,c("location.number")],
     "knot_idex_salish"    = k.pred.index.salish[,c("location.number")],
+    "knot_idex_offshore"    = k.pred.index.offshore[,c("location.number")],
     
     # Ocean Temperature observations    
-    "ocean_temp_dev" = ocean.temp.dev,
+    #"ocean_temp_dev" = ocean.temp.dev,
+    
     # indexes associated with temperatures
     "temperature_season_idx" = temperature_season_idx,
     # helper files for origin_...
@@ -908,15 +1439,24 @@ stan_data = list(
 
     "f_rec_param_idx"    = f_rec_param_idx, ## THIS IS THE 2D file for use with random effect for each location.
     "N_f_rec_idx_param"  = N_f_rec_idx_param,
-
-    "f_treaty_param_idx"    = f_treaty_param_idx, ## THIS IS THE 2D file for use with random effect for each location.
-    "N_f_treaty_idx_param"  = N_f_treaty_idx_param,
+    
+    # There are no treaty observations associated with missing 
+    # "f_treaty_param_idx"    = f_treaty_param_idx, ## THIS IS THE 2D file for use with random effect for each location.
+    # "N_f_treaty_idx_param"  = N_f_treaty_idx_param,
     
     "f_troll_param_idx"    = f_troll_param_idx, ## THIS IS THE 2D file for use with random effect for each location.
     "N_f_troll_idx_param"  = N_f_troll_idx_param,
 
-    "f_hake_ashop_param_idx"    = f_hake_ashop_param_idx, ## THIS IS THE 2D file for use with random effect for each location.
-    "N_f_hake_ashop_idx_param"  = N_f_hake_ashop_idx_param,
+    # There are no hake ashop observations missing.
+    # "f_hake_ashop_param_idx"    = f_hake_ashop_param_idx, ## THIS IS THE 2D file for use with random effect for each location.
+    # "N_f_hake_ashop_idx_param"  = N_f_hake_ashop_idx_param,
+
+    # This is omitted because there are no instances of mis-matched between observations and effort
+    # "f_pollock_shoreside_param_idx"    = f_pollock_shoreside_param_idx, ## THIS IS THE 2D file for use with random effect for each location.
+    # "N_f_pollock_shoreside_idx_param"  = N_f_pollock_shoreside_idx_param,
+    
+    # "f_rockfish_AK_shoreside_param_idx" = f_rockfish_AK_shoreside_param_idx, ## THIS IS THE 2D file for use with random effect for each location.
+    # "N_f_pollock_shoreside_idx_param"   = N_f_rockfish_AK_shoreside_idx_param,
     
     "f_rec_overlap_effort_idx" = f_rec_overlap_effort_idx,
     "N_f_rec_overlap_effort_idx_param" = N_f_rec_overlap_effort_idx_param,
@@ -958,16 +1498,18 @@ stan_data = list(
      "age_year_idx"      = AGE$year,
      "year_region_idx"   = COV$year.reg.idx,
      "age_month_idx"     = AGE$age,
-     "spawn_time"        = AGE$spawn_time,
-     "spawn_time_idx"    = AGE$spawn_time,
-     # "vuln_int_idx"      = vuln_int_idx,
-     # "vuln_int_rec_idx"  = vuln_int_rec_idx,
+     "spawn_time_array"  = spawn_time_array,
+     "spawn_time"        = spawn_time_array,
+     #"spawn_time_idx"    = AGE$spawn_time,
+     #"vuln_int_idx"      = vuln_int_idx,
+     #"vuln_int_rec_idx"  = vuln_int_rec_idx,
      "origin_idx"        = COV$origin.idx,
      "season_idx"        = AGE$season_idx ,
      "start_year"        = COV$start_year,
      "indicator_move_idx"= spawn_loc_2$indicator_move,
      "origin_year_idx"   =  origin_year_idx,
-  
+     "start_month_idx"   = COV$start_month_idx, # index for whether release happens after model start time.
+    
     # Indexes associated with observations
     "mod_time_idx"        = dat.all$time,
     "mod_time_N_all_idx"  = dat.all$time - 1,
@@ -1081,6 +1623,7 @@ stan_pars = c(
   "origin_mat",
   "prop_D",
   "D",
+  "prop_PIT",
   "log_N_all",
   #"log_N_ratio",
   "F_rec",
@@ -1117,7 +1660,8 @@ stan_pars = c(
 
 ### Initial Values
   stan_init_f1 <- function(n.chain,N_loc_spawn,MU_m,Sigma_m,N_rel,N_loc,N_f_rec_idx_param,N_knot_sf,N_knot_ws,
-                           W_star_sf,W_star_ws,W_star_salish,N_troll_idx, N_rec_us_idx, N_sigma_cv_idx){ 
+                           #W_star_sf,W_star_ws,W_star_salish,
+                           N_troll_idx, N_rec_us_idx, N_sigma_cv_idx){ 
         A <- list()
   for(i in 1:n.chain){
     A[[i]] <- list(
@@ -1132,6 +1676,8 @@ stan_pars = c(
       log_q_rec_can_irec_start    = rnorm(1,-14,0.5),
       log_q_hake_ashop_start    = rnorm(1,-14,0.5),
       log_q_hake_shoreside_start    = rnorm(1,-14,0.5),
+      log_q_pollock_GOA_start    = rnorm(1,-14,0.5),
+      log_q_rockfish_AK_start    = rnorm(1,-14,0.5),
       q_int = rnorm(1,-3,0.5),
       #log_q_rec_half    = rnorm(1,-20,1),
       #log_q_treaty_pos = rnorm(1,-6,0.5),
@@ -1173,7 +1719,9 @@ stan_pars = c(
       #phi_space = rgamma(2,300,100),
       w_star_sf = array(runif(N_loc_spawn*2*N_knot_sf,-0.1,0.1),dim=c(2,N_loc_spawn,N_knot_sf)),
       w_star_ws = array(runif(N_loc_spawn*N_knot_ws,-0.1,0.1),dim=c(N_loc_spawn,N_knot_ws)),
-      w_star_salish = array(runif(N_loc_spawn*2*3,-0.1,0.1),dim=c(3,N_loc_spawn,3))
+      w_star_salish = array(runif(N_loc_spawn*2*3,-0.1,0.1),dim=c(3,N_loc_spawn,3)),
+      w_star_offshore = matrix(runif(N_loc_spawn*3,-0.1,0.1),N_loc_spawn)
+     
       # w_star_sf = W_star_sf,
       # w_star_ws = W_star_ws,
       # w_star_salish = W_star_salish
@@ -1225,12 +1773,11 @@ SEASON <- TRUE
 # # indexes associated with temperatures
 # save(Output,file=paste(GROUP," ",NAME,".RData",sep=""))
 
-
 ###############################################################################
 ###############################################################################
 ###############################################################################
 ###############################################################################
-setwd("/Users/ole.shelton/GitHub/Salmon-Climate/Mixed Model")
+setwd(paste0(base.dir,"/spring-chinook-distribution/Mixed Model"))
 stanMod = stan(file = MOD.NAME,
                data = stan_data, 
                verbose = FALSE, chains = N_CHAIN, thin = 1, 
@@ -1253,7 +1800,7 @@ stanMod = stan(file = MOD.NAME,
                init_r = 1
                                    ) 
 
-pars <- rstan::extract(stanMod, permuted = T)
+# pars <- rstan::extract(stanMod, permuted = T)
 # get_adaptation_info(stanMod)
 samp_params <- get_sampler_params(stanMod)
 #
@@ -1262,6 +1809,7 @@ base_params <- c(#"tau_process",
                   "log_q_rec_start","log_q_troll_start","log_q_rec_can_start","log_q_treaty_start",
                  "log_q_rec_slope","log_q_troll_slope","log_q_rec_can_slope","log_q_treaty_slope",
                  "log_q_rec_can_irec_start","log_q_hake_ashop_start","log_q_hake_shoreside_start",
+                 "log_q_pollock_GOA_start","log_q_rockfish_AK_start",
                  "q_int",
                  #"log_q_troll_pos", "log_q_rec_pos","log_q_treaty_pos","log_q_rec_can_pos",#"log_q_rec_PUSO_pos",
                  #"logit_offset_slope",

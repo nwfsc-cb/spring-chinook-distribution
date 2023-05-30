@@ -163,7 +163,15 @@ hs_dat <- df_recovery %>%
   mutate(rec_year= as.numeric(rec_year)) %>%
   unite("id", c("rec_year", "rec_month", "rec_day", "tag_code"), remove = FALSE )
 
-all_dat <- left_join(hs_dat, snout, by =  "id") %>% #combine so that rmis lat and longs can be replaced by snout 
+all_dat <- left_join(hs_dat, snout, by =  "id",relationship="many-to-many") %>% #combine so that rmis lat and longs can be replaced by snout 
+  # Get rid of of one troublesome pair of ids
+  #filter(!id == "2013_5_21_635095")
+  
+# pull out the troublesome observations and make sure there are only in the data once. 
+# all_dat <-  left_join (hs_dat %>% filter(id=="2013_5_21_635095"),snout %>% filter(id=="2013_5_21_635095"),
+#              by="id",relationship="many-to-many") %>%
+#   slice(.,c(1,4)) %>%
+#   bind_rows(all_dat,.)%>%
   filter(!is.na(Year)) %>%
   mutate(Lat = as.numeric(as.character(Lat))) %>%
   mutate(Long = as.numeric(as.character(Long))) %>%
@@ -180,6 +188,32 @@ all_dat <- left_join(hs_dat, snout, by =  "id") %>% #combine so that rmis lat an
   dplyr::select(id,rec_year, rec_month, rec_day, tag_code, recovery_id,rec.area.code,
         fishery, fishery_type, fishery_name, gear, latitude, longitude, recovery_location_name,
         Lat, Long, estimated_number, estimation_level, detection_method, recovery_description)
+
+# This accidentally duplicates a few observations.  
+
+# Find them and manually ensure only one is present.
+these <- all_dat %>% distinct(id,recovery_id,rec.area.code) %>% group_by(id) %>% 
+              summarise(N=length(id)) %>% filter(N>1)
+
+all_dat_dup <- all_dat %>% filter(id %in% these$id)
+
+
+trim <-NULL
+for(i in 1:length(these$id)){
+  temp <- all_dat_dup %>% filter(id ==these$id[i])
+  #print(nrow(temp))
+  #if(nrow(temp)==2){temp <- temp %>% slice(c(1,4))}
+  if(nrow(temp)==4){temp <- temp %>% slice(c(1,4))}
+  if(nrow(temp)==9){temp <- temp %>% slice(c(1,5,9))}
+  if(nrow(temp)==16){temp <- temp %>% slice(c(1,6,11,16))}
+  trim <- rbind(trim,temp)
+}
+
+all_dat <- all_dat %>% filter(!id %in% these$id) %>% bind_rows(.,trim)
+
+# all_dat %>% distinct(id) %>% dim()
+# all_dat %>% distinct(id,recovery_id) %>% dim()
+# all_dat %>% distinct(id,recovery_id,rec.area.code) %>% dim()
 
 df_recovery$Haul <- NA
 df_recovery$Lat  <- NA

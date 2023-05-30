@@ -305,7 +305,7 @@ cwt <- cwt %>% filter(vessel_name == "") %>%
 #######################################################################################################
 # MATCH CWT AND OBSERVER TO GET TRIP TARGET INFORMATION
 #######################################################################################################
-cwt_observer_join<- left_join(cwt, observer, by = c("year", "month","day","vessel_name")) %>%
+cwt_observer_join<- left_join(cwt, observer, by = c("year", "month","day","vessel_name"),relationship="many-to-many") %>%
   dplyr::select(recovery_id, tag_code, Observer, vessel_name, 
                 Vessel_or_Plant_code, PERMIT, Haul_or_Delivery_no, year, month,day,
          longitude, latitude, rec.area.code,trip_target_code,REPORTING_AREA_CODE) 
@@ -317,7 +317,15 @@ cwt_observer_join %>%
 
 #pull out the matched data and tidy it so it can be bound later 
 join1<- cwt_observer_join %>%
-  filter(!is.na(trip_target_code))  
+  filter(!is.na(trip_target_code))
+
+#join1 %>% group_by(recovery_id) %>% summarise(N=length(recovery_id)) %>% filter(N>1)
+
+# Get rid of one duplicate here
+temp  <- join1 %>% filter(recovery_id =="2000091096")
+join1 <- join1 %>% filter(!recovery_id =="2000091096") 
+join1 <- bind_rows(join1,temp %>% slice(1))
+
 
 observer_week_end_date <- observer %>%
   separate(week_end_date, into = c("year", "month", "day"), sep="-")  %>%
@@ -328,7 +336,7 @@ cwt_observer_join1<- cwt_observer_join %>%
     filter(is.na(trip_target_code)) %>%
     dplyr::select(recovery_id, tag_code, Observer, vessel_name, PERMIT, Haul_or_Delivery_no, year, month,day,
            longitude, latitude, rec.area.code,Vessel_or_Plant_code ) %>%
-    left_join(observer_week_end_date, by = c("year", "month","day","vessel_name")) %>% 
+    left_join(observer_week_end_date, by = c("year", "month","day","vessel_name"),relationship="many-to-many") %>% 
     dplyr::select(recovery_id, tag_code, Observer, vessel_name, PERMIT, Haul_or_Delivery_no, year, month,day,
            longitude, latitude, rec.area.code, REPORTING_AREA_CODE,Vessel_or_Plant_code,trip_target_code)  
 
@@ -339,7 +347,22 @@ cwt_observer_join1 %>%
     #pull out the matched data and tidy it so it can be bound later 
 join2<- cwt_observer_join1 %>%
     filter(!is.na(trip_target_code)) 
- 
+
+these <- join2 %>% group_by(recovery_id) %>% summarise(N=length(recovery_id)) %>% filter(N>1)
+
+# filter out the duplicate recovery_ids
+trim <- NULL
+for(i in 1:nrow(these)){
+  temp <- join2 %>% filter(recovery_id == these$recovery_id[i])
+  #print(temp %>% distinct(recovery_id,tag_code,rec.area.code) %>% nrow())
+  trim <- rbind(trim,temp %>% slice(1))
+}
+
+join2 <- join2 %>% filter(!recovery_id %in% these$recovery_id)
+join2 <- bind_rows(join2,trim)
+
+#join2 %>% group_by(recovery_id) %>% summarise(N=length(recovery_id)) %>% filter(N>1)
+
 #keep these to try and figure out which ones dont match 
 na_join<-cwt_observer_join1 %>%
   filter(is.na(trip_target_code))  
@@ -376,6 +399,9 @@ all_cwt<- rbind(na_join, cwt_matches) # %>%
 #all_cwt is the complete version.  
 pollock_cwt <- all_cwt %>%
   filter(trip_target_code %in% c("pollock", "pollock, other")) 
+
+# check for duplicates
+#pollock_cwt %>% group_by(recovery_id) %>% summarise(N=length(recovery_id)) %>% filter(N>1)
 
 #save file: 
 saveRDS(pollock_cwt, paste0(base.dir,"/spring-chinook-distribution/Processed Data/Effort Data/CWT_Recovery_Pollock_Shoreside_trip_assignments.RDS"))

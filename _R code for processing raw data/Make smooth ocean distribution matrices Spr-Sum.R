@@ -8,6 +8,11 @@ k.pred.index.salish <- LOCATIONS %>% filter( location.name %in% c("PUSO","PUSO_o
 N_pred_loc <- as.numeric(k.pred.index %>% summarize(length(location.name)))
 N_pred_loc_salish <- as.numeric(k.pred.index.salish %>% summarize(length(location.name)))
 
+k.pred.index.offshore <- data.frame(location.name = "OFF",
+                                    location.number = max(k.pred.index$location.number,k.pred.index.salish$location.number)+1)
+N_pred_loc_offshore <- 1
+
+
 # user Defined number of knots to smooth over.
 N_knot_sf    <- 8 #round( (2/3)* N_pred_loc) # Summer-Fall
 N_knot_ws    <- 5 #round( (2/3)* N_pred_loc) # Winter-Spring
@@ -16,7 +21,6 @@ N_knot_ws    <- 5 #round( (2/3)* N_pred_loc) # Winter-Spring
 pred.loc <- k.pred.index$knot.idex
 knot.loc.sum.fall <- seq(min(pred.loc -0.25), max(pred.loc +0.25),length.out=N_knot_sf)
 knot.loc.wint.spr <- seq(min(pred.loc -0.25), max(pred.loc +0.25),length.out=N_knot_ws)
-
 
 # Matrices of distance among knots and between knots and prediction locations.
 # Summer Fall

@@ -399,6 +399,8 @@ A <-left_join(expand.grid(ID_numb=1:N.REL,mod.year=1:N.mod.year),
 
 # merge into dat.E
 dat.E <- full_join(dat.E ,A) %>% 
+          # Get rid of NA ID_numb in dat.
+          filter(!is.na(ID_numb)) %>%
           mutate(est.numb.sum=ifelse(is.na(est.numb.sum),0,est.numb.sum)) %>%
           group_by(ID,brood.year,rel.year) %>%
           mutate(tot.est.numb=sum(est.numb.sum)) %>%

@@ -23,7 +23,7 @@ if(getwd()!=paste0(base.dir,"/spring-chinook-distribution")){
 }#mn
   
 NAME <- "FINAL"
-MOD.NAME  <- 'climate model GAMMA - quadratic V LOCVAR2 NO SST.stan'
+MOD.NAME  <- 'chinook-spring-GAMMA_quadratic_LOCVAR2_PIT_AWG.stan'
 
 SAMP.FILE <- paste0("./Output files/",NAME,".csv")
 
@@ -444,8 +444,7 @@ C_rockfish_AK_zero <- abs(C_rockfish_AK_pos - 1)
 # C_net_zero <- abs(C_net_pos - 1)
  
 ### OBSERVED CATCH by catch type:
-
-####3 INITIAL RELEASES
+### INITIAL RELEASES
 N0 <- REL$N.released
 ####################################################################################################
 # Create Movement matrices
@@ -551,10 +550,6 @@ if(MONTH.STRUCTURE == "FRAM"){
 #     ocean.temp <- ocean.temp %>% dplyr::select(year,season,CHAR)
 #   }
 #   
-#   #### MAKE A new index for working with temperature deviation data.
-#   REL$origin_start_year_idx <- 1+(REL$start_year - 1)*N_month  
-#   origin_year_idx <- matrix(seq(0,N.mod.month-1),N.REL,N.mod.month,byrow=T) + matrix(REL$origin_start_year_idx,N.REL,N.mod.month)
-# 
 #   if(MONTH.STRUCTURE =="FOUR"|MONTH.STRUCTURE=="SPRING"){
 #     first <- which(rownames(ocean.temp.dev)==paste(min(YEARS.RECOVER),"Spr",sep="."))
 #     last <- which(rownames(ocean.temp.dev)==paste(max(YEARS.RECOVER),"Fal",sep="."))
@@ -566,18 +561,24 @@ if(MONTH.STRUCTURE == "FRAM"){
 #     last <- which(rownames(ocean.temp.dev)==paste(max(YEARS.RECOVER),"Fal",sep="."))
 #     ocean.temp.dev <- ocean.temp.dev[first:last,]
 #   }
-#     
-#   temperature_season_idx    <- rep(0,nrow(ocean.temp.dev))
-#   temperature_season_idx[grep("Win",rownames(ocean.temp.dev))] <- 1
-#   temperature_season_idx[grep("Spr",rownames(ocean.temp.dev))] <- 1
-#   temperature_season_idx[grep("Sum",rownames(ocean.temp.dev))] <- 2
-#   temperature_season_idx[grep("Fal",rownames(ocean.temp.dev))] <- 3
+# 
+
+  #### MAKE A new index for working with temperature deviation data.
+  REL$origin_start_year_idx <- 1+(REL$start_year - 1)*N_month
+  origin_year_idx <- matrix(seq(0,N.mod.month-1),N.REL,N.mod.month,byrow=T) + matrix(REL$origin_start_year_idx,N.REL,N.mod.month)
+
+  # Make an index for temperature and season.
+  temperature_season_idx    <- rep(0,nrow(K_troll_flat))
+  temperature_season_idx[grep("Win",rownames(K_troll_flat))] <- 1
+  temperature_season_idx[grep("Spr",rownames(K_troll_flat))] <- 1
+  temperature_season_idx[grep("Sum",rownames(K_troll_flat))] <- 2
+  temperature_season_idx[grep("Fal",rownames(K_troll_flat))] <- 3
 
 #################################################################################################
 ### Create Priors for maturity, vulnerability, fishing mortality parameters
 ###################################################################################################
 
-source("./Base_Code/_R code for processing raw data/Priors maturity, mortality, vuln, fishing CLIMATE.R",local=T)
+source("./_R code for processing raw data/Priors maturity, mortality, vuln, fishing Spr-Sum.R",local=T)
 # important values are:
 # MU_gamma, Sigma_gamma : multivariate normal values (3 param, gamma_0, gamma_age, gamma_lat) (for use with ocean ages 1:5 (recast so that the intercept is for age 5... aka ages = -4:0), latitude on 100s of km with 0 at northern limit)
 # MU_m, Sigma_m : multivariate normal (2 param: m0 and m1) (for use with ocean months 1:50+, converted into annual mortality of ~ 0.5, 0.70, 0.85, 0.90
@@ -605,7 +606,9 @@ spawn_loc <- escape_diri[,c("ocean.region","number","init.loc")]
 
 #################################################
 ### Calculate the matrix that informs where fish can enter the river from the ocean.
-source("./_R code for processing raw data/Make river entry matrices.R",local=T)
+source("./_R code for processing raw data/Make river entry matrices Spr-Sum.R",local=T)
+# Relevant object from this is river_entry.
+
 
 #### MAKE A DATA FILE FOR log_n_fin_ratio_data to ensure very few fish are left in the ocean at the end of the simulation
 # REL$log_N_ratio_mean <- -7
@@ -641,19 +644,28 @@ if(loc_18 =="NCA_SOR_PUSO"){
   vuln.treaty.mat  <-   vuln.treaty.mat %>% mutate(NCA = (NCA + SOR )/2) %>% dplyr::select(-SOR)#%>% rename(SOR=COR)
   vuln.rec.mat  <-   vuln.rec.mat %>% mutate(NCA = (NCA + SOR )/2) %>% dplyr::select(-SOR)#%>% rename(SOR=COR)
 }
-if(loc_18 != "TRUE" & loc_18 != "TWO_OR" & loc_18 != "NCA_SOR_PUSO"){
-  vuln.rec.mat    <- vuln.rec.mat %>% dplyr::select(-PUSO_out)
-  vuln.treaty.mat <- vuln.treaty.mat %>% dplyr::select(-PUSO_out)
-  vuln.troll.mat  <- vuln.troll.mat %>% dplyr::select(-PUSO_out)
-}
+# if(loc_18 != "TRUE" & loc_18 != "TWO_OR" & loc_18 != "NCA_SOR_PUSO" & loc_18 == "_two_OR_PUSO_AK"){
+#   vuln.rec.mat    <- vuln.rec.mat %>% dplyr::select(-PUSO_out)
+#   vuln.treaty.mat <- vuln.treaty.mat %>% dplyr::select(-PUSO_out)
+#   vuln.troll.mat  <- vuln.troll.mat %>% dplyr::select(-PUSO_out)
+# }
 
 vuln.troll.mat  <- vuln.troll.mat %>% filter(Year %in% YEARS.RECOVER)
 vuln.treaty.mat <- vuln.treaty.mat %>% filter(Year %in% YEARS.RECOVER)
 vuln.rec.mat    <- vuln.rec.mat %>% filter(Year %in% YEARS.RECOVER)
 
-vuln.troll.mat <- vuln.troll.mat[2:nrow(vuln.troll.mat),]
-vuln.treaty.mat <- vuln.treaty.mat[2:nrow(vuln.treaty.mat),]
-vuln.rec.mat <- vuln.rec.mat[2:nrow(vuln.rec.mat),]
+# Keep only winter and spring of year == YEARS.RECOVER
+vuln.troll.mat <- vuln.troll.mat[1:(nrow(vuln.troll.mat)-2),]
+rownames(vuln.troll.mat) = paste0(vuln.troll.mat$Year,".",vuln.troll.mat$Season)
+vuln.rec.mat <- vuln.rec.mat[1:(nrow(vuln.rec.mat)-2),]
+rownames(vuln.rec.mat) = paste0(vuln.rec.mat$Year,".",vuln.rec.mat$Season)
+vuln.treaty.mat <- vuln.treaty.mat[1:(nrow(vuln.treaty.mat)-2),]
+rownames(vuln.treaty.mat) = paste0(vuln.treaty.mat$Year,".",vuln.treaty.mat$Season)
+
+
+# vuln.troll.mat <- vuln.troll.mat[2:nrow(vuln.troll.mat),]
+# vuln.treaty.mat <- vuln.treaty.mat[2:nrow(vuln.treaty.mat),]
+# vuln.rec.mat <- vuln.rec.mat[2:nrow(vuln.rec.mat),]
 
 # clip off the year and season columns
 vuln_troll_mat  <- vuln.troll.mat %>% dplyr::select(-Year,-Season) * 0.01
@@ -714,7 +726,8 @@ CATCH = list(
 FRESH = list(
   PIT.dat.fin = PIT.dat.fin,
   dat.cwt.fresh = dat.sum,
-  E_true_lab = E_true_lab 
+  ESCAPE = ESCAPE,
+  escape_diri=escape_diri
 )
 
 save(file=paste0(base.dir,"/spring-chinook-distribution/Processed Data/Effort ",RUN.TYPE," ",GROUP,".RData"),EFFORT)
