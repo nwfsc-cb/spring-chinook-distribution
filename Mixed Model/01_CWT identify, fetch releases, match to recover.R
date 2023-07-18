@@ -11,10 +11,10 @@ base.dir <- "/Users/ole.shelton/GitHub"
 RUN.TYPE = "spring-summer" ### options: fall, spring-summer, south, case_study, case_study_south, spring-summer-fall
 
 #GROUP <- "OR_ESA"
-GROUP <- "FRAM_2022_12"  ### Options "CA", "CA+" "COL" "CA+COL" "CA+COL_AWG" "CA+COL+PUSO" , FRAM_v1, FRAM_v2 # THIS IS WHAT YOU READ IN WITH
+GROUP <- "FRAM_2023_07"  ### Options "CA", "CA+" "COL" "CA+COL" "CA+COL_AWG" "CA+COL+PUSO" , FRAM_v1, FRAM_v2 # THIS IS WHAT YOU READ IN WITH
                      ###  "FRAM_EXP" is an experimental one for looking at                 
 #GROUP <- "OR_ESA"
-GROUP.2 <- "FRAM_2022_12"  # THIS IS WHAT GETS WRITTEN TO FILE.  Unless == "CA+COL_AWG" this should be the same as GROUP
+GROUP.2 <- "FRAM_2023_07"  # THIS IS WHAT GETS WRITTEN TO FILE.  Unless == "CA+COL_AWG" this should be the same as GROUP
                           #A CLUGE SO CAN READ IN THE SAME DATA BUT END UP WITH A SLIGHTLY DIFFERENT DATA FRAME
 loc_18 <- "_two_OR_PUSO_AK" ## THIS IS THE MAPPING TO RECOVERIES AREA CODING.  Options I have tried:
                               ## options for this are a null string ("", should be default) 
@@ -795,7 +795,6 @@ trawl.all <- dat.trawl.target %>%
 ocean.recover.trawl = list(dat=trawl.all)
 save(ocean.recover.trawl,file=paste0(base.dir,"/spring-chinook-distribution/Processed Data/Ocean Recoveries Hake Trawl ",RUN.TYPE," ",GROUP,loc_18,".RData"))	    
 
-
 ### OK DRAW IN THE POLLOCK DATA FROM ALASKA.
 
 #######################
@@ -851,7 +850,7 @@ samp.frac.missing <- left_join(samp.frac.missing, extra.samp.frac,
                                by=c("rec.month"="month.numb","rec.area.code"="rec.area.code")) %>%
                                mutate(est.numb = count / median.frac.samp)
 
-trawl.pollock <- trawl.pollock %>% filter(is.na(median.frac.samp)==F) %>%
+trawl.pollock <- trawl.pollock %>% filter(is.na(median.frac.samp)==FALSE) %>%
                         bind_rows(.,samp.frac.missing)
 
 ## Write to File

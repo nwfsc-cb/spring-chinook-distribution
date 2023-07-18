@@ -14,8 +14,8 @@ N_pred_loc_offshore <- 1
 
 
 # user Defined number of knots to smooth over.
-N_knot_sf    <- 8 #round( (2/3)* N_pred_loc) # Summer-Fall
-N_knot_ws    <- 5 #round( (2/3)* N_pred_loc) # Winter-Spring
+N_knot_sf    <- 7 #round( (2/3)* N_pred_loc) # Summer-Fall
+N_knot_ws    <- 7 #round( (2/3)* N_pred_loc) # Winter-Spring
 
 # Prediction locations 
 pred.loc <- k.pred.index$knot.idex

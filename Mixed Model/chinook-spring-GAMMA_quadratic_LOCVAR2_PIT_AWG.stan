@@ -66,7 +66,7 @@ data { /////////////////////////////////////////////////////////////////////////
   int N_obs_bin ;   // Number of observations binomial  
   int N_obs_pos ;   // Number of observations positive
   int N_loc ;       // Number of spatial locations
-  int N_loc_spawn ; // Number of spatial spawning locations 
+  //int N_loc_spawn ; // Number of spatial spawning locations 
   int N_gear ;      // Number of harvest gear types
   int N_effort ;    // Number of effort categories
   int N_vuln   ;    // Number of vulnerability categories
@@ -81,7 +81,9 @@ data { /////////////////////////////////////////////////////////////////////////
   int N_years_release; // Number of release years
   int N_month;     // Number of month groups in a year
   int N_season_total ; // Total number of seasons with effort data and temperature data
-  
+  int N_time_mod_rel[N_rel] ; // Length of time to model for each release
+  int N_no_offshore ; // number of locations for which there is no offshore box.
+  int N_juv ; // Number of juvenile stages (2 fingerling and yearlings)
   // In-river data.
   int N_PIT ; // Total number of releases with PIT survival data
   int N_AWG ; // Total number of releases wtih AWG data
@@ -126,19 +128,28 @@ data { /////////////////////////////////////////////////////////////////////////
   vector[N_obs_pos] log_inv_frac_samp_pos;
   
   // Observations of PIT data in-river
+  // N (total number of observations)
+  // k (total number of successes (survivors))
+
   int PIT_N[N_PIT]; // Implied sample size for binomial for in river PIT data
   int PIT_K[N_PIT]; // Implied recoveries for binomial for in-river PIT data
   
   // Observations of CWT in-river recoveries
+  // N (total number of observations)
+  // k (total number of successes (survivors))
+
   int AWG_dat[N_AWG,N_year]; 
-  
+  // Overdispersion for Neg Biomial (AWG in-river data)
+    real<lower=0>  nb_phi_fix ;
+
+
   // End of model constraints ; 
   // vector[N_rel] log_N_fin_ratio_data  ;
   // vector[N_rel] log_N_fin_ratio_sd ; 
 
   // Assumed constraint on the final abundance (<0.001 of initial)
-  row_vector[N_rel] log_N_ratio_mean;
-  row_vector<lower=0>[N_rel] log_N_ratio_sd;
+  // row_vector[N_rel] log_N_ratio_mean;
+  // row_vector<lower=0>[N_rel] log_N_ratio_sd;
 
   // Fishing associated things
   int<lower=1> N_f_rec_idx_param;     // Number of rec params for fishing mortality
@@ -207,8 +218,8 @@ data { /////////////////////////////////////////////////////////////////////////
     int troll_idx[N_loc] ;
     int N_rec_us_idx ;
     int rec_us_idx[N_loc] ;
-    int N_sigma_cv_idx ;
-    int sigma_cv_idx[N_loc] ;
+    // int N_sigma_cv_idx ;
+    // int sigma_cv_idx[N_loc] ;
 
   // Indexes state space
       int mod_time_idx[N_obs_bin] ; // number of months between release and recruitment 
@@ -217,7 +228,7 @@ data { /////////////////////////////////////////////////////////////////////////
 
       //int mod_time_pos_idx[N_obs_pos] ; // number of months between release and recruitment 
       //int rel_pos_idx[N_obs_pos] ;        // release index for all binomial observations,
-      int<lower=0> loc_spawn_idx[N_rel] ;
+      //int<lower=0> loc_spawn_idx[N_rel] ;
       int<lower=0> age_year_idx[N_time_mod] ;
       int<lower=0> year_region_idx[N_rel] ;
       int<lower=0> age_month_idx[N_time_mod] ;
@@ -226,9 +237,9 @@ data { /////////////////////////////////////////////////////////////////////////
       int<lower=0> season_idx[N_time_mod] ;
       int<lower=0> origin_idx[N_rel] ;
       int<lower=0> start_year[N_rel] ;
-      int<lower=0> indicator_move_idx[N_origin] ;
       int<lower=0> origin_year_idx[N_rel,N_time_mod] ;
       int<lower=0> start_month_idx[N_rel];
+      int<lower=0> juv_idx[N_rel];
       
   // values for spawn timing within a season
       real spawn_time_fraction[N_rel] ;  // For each release
@@ -243,8 +254,9 @@ data { /////////////////////////////////////////////////////////////////////////
   int<lower=0> origin_bin_idx[N_obs_bin] ;
   int<lower=0> season_bin_idx[N_obs_bin] ;
   int<lower=0> gear_bin_idx[N_obs_bin] ;
-  int<lower=0> loc_spawn_bin_idx[N_obs_bin] ;
+  //int<lower=0> loc_spawn_bin_idx[N_obs_bin] ;
   int<lower=0> temp_dat_season_bin_idx[N_obs_bin] ;
+  int<lower=0> juv_bin_idx[N_obs_bin] ; 
 
   // Index for PIT data and AWG data
   int<lower=0> PIT_idx[N_PIT]; // This is the release number of the pit data.
@@ -260,7 +272,8 @@ data { /////////////////////////////////////////////////////////////////////////
   
   // Continuous covariates, shared
     row_vector[N_vuln_month] vuln_age;
-    row_vector[N_vuln_month] vuln_age_trawl;
+    row_vector[N_vuln_month] vuln_age_hake;
+    row_vector[N_vuln_month] vuln_age_pollock;
     
     // Continuous covariates, State space version
       real month_rec[N_rel] ; // number of months between release and recruitment 
@@ -268,29 +281,21 @@ data { /////////////////////////////////////////////////////////////////////////
       real spawn_time[N_rel,N_time_mod] ;
 
   // Data and assumptions for spawners
-    vector[N_year] E_prop[N_loc_spawn];
+    vector[N_year] E_prop_1[N_origin];
+    vector[N_year] E_prop_2[N_origin];
+    //vector[N_year] E_prop[N_origin];
     real diri_constant;           // Assumed precision for the dirichlet distribution
 
-  // Observations of in-river PIT survival data.  Binomial parameterization.
-  // N (total number of observations)
-  // k (total number of successes (survivors))
-  vector[N_PIT] pit_N ;
-  vector[N_PIT] pit_k ;
-
-  // Observations of in-river AWG data.Rounded in-river Counts.
-  // N (total number of observations)
-  // k (total number of successes (survivors))
-  vector[N_year] awg_N[N_AWG] ;
-  
   //Priors 
-  vector[N_year] E_alpha[N_loc_spawn];
+  vector[N_year] E_alpha[N_origin];
   real log_rel_year_mu_prior[2] ;
   real log_rel_year_sigma_prior[2] ;
   vector[2] MU_M2 ;
   matrix[2,2] Sigma_M2;
   //real vuln_int_prior[2];
   real beta_vuln_prior[2];
-  real beta_vuln_hake_prior[2];
+  // real beta_vuln_hake_prior[2];
+  // real beta_vuln_pollock_prior[2];
   //real beta_vuln_int_prior[2];
   // real sigma_prior[2];
   real sigma_cv_prior[2];
@@ -322,6 +327,7 @@ data { /////////////////////////////////////////////////////////////////////////
   real theta_space_prior[2] ;
   real q_int_prior[2] ;
   real spawn_smooth_prior[2];
+  // real nb_phi_prior[2];
 }
 
 transformed data { ////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -330,7 +336,6 @@ transformed data { /////////////////////////////////////////////////////////////
   vector[N_year] vec_one ;
   row_vector[N_loc] vec_one_loc ;
   matrix[N_season_total,N_loc] ZERO_mat ; /// Matrix of zeros
-  vector[N_loc] indicator_move_vec ;
   vector[N_knot_sf] zero_vec_pred_loc_sf ;
   vector[N_knot_ws] zero_vec_pred_loc_ws ;
   vector[N_pred_loc_salish] zero_vec_pred_loc_salish ;
@@ -373,22 +378,13 @@ transformed data { /////////////////////////////////////////////////////////////
   for(i in 1:N_season_total){
     ZERO_mat[i] = rep_row_vector(0,N_loc) ;
   }
-    for(i in 1:N_year){
+  for(i in 1:N_year){
     vec_one[i] = 1 ;
   }
   for(i in 1:N_loc){
     vec_one_loc[i] = 1 ;
   }
-
-    for(j in 1:N_loc){
-      if(j<=5){
-        indicator_move_vec[j] = 0 ;
-      }
-      if(j>5){
-        indicator_move_vec[j] = 1 ;
-      }
-    }
-    
+  
      for(i in 1:N_years_release){ // Make an array of the same dimensions as the state vector
       vuln_troll_array[i]    = block(vuln_troll_mat,(1+(i-1)*N_month),1,N_time_mod,N_loc) ;
       vuln_treaty_array[i]   = block(vuln_treaty_mat,(1+(i-1)*N_month),1,N_time_mod,N_loc) ;
@@ -420,24 +416,29 @@ parameters { ///////////////////////////////////////////////////////////////////
     // Observation CV parameters
     real<lower=0> sigma_cv[2] ;
     real<lower=0> sigma_cv_hake ;
-
+    real<lower=0> sigma_cv_pollock ;
+    
     real log_rel_year_mu ;
     real<lower=0> log_rel_year_sigma ;
+
+    // real<lower=0> nb_phi ;
 
    // Vulnerability parameters (logit)
         //real beta_vuln_int[2] ; // These are the intercept and slope parameters for how vulnerability is shaped with respect to model age
         vector[2] beta_vuln ;
         real beta_vuln_hake[2] ;
         real beta_vuln_pollock[2] ;
-        real beta_vuln_rockfish[2] ;
+        //real beta_vuln_rockfish[2] ;
         
   /// Ocean distribution smoothing parameters
       real<lower = 0> theta_space[2]  ; /// spatial correlation parameter (1 is summer-fall, 2 is winter-spring)
       //real<lower = 0> phi_space    ; /// spatial sd parameter (1 is summer-fall, 2 is winter-spring)
 
     // Spawning Parameters
-    vector[N_loc_spawn] alpha_pay ;
-    vector[N_loc_spawn] log_beta_pay ;
+    //vector[N_juv] alpha_pay[N_origin] ;
+    //vector[N_juv] log_beta_pay[N_origin] ;
+    
+    vector[N_year] gamma_pay[N_origin,N_juv] ; // alternate parameterization for maturity.  No constraint on higher fraction of fish having to leave ocean with age.
     real<lower=0> spawn_smooth ;
 
     // Catchability offsets
@@ -463,9 +464,9 @@ parameters { ///////////////////////////////////////////////////////////////////
 
   // More ocean smooth paramters
       vector[N_knot_sf] w_star_sf[2, N_origin] ; /// Values at the knots(by origin and season) Summer-Fall
-      vector[N_knot_ws] w_star_ws[N_origin] ; /// Values at the knots(by origin and season) Winter-spring
+      vector[N_knot_ws] w_star_ws[2, N_origin] ; /// Values at the knots(by origin and season) Winter-spring
       vector[N_pred_loc_salish] w_star_salish[N_season, N_origin] ;
-      real w_star_offshore[N_season, N_origin] ;
+      real w_logit_offshore[N_origin] ;
     
     // Distribution in the ocean coefficients (Origin-location slopes in response to ocean temperature)
        // vector[N_loc] origin_sea_slope[N_season,N_origin] ;
@@ -517,6 +518,7 @@ transformed parameters { ///////////////////////////////////////////////////////
     // Distribution in the ocean coefficients (Origin-location offsets)
        // real origin_ref[N_origin] ;
         vector[N_loc] origin_sea_int[N_season,N_origin] ;
+        //vector[N_season] origin_sea_offshore[N_origin] ;
         vector[N_pred_loc] w_temp ;
         
         // local variable for inverse of knot matrix
@@ -547,18 +549,19 @@ transformed parameters { ///////////////////////////////////////////////////////
       matrix[N_season_total,N_loc] log_q_rockfish_AK_pos ;
 
     // DEFINE ORIGIN_LOC AS A MATRIX OF VECTORS
-    vector[N_loc] origin_mat[N_origin,N_season_total] ;        // Array of coefficients for location information.
+    vector[N_loc] origin_mat[N_origin,N_season] ;        // Array of coefficients for location information.
+    vector[N_origin] origin_off ;        // Array of coefficients for location information.
  
   // States for all model ages and releases
-      row_vector[N_rel] log_N_ratio;
+     // row_vector[N_rel] log_N_ratio;
       matrix[N_rel,N_log_N_all] log_N_all ;
+      matrix[N_rel,N_log_N_all] log_N_off ; // offshore component
         //matrix[N_time_mod,N_rel] log_N_all_t ;
-      vector[N_loc] log_N_temp_vec ;
-      //real log_N_temp_1;
+       //real log_N_temp_1;
 
   // Probability of entering the river.
-    vector[N_loc_spawn] beta_pay ;
-    vector[N_year] prob_age_year[N_loc_spawn] ;
+    //vector[N_juv] beta_pay[N_origin] ;
+    vector[N_year] prob_age_year[N_origin,N_juv] ;
 
   // early mortality
      vector[N_rel] rel_year_all ;
@@ -652,22 +655,41 @@ transformed parameters { ///////////////////////////////////////////////////////
         for(j in 1:N_season){
           // This is the smoothing projection
            if(j == 1){
-              w_temp  =   c_pred_trans_ws * C_knot_inverse_ws  * w_star_ws[i] ; // This means winter-spring is its own thing
+              w_temp  =   c_pred_trans_ws * C_knot_inverse_ws  * w_star_ws[1,i] ; // This means spring is its own thing
            }
-           if(j == 2 ){
+           if(j == 2){
               w_temp  =   c_pred_trans_sf * C_knot_inverse_sf  * w_star_sf[1,i] ; // summer and fall are treated the same.
            }
-           if(j == 3 ){
+           if(j == 3){
               w_temp  =   c_pred_trans_sf * C_knot_inverse_sf  * w_star_sf[2,i] ;
+           }
+           if(j == 4){
+              w_temp  =   c_pred_trans_ws * C_knot_inverse_ws  * w_star_ws[2,i] ; // This means winter is its own thing
            }
           for(k in 1:N_pred_loc){
               origin_sea_int[j,i,knot_idex[k]] = w_temp[k] ;
           }
-          // if(i > 2){  // Kluge to make Monterey stop having stupid abundances in the fall ( only for north of NCA stocks.)
-          //   if(j== 3){
-          //    origin_sea_int[j,i,1] = origin_sea_int[j,i,2] ;
-          //   }
+          // if(i > 21){  // Kluge to make Monterey stop having stupid abundances in the winter ( only for Canada and north )
+          //    if(j == 4){
+          //     origin_sea_int[j,i,1] = origin_sea_int[1,i,1] ; // make winter == spring for Monterey
+          //     origin_sea_int[j,i,2] = origin_sea_int[1,i,2] ; // make winter == spring for San Fran
+          //     origin_sea_int[j,i,3] = origin_sea_int[1,i,3] ; // make winter == spring for MEN
+          //     origin_sea_int[j,i,4] = origin_sea_int[1,i,4] ; // make winter == spring for NCA
+          //    }
           // }
+          if(i <= 3 ){  // Kluge to make Central Alaska stop having stupid abundances in all seasons (only for SOR and south)
+              origin_sea_int[j,i,21] = origin_sea_int[j,i,17] ; // make WAPEN==NSEAK, all seasons
+              origin_sea_int[j,i,20] = origin_sea_int[j,i,17] ; // make EAPEN==NSEAK, all seasons
+              origin_sea_int[j,i,19] = origin_sea_int[j,i,17] ; // make NWGOA==NSEAK, all seasons
+              origin_sea_int[j,i,18] = origin_sea_int[j,i,17] ; // make NEGOA== NSEAK, all seasons
+          }else if(i ==5){    
+              origin_sea_int[j,i,21] = origin_sea_int[j,i,17] ; // make WAPEN==NSEAK, all seasons
+              origin_sea_int[j,i,20] = origin_sea_int[j,i,17] ; // make EAPEN==NSEAK, all seasons
+              origin_sea_int[j,i,19] = origin_sea_int[j,i,17] ; // make NWGOA==NSEAK, all seasons
+              origin_sea_int[j,i,18] = origin_sea_int[j,i,17] ; // make NEGOA== NSEAK, all seasons
+          }
+          
+          
           for(k in 1:N_pred_loc_salish){ // this is the value for the salish sea (SGEO and PUSO and PUSO_out) and not 
               origin_sea_int[j,i,knot_idex_salish[k]] = w_star_salish[j,i,k] ;
           }
@@ -696,49 +718,75 @@ transformed parameters { ///////////////////////////////////////////////////////
     //    }
     // }
     
+    
+    // THIS IS THE NEW SPR-SUM ONE
+     // for(i in 1:N_origin){
+     //   for(j in 1:N_season_total){
+     //     
+     //        if(i <= 7 ){ // Force all fish from NOR south to not be offshore
+     //        origin_mat[i,j] =   exp(origin_sea_int[temperature_season_idx[j],i]) *
+     //                                //origin_sea_slope[temperature_season_idx[j],i] .* to_vector(ocean_temp_dev[j])) *
+     //                                pow(sum(exp(origin_sea_int[temperature_season_idx[j],i])),-1) ;
+     //                                //origin_sea_slope[temperature_season_idx[j],i] .* to_vector(ocean_temp_dev[j]))),-1)
+     //        }else{ // allow for all COL and north fish to be offshore
+     //        origin_mat[i,j] =   exp(origin_sea_int[temperature_season_idx[j],i]) *
+     //                                //origin_sea_slope[temperature_season_idx[j],i] .* to_vector(ocean_temp_dev[j])) *
+     //                                pow(sum(exp(origin_sea_int[temperature_season_idx[j],i])) + exp(w_star_offshore[i,temperature_season_idx[j]]),-1) ;
+     //                                //origin_sea_slope[temperature_season_idx[j],i] .* to_vector(ocean_temp_dev[j]))),-1)
+     //        }                   
+     //   }
+     
+     
+     
      for(i in 1:N_origin){
-       for(j in 1:N_season_total){
+        if(i<= 3){origin_off[i] = 1e-5  ;
+        }else if(i==5){origin_off[i] = 1e-5 ; 
+        }else{
+            origin_off[i] = 1 /  (1 + exp(-(w_logit_offshore[i]))) ;
+        }
+     }
+     
+     
+     for(i in 1:N_origin){
+       for(j in 1:N_season){
          
-            if(i <= 7 ){ // Force all fish from NOR south to not be offshore
-            origin_mat[i,j] =   exp(origin_sea_int[temperature_season_idx[j],i]) *
-                                    //origin_sea_slope[temperature_season_idx[j],i] .* to_vector(ocean_temp_dev[j])) *
-                                    pow(sum(exp(origin_sea_int[temperature_season_idx[j],i])),-1) ;
-                                    //origin_sea_slope[temperature_season_idx[j],i] .* to_vector(ocean_temp_dev[j]))),-1)
-            }else{ // allow for all COL and north fish to be offshore
-            origin_mat[i,j] =   exp(origin_sea_int[temperature_season_idx[j],i]) *
-                                    //origin_sea_slope[temperature_season_idx[j],i] .* to_vector(ocean_temp_dev[j])) *
-                                    pow(sum(exp(origin_sea_int[temperature_season_idx[j],i])) + exp(w_star_offshore[temperature_season_idx[j],i]),-1) ;
-                                    //origin_sea_slope[temperature_season_idx[j],i] .* to_vector(ocean_temp_dev[j]))),-1)
-            }                   
+            // if(i <= 7 ){ // Force all fish from NOR south to not be offshore
+            // origin_mat[i,j] =   exp(origin_sea_int[j,i]) *
+            //                         //origin_sea_slope[temperature_season_idx[j],i] .* to_vector(ocean_temp_dev[j])) *
+            //                         pow(sum(exp(origin_sea_int[j,i])),-1) ;
+            //                         //origin_sea_slope[temperature_season_idx[j],i] .* to_vector(ocean_temp_dev[j]))),-1)
+            // }else{ // allow for all COL and north fish to be offshore
+            
+            if(j <=3){ // Make spring, summer and fall distributions 
+            origin_mat[i,j] =   exp(origin_sea_int[j,i]) *
+                                    pow(sum(exp(origin_sea_int[j,i])),-1) ;
+  
+            }else if(j == 4){ // Make winter half way between fall and spring.
+            origin_mat[i,j] =   0.5 * (origin_mat[i,1] + origin_mat[i,3]) ;
+            }
+
+            origin_mat[i,j] = origin_mat[i,j] * (1-origin_off[i]) ; // Adjust for the offshore component
        }
     }
-
     
-    
-  //print("MAT", origin_mat[1])
-
-  // Vulnerabilities
-  // for(j in 1:N_vuln_month){
-  //     for(i in 1:N_vuln){
-  //         //if(i <=2){
-  //           vuln_mat[i,j] =   1 / (1 + exp(-(vuln_int + vuln_age[j] * beta_vuln[i]))) ;
-  //         //}
-  //         //if(i > 2){
-  //         //` vuln_mat[i,j] =   1 / (1 + exp(-(vuln_int + vuln_age[j] * beta_vuln[i]))) ;
-  //         //}
-  //     }
-  // }
-  
-  /// Matt trick for alpha_pay
-    //alpha_pay = alpha_pay_mean + alpha_pay_raw * alpha_pay_sd ; 
-    //spawn_smooth = exp(log_spawn_smooth_mean + log_spawn_smooth_raw * log_spawn_smooth_sigma) ;
-  
   // Prob_age_year logit transform
-      beta_pay = exp(log_beta_pay) ;
+    // for(i in 1:N_origin){
+    //   beta_pay[i] = exp(log_beta_pay[i]) ;
+    // }
   
-      for(i in 1:N_loc_spawn){
-          prob_age_year[i] =   vec_one ./ (1 + exp(-(alpha_pay[i] + age_year * beta_pay[i]))) ;
-          prob_age_year[i,N_year] = 1 ; 
+      for(i in 1:N_origin){
+        for(j in 1:N_juv){
+          // prob_age_year[i,j] =   vec_one ./ (1 + exp(-(alpha_pay[i,j] + age_year * beta_pay[i,j]))) ; //maturity for fingerlings and yearlings
+          
+          prob_age_year[i,j] =   vec_one ./ (1 + exp(-(gamma_pay[i,j]))) ; //maturity for fingerlings and yearlings, with logit form
+        }
+          prob_age_year[i,1,N_year] = 1 ; // maturity for fingerlings
+          prob_age_year[i,2,N_year] = 1 ; //maturity for yearlings
+          if(i == 2){
+            prob_age_year[i,1,N_year-1] = 1 ; //maturity for SFB_wint fing
+            prob_age_year[i,2,N_year-1] = 1 ; //maturity for SFB_wint yearlings
+          }
+        
       }
 
     // M2 vector and cum_M2 calculation
@@ -801,7 +849,7 @@ transformed parameters { ///////////////////////////////////////////////////////
        
        log_q_hake_shoreside_pos[i] = rep_row_vector(log_q_hake_shoreside_start ,N_loc); 
        
-       log_q_pollock_GOA_pos[i] = rep_row_vector(log_q_pollock_GOA_start ,N_loc); 
+       log_q_pollock_GOA_pos[i] = rep_row_vector(log_q_pollock_GOA_start,N_loc); // NOTE THAT POLLOCK == ASHOP HAKE HERE!!!
        
        log_q_rockfish_AK_pos[i] = rep_row_vector(log_q_rockfish_AK_start ,N_loc); 
     } 
@@ -851,11 +899,11 @@ transformed parameters { ///////////////////////////////////////////////////////
       treaty_mat[i,j] = to_row_vector(vec_one_loc ./ (1 + exp(-(vuln_fixed + vuln_treaty_array[i,j] * (beta_vuln[1]  * vuln_age[j])))));
       rec_mat[i,j]    = to_row_vector(vec_one_loc ./ (1 + exp(-(vuln_fixed + vuln_rec_array[i,j]    * (beta_vuln[2]  * vuln_age[j])))));
       
-      hake_ashop_mat[i,j] = to_row_vector(vec_one_loc ./ (1 + exp(-(vuln_fixed + (beta_vuln_hake[1] * vuln_age_trawl[j] + beta_vuln_hake[2] * pow(vuln_age_trawl[j] ,2) )))));
-      hake_shoreside_mat[i,j] = to_row_vector(vec_one_loc ./ (1 + exp(-(vuln_fixed + (beta_vuln_hake[1] * vuln_age_trawl[j] + beta_vuln_hake[2] * pow(vuln_age_trawl[j],2) )))));
+      hake_ashop_mat[i,j] = to_row_vector(vec_one_loc ./ (1 + exp(-(vuln_fixed + (beta_vuln_hake[1] * vuln_age_hake[j] + beta_vuln_hake[2] * pow(vuln_age_hake[j] ,2) )))));
+      hake_shoreside_mat[i,j] = to_row_vector(vec_one_loc ./ (1 + exp(-(vuln_fixed + (beta_vuln_hake[1] * vuln_age_hake[j] + beta_vuln_hake[2] * pow(vuln_age_hake[j],2) )))));
 
-      pollock_GOA_mat[i,j] = to_row_vector(vec_one_loc ./ (1 + exp(-(vuln_fixed + (beta_vuln_pollock[1] * vuln_age_trawl[j] + beta_vuln_pollock[2] * pow(vuln_age_trawl[j] ,2) )))));
-      rockfish_AK_mat[i,j] = to_row_vector(vec_one_loc ./ (1 + exp(-(vuln_fixed + (beta_vuln_rockfish[1] * vuln_age_trawl[j] + beta_vuln_rockfish[2] * pow(vuln_age_trawl[j],2) )))));
+      pollock_GOA_mat[i,j] = to_row_vector(vec_one_loc ./ (1 + exp(-(vuln_fixed + (beta_vuln_pollock[1] * vuln_age_pollock[j] + beta_vuln_pollock[2] * pow(vuln_age_pollock[j] ,2) )))));
+      rockfish_AK_mat[i,j] = to_row_vector(vec_one_loc ./ (1 + exp(-(vuln_fixed + (beta_vuln_pollock[1] * vuln_age_pollock[j] + beta_vuln_pollock[2] * pow(vuln_age_pollock[j] ,2) )))));
 
 
         // hake_ashop_mat[i,j] = to_row_vector(vec_one_loc ./ (1 + exp(-(vuln_fixed + (beta_vuln_hake  * vuln_age_trawl[j] + beta_vuln_hake*pow(vuln_age_trawl[j],2) )))));
@@ -864,25 +912,7 @@ transformed parameters { ///////////////////////////////////////////////////////
       }
     }
   }
-  
-  if(vuln_fixed<2){
- // This is the complementary log-log formulation for vulnerability (this allows for asymmetrical shape to the vulnerability curve)
-    for(i in 1:N_years_release){ // Make an array of the same dimensions as the state vector
-      for(j in 1:N_time_mod){
-      // troll_mat[i,j]  = to_row_vector(vec_one_loc - exp(- exp(vuln_fixed + vuln_troll_array[i,j]  * (beta_vuln_int[1] + beta_vuln[1] * vuln_age[j]))));
-      // treaty_mat[i,j] = to_row_vector(vec_one_loc - exp(- exp(vuln_fixed + vuln_treaty_array[i,j] * (beta_vuln_int[1] + beta_vuln[1]  * vuln_age[j]))));
-      // rec_mat[i,j]    = to_row_vector(vec_one_loc - exp(- exp(vuln_fixed + vuln_rec_array[i,j]    * (beta_vuln_int[2] + beta_vuln[2]  * vuln_age[j]))));
 
-      troll_mat[i,j]        = to_row_vector(vec_one_loc - exp(- exp(vuln_fixed + vuln_troll_array[i,j]  * (beta_vuln[1] * vuln_age[j]))));
-      treaty_mat[i,j]       = to_row_vector(vec_one_loc - exp(- exp(vuln_fixed + vuln_treaty_array[i,j] * (beta_vuln[1]  * vuln_age[j]))));
-      rec_mat[i,j]          = to_row_vector(vec_one_loc - exp(- exp(vuln_fixed + vuln_rec_array[i,j]    * (beta_vuln[2]  * vuln_age[j]))));
-      hake_ashop_mat[i,j]   = to_row_vector(vec_one_loc - exp(- exp(vuln_fixed + (beta_vuln_hake[1]  * vuln_age_trawl[j]) ))) ;// + 
-                                                                                  // (beta_vuln_hake[2]  * pow(0.1* vuln_age_trawl[j],2) ))));
-      hake_shoreside_mat[i,j] = to_row_vector(vec_one_loc - exp(- exp(vuln_fixed + (beta_vuln_hake[1]  * vuln_age_trawl[j]) ))) ; //+ 
-                                                                                  // (beta_vuln_hake[2]  * pow(0.1* vuln_age_trawl[j],2)))));
-      }
-    }
-  }
 
     for(i in 1:N_years_release){ // Make an array of the same dimensions as the state vector
       F_troll_fin[i]      = block(F_troll_array,(1+(i-1)*N_month),1,N_time_mod,N_loc) .* troll_mat[i] ;
@@ -890,8 +920,12 @@ transformed parameters { ///////////////////////////////////////////////////////
       F_rec_fin[i]        = block(F_rec_array,(1+(i-1)*N_month),1,N_time_mod,N_loc)   .* rec_mat[i]   ;
       F_hake_ashop_fin[i]     = block(F_hake_ashop_array,(1+(i-1)*N_month),1,N_time_mod,N_loc)   .* hake_ashop_mat[i]   ;
       F_hake_shoreside_fin[i] = block(F_hake_shoreside_array,(1+(i-1)*N_month),1,N_time_mod,N_loc)   .* hake_shoreside_mat[i]   ;
+      F_pollock_GOA_fin[i] = block(F_pollock_GOA_array,(1+(i-1)*N_month),1,N_time_mod,N_loc)   .* pollock_GOA_mat[i]   ;
+      F_rockfish_AK_fin[i] = block(F_rockfish_AK_array,(1+(i-1)*N_month),1,N_time_mod,N_loc)   .* rockfish_AK_mat[i]   ;
       
-      F_tot_fin[i]        = F_troll_fin[i]  + F_rec_fin[i] + F_treaty_fin[i] +F_hake_ashop_fin[i] + F_hake_shoreside_fin[i] +// THIS IS EXTRA MORTALITY FOR SHAKERS AND SUCH FROM THE FISHERY
+      F_tot_fin[i]        = F_troll_fin[i]  + F_rec_fin[i] + F_treaty_fin[i] +F_hake_ashop_fin[i] + F_hake_shoreside_fin[i] +
+                                F_pollock_GOA_fin[i] + F_rockfish_AK_fin[i] +
+                                // THIS IS EXTRA MORTALITY FOR SHAKERS AND SUCH FROM THE FISHERY
                                 block(F_troll_array,(1+(i-1)*N_month),1,N_time_mod,N_loc) .* (1-troll_mat[i]) * shaker_mort +
                                 block(F_treaty_array,(1+(i-1)*N_month),1,N_time_mod,N_loc) .* (1-treaty_mat[i]) * shaker_mort + 
                                 block(F_rec_array,(1+(i-1)*N_month),1,N_time_mod,N_loc)   .* (1-rec_mat[i]) * shaker_mort   ;
@@ -904,27 +938,68 @@ transformed parameters { ///////////////////////////////////////////////////////
    real F_focal ;
    real F_tot ;
    real log_N_temp_1 ;
+   vector[N_loc] log_N_temp_vec ;
+   real log_N_temp_off;
 
   for(i in 1:N_rel){
-    for(j in 1:N_time_mod){
+    D[i,1] = 1e-5 ; // ensure there are a trivial number of spawners at the first time point, even if the releases happen after the first time.
+    // D[i,2] = 1e-5 ;
+    // D[i,3] = 1e-5 ;
+    // D[i,4] = 1e-5 ;
+    // D[i,5] = 1e-5 ;
+    D[i,N_year] = 1e-5 ; // ensure final year is not nan
+    for(j in 1:N_time_mod_rel[i]){
         if(j == (start_month_idx[i]+1)){ // This accounts for cases when the fish were released after the model starts.
-        //if(j == 1){
-            log_N_all[i,j] =  log(sum(exp(log_N0[i] - rel_year_all[i] + //* month_rec[i] -
-                                  log(origin_mat[origin_idx[i],origin_year_idx[i,j]]) -
+              log_N_all[i,j] =  log_sum_exp(
+                                  log_N0[i] - rel_year_all[i] + //* month_rec[i] -
+                                  log(origin_mat[origin_idx[i],season_idx[j]]) -
                                   cum_M2_temp[j]   -
-                                  to_vector(F_tot_fin[start_year[i], j])))) + epsilon[i,j];
-  
-  
-  
+                                  to_vector(F_tot_fin[start_year[i], j])) + epsilon[i,j];
+              log_N_off[i,j] =    log_N0[i] - rel_year_all[i] + //* month_rec[i] -
+                                  log(origin_off[origin_idx[i]]) -
+                                  cum_M2_temp[j] + epsilon[i,j];
+                                  
+          if(spawn_time_array[i,j] > 0 ){
+              // print("stoped here A") ;
+              log_N_temp_vec = log_N0[i] - rel_year_all[i] +
+                              log(origin_mat[origin_idx[i],season_idx[j]]) -
+                              to_vector(F_tot_fin[start_year[i], j]) * spawn_time_fraction[i] -
+                              cum_M2_temp[j] * spawn_time_fraction[i] ;
+              log_N_temp_off = log_N0[i] - rel_year_all[i] +
+                              log(origin_off[origin_idx[i]]) -
+                              cum_M2_temp[j] * spawn_time_fraction[i] ;
+
+              D[i,spawn_time_array[i,j]] = sum(exp(log_N_temp_vec +
+                                        log(prob_age_year[origin_idx[i],juv_idx[i], spawn_time_array[i,j]]) - river_entry[i] * inv(spawn_smooth))) +
+                                        exp(log_N_temp_off + log(prob_age_year[origin_idx[i],juv_idx[i], spawn_time_array[i,j]]) - 2 * inv(spawn_smooth)) ; // make offshore equivalent to 1 space away from spawning ground.
+              
+              log_N_all[i,j] = log_sum_exp(
+                                  log_N_temp_vec +
+                                  log(1- exp(log(prob_age_year[origin_idx[i],juv_idx[i], spawn_time_array[i,j]]) - river_entry[i] * inv(spawn_smooth))) -
+                                  to_vector(F_tot_fin[start_year[i], j]) * (1-spawn_time_fraction[i]) -
+                                  cum_M2_temp[j] * (1-spawn_time_fraction[i])) +
+                                  epsilon[i,j] ;
+              log_N_off[i,j] =    log_N_temp_off +
+                                  log(1- exp(log(prob_age_year[origin_idx[i],juv_idx[i], spawn_time_array[i,j]]) - inv(spawn_smooth))) -
+                                  cum_M2_temp[j] * (1-spawn_time_fraction[i]) +
+                                  epsilon[i,j];
+          }
         }
         if(j> (start_month_idx[i]+1)){
-          if(j != N_time_mod){
+          if(j != N_time_mod_rel[i]){
             if(spawn_time_array[i,j] == 0){
-              log_N_all[i,j]   =   log(sum(exp(
-                                           log_N_all[i,j-1] +
-                                          log(origin_mat[origin_idx[i],origin_year_idx[i,j]]) -
+             // print("stoped here B") ;
+
+             
+              log_N_all[i,j]   =   log_sum_exp(
+                                          log(exp(log_N_all[i,j-1]) + exp(log_N_off[i,j-1])) +
+                                          log(origin_mat[origin_idx[i],season_idx[j]]) -
                                            cum_M2_temp[j]   -
-                                           to_vector(F_tot_fin[start_year[i], j])))) + epsilon[i,j];
+                                           to_vector(F_tot_fin[start_year[i], j])) + epsilon[i,j];
+              log_N_off[i,j] =    log(exp(log_N_all[i,j-1]) + exp(log_N_off[i,j-1])) +
+                                  log(origin_off[origin_idx[i]]) -
+                                  cum_M2_temp[j] + epsilon[i,j];
+                                           
            // if(i==1135){
            //   if(j == (N_time_mod-1) ){
            //   print("log(mean) =",log_rel_year_mu,"; log(sd) = ",log_rel_year_sigma," rel_year_all = ",rel_year_all[i-10]," , ",rel_year_all[i]," , ",rel_year_all[i+10]);
@@ -951,25 +1026,49 @@ transformed parameters { ///////////////////////////////////////////////////////
            //   //print("SD_proc = ",sqrt(tau_process_prod*cum_M2_temp));
            //   }
            // }
-           
-           
+            }
            }
-            if(spawn_time_array[i,j] > 0){
-              log_N_temp_vec = log_N_all[i,j-1] +
-                              log(origin_mat[origin_idx[i],origin_year_idx[i,j]]) -
+            if(spawn_time_array[i,j] > 0 ){
+              if(j < N_time_mod_rel[i]){
+               // print("stoped here C") ;
+              log_N_temp_vec = log(exp(log_N_all[i,j-1]) + exp(log_N_off[i,j-1])) +
+                              log(origin_mat[origin_idx[i],season_idx[j]]) -
                               to_vector(F_tot_fin[start_year[i], j]) * spawn_time_fraction[i] -
+                              cum_M2_temp[j] * spawn_time_fraction[i] ;
+              log_N_temp_off = log(exp(log_N_all[i,j-1]) + exp(log_N_off[i,j-1])) +
+                              log(origin_off[origin_idx[i]]) -
                               cum_M2_temp[j] * spawn_time_fraction[i] ;
 
               D[i,spawn_time_array[i,j]] = sum(exp(log_N_temp_vec +
-                                        log(prob_age_year[loc_spawn_idx[i], spawn_time_array[i,j]]) - river_entry[i] * inv(spawn_smooth))) ;
-                        
-               log_N_all[i,j] = log(sum(exp(
+                              log(prob_age_year[origin_idx[i],juv_idx[i], spawn_time_array[i,j]]) - river_entry[i] * inv(spawn_smooth))) +
+                              exp(log_N_temp_off + log(prob_age_year[origin_idx[i],juv_idx[i], spawn_time_array[i,j]]) - 2 * inv(spawn_smooth)) ; // make offshore equivalent to 1 space away from spawning ground.
+
+              log_N_all[i,j] = log_sum_exp(
                                   log_N_temp_vec +
-                                  log(1- exp(log(prob_age_year[loc_spawn_idx[i], spawn_time_array[i,j]]) - river_entry[i] * inv(spawn_smooth))) -
+                                  log(1- exp(log(prob_age_year[origin_idx[i],juv_idx[i], spawn_time_array[i,j]]) - river_entry[i] * inv(spawn_smooth))) -
                                   to_vector(F_tot_fin[start_year[i], j]) * (1-spawn_time_fraction[i]) -
-                                  cum_M2_temp[j] * (1-spawn_time_fraction[i])))) +
+                                  cum_M2_temp[j] * (1-spawn_time_fraction[i])) +
                                   epsilon[i,j] ;
-             }
+              log_N_off[i,j] =    log_N_temp_off +
+                                  log(1- exp(log(prob_age_year[origin_idx[i],juv_idx[i], spawn_time_array[i,j]]) - 2 * inv(spawn_smooth))) -
+                                  cum_M2_temp[j] * (1-spawn_time_fraction[i]) +
+                                  epsilon[i,j];
+              }
+              if(j==N_time_mod_rel[i]){
+                
+                log_N_temp_vec = log(exp(log_N_all[i,j-1] + log_N_off[i,j-1]))  +
+                              log(origin_mat[origin_idx[i],season_idx[j]]) -
+                              to_vector(F_tot_fin[start_year[i], j]) * spawn_time_fraction[i] -
+                              cum_M2_temp[j] * spawn_time_fraction[i] ;
+                log_N_temp_off = log(exp(log_N_all[i,j-1] + log_N_off[i,j-1]))  +
+                              log(origin_off[origin_idx[i]]) -
+                              cum_M2_temp[j] * spawn_time_fraction[i] ;
+               
+                D[i,spawn_time_array[i,j]] = sum(exp(log_N_temp_vec)) + exp(log_N_temp_off) ;
+          
+              }// end last model step.
+            } // end spawn_time_array[i,j] > 0 
+
           // if(i==1135){
           //    if(spawn_time_idx[j]==4){
           //    //print("Vec move to river(log) = ",log(prob_age_year[loc_spawn_idx[i], spawn_time_idx[j]]) - river_entry[i] * pow(spawn_smooth,-1));
@@ -977,20 +1076,19 @@ transformed parameters { ///////////////////////////////////////////////////////
           //    print("spawn_smooth = ",spawn_smooth);}
           //    }
           // }
-           }
-           if(j == N_time_mod){
-             if(spawn_time_array[i,j] > 0){
-              log_N_temp_vec = log_N_all[i,j-1] +
-                              log(origin_mat[origin_idx[i],origin_year_idx[i,j]]) -
-                              to_vector(F_tot_fin[start_year[i], j]) * spawn_time_fraction[i] -
-                              cum_M2_temp[j] * spawn_time_fraction[i] ;
-              
-              D[i,spawn_time_array[i,j]] = sum(exp(log_N_temp_vec)) ;
-              }
-           } // end j == N_time_mod
+             // if(j == N_time_mod){
+           //   if(spawn_time_array[i,j] > 0){
+           //    log_N_temp_vec = log_N_all[i,j-1] +
+           //                    log(origin_mat[origin_idx[i],origin_year_idx[i,j]]) -
+           //                    to_vector(F_tot_fin[start_year[i], j]) * spawn_time_fraction[i] -
+           //                    cum_M2_temp[j] * spawn_time_fraction[i] ;
+           //    
+           //    D[i,spawn_time_array[i,j]] = sum(exp(log_N_temp_vec)) ;
+           //    }
+           // } // end j == N_time_mod
           } // end j>(start_month_idx[i]+1) if statement
           
-          // eliminate process error for final step (messes up N_ratio calculation)
+        // eliminate process error for final step (messes up N_ratio calculation)
           // if(j == N_time_mod){
           //  if(spawn_time[j] == 0){
           //     log_N_all[i,j]   =   log(sum(exp(
@@ -1023,11 +1121,18 @@ transformed parameters { ///////////////////////////////////////////////////////
 //log_N_ratio = (log_N_all')[N_log_N_all] - ((to_vector(log_N0) - rel_year_all)')  ; //Add back in mortality from first period.
 //arf ;
 // Proportion of fish that show up in the river
+// for(i in 1:100){
+//   print("D=",i," ",D[i,]) ;
+// }
+
     for(i in 1:N_rel){
       prop_D[i] = D[i] / sum(D[i]) ;
     }
     for(i in 1:N_PIT){
       prop_PIT[i] =  sum(D[PIT_idx[i]]) / exp(log_N0[PIT_idx[i]]) ;
+      if(prop_PIT[i] > 1){
+        prop_PIT[i] = 1 - 1e-10;
+      }
     }
     
 } // end transformed parameters section. 
@@ -1048,18 +1153,23 @@ model {/////////////////////////////////////////////////////////////////////////
     //phi_space ~ gamma(phi_space_prior[1],phi_space_prior[2]) ;  
     theta_space ~ gamma(theta_space_prior[1],theta_space_prior[2]) ; 
    
-    for(i in 1:N_origin){
-      w_star_ws[i] ~ multi_normal_cholesky(zero_vec_pred_loc_ws,L_knot_ws[i]) ;
-      w_star_salish[1,i] ~ normal(0,phi_space_fix) ;
-      w_star_offshore[1,i] ~ normal(0,phi_space_fix) ;
-      for(j in 1:N_season){
-        if(j>1){
+   
+  for(i in 1:N_origin){
+      // ORIGINAL
+      // w_star_ws[i] ~ multi_normal_cholesky(zero_vec_pred_loc_ws,L_knot_ws[i]) ;
+      // w_star_salish[1,i] ~ normal(0,phi_space_fix) ;
+      // w_star_offshore[i,1] ~ normal(0,phi_space_fix) ;
+      for(j in 1:2){
+        // if(j>1){
           w_star_salish[j,i] ~ normal(0,phi_space_fix) ;
-          w_star_sf[j-1,i] ~ multi_normal_cholesky(zero_vec_pred_loc_sf,L_knot_sf[i]) ;
-          w_star_offshore[j,i] ~ normal(0,phi_space_fix) ;
-        }
+          w_star_ws[j,i] ~ multi_normal_cholesky(zero_vec_pred_loc_ws,L_knot_ws[i]) ;
+          w_star_sf[j,i] ~ multi_normal_cholesky(zero_vec_pred_loc_sf,L_knot_sf[i]) ;
+         // w_star_offshore[i,j] ~ normal(0,phi_space_fix) ;
       }
     }
+    
+    w_logit_offshore ~ normal(-3,1.5); // logit prior for offshore proportions.
+    
 
   ////////////////////////////////////////
     // Prior on temperature-distribution slopes (centered on 0)
@@ -1075,21 +1185,29 @@ model {/////////////////////////////////////////////////////////////////////////
 
     //alpha_pay_sd ~ lognormal(0.1,0.2) ;
     //log_beta_pay ~ normal(0,0.5) ;
-
-    alpha_pay ~ normal(gamma_int_prior[1],gamma_int_prior[2]) ;
-    log_beta_pay  ~ normal(gamma_slope_prior[1],gamma_slope_prior[2]);
-    spawn_smooth ~ gamma(spawn_smooth_prior[1],spawn_smooth_prior[2]) ;
+    // for(i in 1:N_origin){
+    //   alpha_pay[i] ~ normal(gamma_int_prior[1],gamma_int_prior[2]) ;
+    //   log_beta_pay[i]  ~ normal(gamma_slope_prior[1],gamma_slope_prior[2]);
+    // }
+    for(i in 1:N_origin){
+      for(j in 1:N_juv){
+      gamma_pay[i,j] ~ normal(0,3); 
+      }
+    }
+      spawn_smooth ~ gamma(spawn_smooth_prior[1],spawn_smooth_prior[2]) ;
 
   // prior on slopes for beta_vuln (must be positive)
       beta_vuln ~  gamma(beta_vuln_prior[1],beta_vuln_prior[2]) ;
       beta_vuln_hake[1] ~  normal(-1,1) ;
       beta_vuln_hake[2] ~  normal(-1,1) ;
       beta_vuln_pollock ~  normal(-1,1) ;
-      beta_vuln_rockfish ~  normal(-1,1) ;
-
+      //beta_vuln_rockfish ~  normal(-1,1) ;
 
       sigma_cv ~  gamma(sigma_cv_prior[1],sigma_cv_prior[2]) ; // remember the sigma_cv is the CV of the true catch)
       sigma_cv_hake ~ gamma(sigma_cv_prior[1],sigma_cv_prior[2]) ;
+      sigma_cv_pollock ~ gamma(sigma_cv_prior[1],sigma_cv_prior[2]) ;
+  // NB overdispersion on AWG data
+      // nb_phi ~gamma(nb_phi_prior[1],nb_phi_prior[2]) ;
 
   // rel_year_all on a monthly scale make prior on log-scale.
       log_rel_year_mu ~ normal(log_rel_year_mu_prior[1],log_rel_year_mu_prior[2]) ;
@@ -1161,7 +1279,8 @@ model {/////////////////////////////////////////////////////////////////////////
       // Helper objects for the observations
        real F_focal ;
        real F_tot ;
-       real log_N_temp_1 ;  
+       real log_N_temp_1 ; 
+       real log_N_temp_2 ; 
 
 ////// CALCULATING THE PREDICTIONS FOR OBSERVATIONS
   for(i in 1:N_obs_bin){
@@ -1173,41 +1292,86 @@ model {/////////////////////////////////////////////////////////////////////////
       if( gear_bin_idx[i]  == 6 ){ F_focal = F_pollock_GOA_fin[start_year[rel_idx[i]],mod_time_idx[i],loc_idx[i]] ; }
       if( gear_bin_idx[i]  == 7 ){ F_focal = F_rockfish_AK_fin[start_year[rel_idx[i]],mod_time_idx[i],loc_idx[i]] ; }
       
+      //if(i==124){ 
+      //   print("start_year ",start_year[rel_idx[i]]);
+      //   print("mod_time_idx ", mod_time_idx[i]) ;
+      //   print("loc_idx ",loc_idx[i]);
+      //   //print("F_pollock_GOA_fin start year ",F_pollock_GOA_fin[start_year[rel_idx[i]]]) ;
+      // }
+      // print("start_month ",start_month_idx[rel_idx[i]]) ;
+      // print("mod_time_idx ",mod_time_idx[i]) ;
       F_tot = F_tot_fin[start_year[rel_idx[i]],mod_time_idx[i],loc_idx[i]];
+      
+      // Calculate abundance.  
+        if(mod_time_idx[i] == (start_month_idx[rel_idx[i]]+1)){ 
+          log_N_temp_2 =  log_N0[rel_idx[i]] - rel_year_all[rel_idx[i]] ;
+        }else{
+          log_N_temp_2 = log(exp(log_N_all[rel_idx[i],mod_time_N_all_idx[i]]) + exp(log_N_off[rel_idx[i],mod_time_N_all_idx[i]])) ;
+        }
+
+      // if( i == 49374){
+      // print("STA = ",spawn_time_array[rel_idx[i] ,mod_time_idx[i]]) ;
+      // print("mod_time_idx ", mod_time_idx[i]) ;
+      // print("F_focal =", F_focal);
+      // print("F_tot =", F_tot);
+      // print("log_N_all = ", log_N_all[rel_idx[i],mod_time_N_all_idx[i]]);
+      // print("log_N_off = ", log_N_all[rel_idx[i],mod_time_N_all_idx[i]]);
+      // }
+
+      // 
+      // if( i == 8481){
+      // print(i) ;
+      // print("STA = ",spawn_time_array[rel_idx[i] ,mod_time_idx[i]]) ;
+      // print("mod_time_idx ", mod_time_idx[i]) ;
+      // print("F_focal =", F_focal);
+      // print("F_tot =", F_tot);
+      // print("log_N_all = ", log_N_all[rel_idx[i],mod_time_N_all_idx[i]]);
+      // print("log_N_off = ", log_N_all[rel_idx[i],mod_time_N_all_idx[i]]);
+      // 
+      // }
+     
+     
+     
+     
+     
       if(spawn_time_array[rel_idx[i] ,mod_time_idx[i]] == 0){
-          if(mod_time_idx[i] == 1){
             lambda_temp =
                   Baranov(  cum_M2_temp[mod_time_idx[i]],
                       F_focal,
                       F_tot,
-                      log_N0[rel_idx[i]] - rel_year_all[rel_idx[i]],
+                      log_N_temp_2,
                       ////log(origin_loc[season_idx[mod_time_idx[i]],origin_bin_idx[i],loc_idx[i]] ) );
-                      log(origin_mat[origin_bin_idx[i],temp_dat_season_bin_idx[i],loc_idx[i]] ) );
-          }else{
-          lambda_temp =
-                  //logit_offset_int[i]  + logit_offset_slope *
-                      Baranov(  cum_M2_temp[mod_time_idx[i]],
-                      F_focal,
-                      F_tot,
-                      log_N_all[rel_idx[i],mod_time_N_all_idx[i]],
-                      ////log(origin_loc[season_idx[mod_time_idx[i]],origin_bin_idx[i],loc_idx[i]] ) );
-                      log(origin_mat[origin_bin_idx[i],temp_dat_season_bin_idx[i],loc_idx[i]] ) );
-          }
+                      log(origin_mat[origin_bin_idx[i],season_bin_idx[i],loc_idx[i]] ) );
         }
-
+        
         if(spawn_time_array[rel_idx[i] ,mod_time_idx[i]] > 0){
-          if(mod_time_idx[i] < N_time_mod){
+          if(mod_time_idx[i] < N_time_mod_rel[rel_idx[i]]){
+            // print("mod_time ",  mod_time_N_all_idx[i]]) ;
+            // print("rel_idx",rel_idx[i]);
+            // print("log_N_all ",log_N_all[rel_idx[i],mod_time_N_all_idx[i]]) ;
             lambda_temp =
                 Baranov(  cum_M2_temp[mod_time_idx[i]] * spawn_time_fraction[rel_idx[i]],
                 F_focal * spawn_time_fraction[rel_idx[i]],
                 F_tot * spawn_time_fraction[rel_idx[i]],
-                log_N_all[rel_idx[i],mod_time_N_all_idx[i]],
-                log(origin_mat[origin_bin_idx[i],temp_dat_season_bin_idx[i],loc_idx[i]] ) );
-            log_N_temp_1 = log_N_all[rel_idx[i],mod_time_N_all_idx[i]] +
-                              log(origin_mat[origin_bin_idx[i],temp_dat_season_bin_idx[i],loc_idx[i]]) -
+                log_N_temp_2,
+                log(origin_mat[origin_bin_idx[i],season_bin_idx[i],loc_idx[i]] ) );
+            
+            //  if(i==1){
+            //  print("lambda_temp A ",lambda_temp) ;
+            //  print("M2 ",cum_M2_temp[mod_time_idx[i]] * spawn_time_fraction[rel_idx[i]]) ;
+            //  print("log_N_temp_2 ",log_N_temp_2);
+            //  print("log_N_temp_1 ",log_N_temp_1);
+            //  print("F_tot ", F_tot) ;
+            //  print("F_focal ", F_focal) ;
+            //  print("SPT ",spawn_time_fraction[rel_idx[i]]) ;
+            // }
+
+            
+            log_N_temp_1 = log_N_temp_2 + //log_N_all[rel_idx[i],mod_time_N_all_idx[i]] +
+                              log(origin_mat[origin_bin_idx[i],season_bin_idx[i],loc_idx[i]]) -
                               F_tot * spawn_time_fraction[rel_idx[i]] -
                               cum_M2_temp[mod_time_idx[i]] * spawn_time_fraction[rel_idx[i]] +
-                              log(1- exp(log(prob_age_year[loc_spawn_bin_idx[i], spawn_time_array[rel_idx[i],mod_time_idx[i]]]) - river_entry[rel_idx[i],loc_idx[i]] * inv(spawn_smooth))) ;
+                              log(1- exp(log(prob_age_year[origin_bin_idx[i],juv_bin_idx[i], spawn_time_array[rel_idx[i],mod_time_idx[i]]]) - river_entry[rel_idx[i],loc_idx[i]] * inv(spawn_smooth))) ;
             lambda_temp =
                   //logit_offset_int[i]  + logit_offset_slope *
                   log(exp(lambda_temp) +
@@ -1216,27 +1380,49 @@ model {/////////////////////////////////////////////////////////////////////////
                             F_tot * (1-spawn_time_fraction[rel_idx[i]]),
                             log_N_temp_1,
                             0)));
+                            
+            //  if(i==1){
+            //  print("lambda_temp B ",lambda_temp) ;
+            //  print("M2 ",cum_M2_temp[mod_time_idx[i]] * spawn_time_fraction[rel_idx[i]]) ;
+            //  print("log_N_temp_2 ",log_N_temp_2);
+            //  print("log_N_temp_1 ",log_N_temp_1);
+            //  print("F_tot ", F_tot) ;
+            //  print("F_focal ", F_focal) ;
+            //  print("SPT ",spawn_time_fraction[rel_idx[i]]) ;
+            // }
+
           }else{
             lambda_temp =
                 Baranov(  cum_M2_temp[mod_time_idx[i]] * spawn_time_fraction[rel_idx[i]],
                 F_focal * spawn_time_fraction[rel_idx[i]],
                 F_tot * spawn_time_fraction[rel_idx[i]],
-                log_N_all[rel_idx[i],mod_time_N_all_idx[i]],
-                log(origin_mat[origin_bin_idx[i],temp_dat_season_bin_idx[i],loc_idx[i]] ) );
+                log_N_temp_2,
+                log(origin_mat[origin_bin_idx[i],season_bin_idx[i],loc_idx[i]] ) );
           }
         }
 
       if( gear_bin_idx[i]  == 1 ){ alpha_temp = alpha_calc(sigma_cv[1])  ; } //troll
       if( gear_bin_idx[i]  == 2 ){ alpha_temp = alpha_calc(sigma_cv[2]) ; }  //rec
       if( gear_bin_idx[i]  == 3 ){ alpha_temp = alpha_calc(sigma_cv[1]) ; } //treaty
-      if( gear_bin_idx[i]  >= 4 ){ alpha_temp = alpha_calc(sigma_cv_hake) ; } //all trawl bycatch fleets (hake (ashop & shore), pollock, rockfish )
-      //if( gear_bin_idx[i]  == 5 ){ sigma_cv_temp = sigma_cv_hake ; }
+      if( gear_bin_idx[i]  >= 4 ){ alpha_temp = alpha_calc(sigma_cv_hake) ; } //all trawl bycatch fleets (hake (ashop & shore) and rockfish except pollock)
+      if( gear_bin_idx[i]  == 6 ){ alpha_temp = alpha_calc(sigma_cv_pollock) ; }
     // if(gear_bin_idx[i]<=3){        alpha_temp = alpha_calc(sigma_cv_temp) ;}
     //  if(gear_bin_idx[i]>=4){        alpha_temp = 1 ;}
     
     beta_temp  = beta_calc(lambda_temp, alpha_temp) ;
 
     prob[i] = 1- Prob_0_Calc(alpha_temp,beta_temp, inv_frac_samp[i]) ;
+    
+    // if(i==582){
+    //   print("rel_idx ", rel_idx[i] ) ;
+    //   print("log_N_temp_1",log_N_temp_1) ;
+    //   print("log_N_temp_2",log_N_temp_2) ;
+    //   print("lambda_temp ",lambda_temp) ;
+    //   print("alpha_temp ",alpha_temp) ;
+    //   print("inv_frac_samp",inv_frac_samp[i]) ;
+    //   // print("mod_time_idx ",mod_time_idx[i])
+    //   print("prob ",i," ",prob[i]);
+    // }
     // if(is_nan(prob[i])){print("NA ",i) ;}
     // if(is_inf(prob[i])){print("INF ",i) ;}
     // if( i == 100000){
@@ -1265,22 +1451,22 @@ model {/////////////////////////////////////////////////////////////////////////
       E_trunc_temp = E_trunc_pos(alpha_temp,beta_temp, inv_frac_samp[i]) ;
       V_trunc_temp = V_trunc_pos(alpha_temp,beta_temp,E_trunc_temp, prob_0_temp, inv_frac_samp[i]) ;
 
-        // if( i == 3013){
-        //   print("POS MOD: ", i) ;
-        //   print("OBS ", pos_catch[i]) ;
-        //   print("Frac_samp ",inv(inv_frac_samp[i])) ;
-        //   print("LAMBDA ",lambda_temp) ;
-        //   print("exp.LAMBDA ",exp(lambda_temp)) ;
-        //   print("E_trunc ",E_trunc_temp) ;
-        //   //print("PROB_0 ",prob_0_temp) ;
-        //   print("V_trunc ", V_trunc_temp) ;
-        //   print("SD_trunc ", pow(V_trunc_temp, 0.5)) ;
-        //   print("MEAN Pos Value ",exp(log_alpha_calc_pos( E_trunc_temp, V_trunc_temp)) /
-        //                         exp(log_beta_calc_pos( E_trunc_temp, V_trunc_temp, log_inv_frac_samp_pos[i]))) ;
-        //   print("SD Pos Value ",pow(exp(log_alpha_calc_pos( E_trunc_temp, V_trunc_temp)) /
-        //                         pow(exp(log_beta_calc_pos( E_trunc_temp, V_trunc_temp, log_inv_frac_samp_pos[i])),2),0.5)) ;
-        // //   print("ALP_POS_LIKE ",exp(log_alpha_calc_pos( E_trunc_temp, V_trunc_temp, log_inv_frac_samp_pos[i]))) ;
-        // //   print("BETA_POS_LIKE ",exp(log_beta_calc_pos( E_trunc_temp, V_trunc_temp, log_inv_frac_samp_pos[i]))) ;
+        // if( i == 8481){
+          //  print("POS MOD: ", i) ;
+          //  print("OBS ", pos_catch[i]) ;
+          //  print("Frac_samp ",inv(inv_frac_samp[i])) ;
+          //  print("LAMBDA ",lambda_temp) ;
+          //  print("exp.LAMBDA ",exp(lambda_temp)) ;
+          //  print("E_trunc ",E_trunc_temp) ;
+          // //print("PROB_0 ",prob_0_temp) ;
+          // print("V_trunc ", V_trunc_temp) ;
+          // print("SD_trunc ", pow(V_trunc_temp, 0.5)) ;
+          // print("MEAN Pos Value ",exp(log_alpha_calc_pos( E_trunc_temp, V_trunc_temp)) /
+          //                       exp(log_beta_calc_pos( E_trunc_temp, V_trunc_temp, log_inv_frac_samp_pos[i]))) ;
+          // print("SD Pos Value ",pow(exp(log_alpha_calc_pos( E_trunc_temp, V_trunc_temp)) /
+          //                       pow(exp(log_beta_calc_pos( E_trunc_temp, V_trunc_temp, log_inv_frac_samp_pos[i])),2),0.5)) ;
+        //   print("ALP_POS_LIKE ",exp(log_alpha_calc_pos( E_trunc_temp, V_trunc_temp, log_inv_frac_samp_pos[i]))) ;
+        //   print("BETA_POS_LIKE ",exp(log_beta_calc_pos( E_trunc_temp, V_trunc_temp, log_inv_frac_samp_pos[i]))) ;
         // }
         //if(V_trunc_temp < 1e-9){ print(i,"var error",)}
     
@@ -1300,24 +1486,31 @@ model {/////////////////////////////////////////////////////////////////////////
         bin_catch ~ bernoulli(prob);
         pos_catch ~ gamma(alpha_pos , beta_pos) ;
 
-
-} // end Local Variable Declaration
+} // end Local Variable Declaration 
 
   // Likelihood forcing the fraction of fish at the last time step to be about 0.001 of fish who survive to start the model.
        //log_N_ratio_mean ~ normal(log_N_ratio,log_N_ratio_sd) ;
 
   // Likelihood fraction disappearing to spawn. // This is for all RELEASES
     for( i in 1:N_rel){
-      E_prop[loc_spawn_idx[i]] ~  dirichlet(prop_D[i] * diri_constant) ;
-   }
-
-   // Likelihood data for AWG data.  USE POISSON FOR NOW?
+      if(juv_idx[i]==1){  
+        // print("i= ",i," origin= ",origin_idx[i]," 1") ;
+        // print(prop_D[i]) ;
+        // print(D[i]) ;
+        E_prop_1[origin_idx[i]] ~  dirichlet(prop_D[i] * diri_constant) ;
+      }else if(juv_idx[i]==2){
+        E_prop_2[origin_idx[i]] ~  dirichlet(prop_D[i] * diri_constant) ;
+      }
+    }
+   // Likelihood data for AWG data.  USE NB.  but the dispersion term goes to 0... so add 1 for now.
    for(i in 1:N_AWG){
+      //AWG_dat[i] ~  neg_binomial_2(D[AWG_idx[i]],nb_phi_fix) ;
       AWG_dat[i] ~  poisson(D[AWG_idx[i]]) ;
    }
 
+   // print("prop_PIT", prop_PIT[1]," and ", prop_PIT[10]);
    // Likelihood for PIT TAG DATA. // THIS IS FOR ALL RELEASES WITH PIT RELEASES (COLUMBIA RIVER)
-      PIT_K ~ binomial(PIT_N, prop_PIT);
+     PIT_K ~ binomial(PIT_N, prop_PIT);
 }
 
 

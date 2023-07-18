@@ -254,7 +254,7 @@ ocean.recover.trawl$dat <- rbind(ASHOP.fin,SHORESIDE.fin) %>% dplyr::select(-est
     
   # GOA Pollock Make a flat file equivalent to Lambda that will be made for the other gear groups in the 
   # Make catch and escapement files script later.
-  A<-    pivot_longer(pollock.sample.fraction,cols = starts_with("month"),
+  A <- pivot_longer(pollock.sample.fraction,cols = starts_with("month"),
                       names_to = "season",values_to="median.frac.samp") %>% as.data.frame()
   
   A <- A %>% mutate(season.numb=0) %>% 
@@ -277,7 +277,7 @@ ocean.recover.trawl$dat <- rbind(ASHOP.fin,SHORESIDE.fin) %>% dplyr::select(-est
   Lambda_pollock_GOA_flat <- Lambda_pollock_GOA_flat %>% dplyr::select(-year,-season,-season.numb)
   colnames(Lambda_pollock_GOA_flat) <- paste0("loc",".",nom)
   
-  # GOA Pollock Make a flat file equivalent to Lambda that will be made for the other gear groups in the 
+  # GOA Rockfish Make a flat file equivalent to Lambda that will be made for the other gear groups in the 
   # Make catch and escapement files script later.
   A<-    pivot_longer(rock.shoreside.sample.fraction,cols = starts_with("month"),
                       names_to = "season",values_to="median.frac.samp") %>% as.data.frame()

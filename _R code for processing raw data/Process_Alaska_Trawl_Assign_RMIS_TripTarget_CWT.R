@@ -228,23 +228,25 @@ cwt <- read.csv(paste0(base.dir,"/Orca_Salmon_DATA/Recoveries/Alaska Trawl/AK_CW
   cwt <- cwt %>%
   # only include some years, only GOA for now.
   filter(year > 1995,fishery==81) %>%
-    mutate(rec.area.code = NULL, 
-           rec.area.code = case_when(Area == "650" ~  "NEGOA",
-                                     Area == "640" ~  "NEGOA",
-                                     Area == "630" ~  "NWGOA",
-                                     Area == "620" ~  "EAPEN",
-                                     Area == "621" ~  "EAPEN",
-                                     Area == "610" ~  "WAPEN",
-                                     Area == "649" ~  "PWS")) %>%
-  ## assign locations based on lat-lons
-    mutate(rec.area.code = case_when(is.na(rec.area.code) & longitude > -140 & latitude > 55.5   ~  "NSEAK", #"X650",
-                              is.na(rec.area.code) & longitude <= -140 & longitude > -147  ~ "NEGOA", #"X640",
-                              is.na(rec.area.code) & longitude <= -147 & longitude > -154  ~ "NWGOA", #"X630",
-                              is.na(rec.area.code) & longitude <= -154 & longitude > -159  ~ "EAPEN", #"X620",
-                              is.na(rec.area.code) & longitude <= -159 & longitude > -170  ~ "WAPEN",
-                              is.na(rec.area.code) & longitude < -170 & latitude < 54 ~ "ALEUT",
-                              is.na(rec.area.code) & longitude > -136 ~ "SSEAK",
-                              TRUE ~ rec.area.code)) %>%
+    ## assign locations based on lat-lons
+        mutate(rec.area.code = NULL) %>% 
+        mutate(rec.area.code = case_when(Area == "650" ~  "NEGOA",
+                                           Area == "640" ~  "NEGOA",
+                                           Area == "630" ~  "NWGOA",
+                                           Area == "620" ~  "EAPEN",
+                                           Area == "621" ~  "EAPEN",
+                                           Area == "610" ~  "WAPEN",
+                                           Area == "649" ~  "PWS")) %>%
+        mutate(rec.area.code = case_when(is.na(rec.area.code) & longitude > -140 & latitude > 55.5   ~  "NSEAK", #"X650",
+                                     is.na(rec.area.code) & longitude <= -140 & longitude > -147  ~ "NEGOA", #"X640",
+                                     is.na(rec.area.code) & longitude <= -147 & longitude > -154  ~ "NWGOA", #"X630",
+                                     is.na(rec.area.code) & longitude <= -154 & longitude > -159  ~ "EAPEN", #"X620",
+                                     is.na(rec.area.code) & longitude <= -159 & longitude > -170  ~ "WAPEN",
+                                     is.na(rec.area.code) & longitude < -170 & latitude < 54 ~ "ALEUT",
+                                     is.na(rec.area.code) & longitude > -136 ~ "SSEAK",
+                                     TRUE ~ rec.area.code)) %>%
+    # Use reporting area over lat-lon when available.
+
     # There are vanishingly few recoveries that do not have a reported fishing area or a reported lat-long (5 since 1996, 1 in 1998, 1 in 1999)
     # I decided to simply exclude those recoveries. 
     filter(!is.na(rec.area.code)) %>%
