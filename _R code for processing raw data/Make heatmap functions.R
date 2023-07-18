@@ -14,7 +14,7 @@ temp <- temp[,1:(ncol(temp))]
   
 z.lim	<- c(-0.01,max(temp))
 if(max(temp) < -0.01){z.lim	<- c(-0.01,0)}
-lab.new <- LOCATIONS[order(LOCATIONS$location.number),]
+lab.new <- LOCATIONS.plot[order(LOCATIONS.plot$location.number),]
 x.lab	=	lab.new$location.name
 col.br<- colorRampPalette(c("blue", "cyan", "yellow", "red"))
 par(mfrow=c(1,1),oma=c( 0,0,0,4) )
@@ -41,7 +41,7 @@ plot.heatmap.nolog <- function(temp.all,id){
   Title = paste(REL$ID[id],REL$ocean.region[id],REL$brood_year[id],"y=",REL$n.year[id],";",REL$N.released[id])
   temp <- t(as.matrix(temp.all[id,,]))
   z.lim	<- c(0.01,min(max(max(temp),1),99999))
-  lab.new <- LOCATIONS[order(LOCATIONS$location.number),]
+  lab.new <- LOCATIONS.plot[order(LOCATIONS.plot$location.number),]
   x.lab	=	lab.new$location.name
   col.br<- colorRampPalette(c("blue", "cyan", "yellow", "red"))
   par(mfrow=c(1,1),oma=c( 0,0,0,4) )
@@ -69,7 +69,7 @@ plot.heatmap.samp.frac <- function(temp,Title){
   temp <- temp[,1:(ncol(temp))]
   
   z.lim	<- c(1e-6,1)
-  lab.new <- LOCATIONS[order(LOCATIONS$location.number),]
+  lab.new <- LOCATIONS.plot[order(LOCATIONS.plot$location.number),]
   x.lab	=	lab.new$location.name
   col.br<- colorRampPalette(c("blue", "cyan", "yellow", "red"))
   par(mfrow=c(1,1),oma=c( 0,0,0,4) )
@@ -137,15 +137,15 @@ plot.CPUE.heatmap <- function(temp.all,effort.all,id,MONTH.STRUCTURE){
   z.lim	<- c(1e-6,max(max(cpue[cpue<99])))
   if(z.lim[2]==0 | z.lim[2]== -99){ z.lim[2]=2e-6}
   
-  lab.new <- LOCATIONS[order(LOCATIONS$location.number),]
+  lab.new <- LOCATIONS.plot[order(LOCATIONS.plot$location.number),]
   x.lab	=	lab.new$location.name
   col.br<- colorRampPalette(c("blue", "cyan", "yellow", "red"))
   par(mfrow=c(1,1),oma=c( 0,0,0,4) )
-  image(z=t(cpue),x=1:nrow(t(temp)),y=LOCATIONS$location.number,axes=F,ylab="",xlab="",
+  image(z=t(cpue),x=1:nrow(t(temp)),y=LOCATIONS.plot$location.number,axes=F,ylab="",xlab="",
         col=grey(0.5),zlim=c(-100,-98))
-  image(z=t(cpue),x=1:nrow(t(temp)),y=LOCATIONS$location.number,axes=F,ylab="",xlab="",
+  image(z=t(cpue),x=1:nrow(t(temp)),y=LOCATIONS.plot$location.number,axes=F,ylab="",xlab="",
         col=col.br(32),zlim=z.lim,add=T)
-  image(z=t(cpue),x=1:nrow(t(temp)),y=LOCATIONS$location.number,axes=F,ylab="",xlab="",
+  image(z=t(cpue),x=1:nrow(t(temp)),y=LOCATIONS.plot$location.number,axes=F,ylab="",xlab="",
         col="black",zlim=c(-1e-10,1e-10),add=T)
   box(bty="o",lwd=2)
   axis(2,las=2,at=1:nrow(temp),labels=x.lab)

@@ -45,14 +45,14 @@ if(MONTH.STRUCTURE=="SPRING"){
 }
 
 
-
 pollock.sample.frac <- pol.samp %>% mutate(year = ifelse(season =="winter.2",year-1,year)) %>%
   group_by(year,rec.area.code,season) %>% 
   summarise(samp.frac = median(final.samp.fraction)) %>% 
   pivot_wider(., id_cols=c("year","rec.area.code"),names_from="season",values_from=c("samp.frac")) %>%
   replace(is.na(.),0) %>%
-  mutate(month.winter = median(winter.1, winter.2,na.rm=T)) %>%
-  dplyr::select(-winter.1,-winter.2) %>% 
+  ungroup() %>%
+  mutate(month.winter = (winter.1 + winter.2) / 2) %>%
+  #dplyr::select(-winter.1,-winter.2) %>% 
   dplyr::select(year,area.code = rec.area.code, month.winter, month.spring, month.summer, month.fall)
 
 # Merge in missing years and locations
@@ -61,10 +61,17 @@ temp<- expand.grid(year=YEARS.RECOVER,area.code=LOCATIONS$location.name)
 effort.pollock <- left_join(temp,effort.pollock) %>% 
                   left_join(.,LOCATIONS,by=c("area.code"="location.name")) %>% 
                   rename("area.numb"="location.number")%>%
-                  replace(is.na(.),0)
+                  replace(is.na(.),0) %>%
+                  arrange(area.numb,year)
+                  
 
 pollock.sample.fraction <- left_join(temp,pollock.sample.frac) %>% 
                        left_join(.,LOCATIONS,by=c("area.code"="location.name")) %>% 
                        rename("area.numb"="location.number") %>%
-                       replace(is.na(.),0)
-
+                       replace(is.na(.),0) %>%
+                       arrange(area.numb,year)
+# Make one single modification to 2002, january (month.winter 2021)
+# borrow from spring 2002
+val <- pollock.sample.fraction %>% filter(year==2002, area.code =="NWGOA") %>% pull(month.spring)
+pollock.sample.fraction <- pollock.sample.fraction %>% 
+                    mutate(month.winter = ifelse(year==2001 & area.code=="NWGOA",val,month.winter))

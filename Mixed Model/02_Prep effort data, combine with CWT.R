@@ -11,22 +11,25 @@ library(MASS)
 library(extrafont)
 library(gtable)
 
-#set.seed(10)
+set.seed(8)
 #test
 rm(list=ls())
 gc()
 
 base.dir  <- "/Users/ole.shelton/GitHub"
-#print(base.dir)
-#mn
-NAME <- "FINAL"
-MOD.NAME  <- 'climate model GAMMA - quadratic V LOCVAR2 NO SST.stan'
+# 
+if(getwd()!=paste0(base.dir,"/spring-chinook-distribution")){
+  setwd(paste0(base.dir,"/spring-chinook-distribution"))
+}#mn
+  
+NAME <- "R1-pois;hake!=pollock,cv=hake,pollock,vuln=hake,pollock;4-season(single offshore,wint=avg),year+fing,ZEROS"
+MOD.NAME  <- 'chinook-spring-GAMMA_quadratic_LOCVAR2_PIT_AWG.stan'
 
-SAMP.FILE <- paste0("./Output files/",NAME,".csv")
+SAMP.FILE <- paste0("../Output Files/",NAME,".csv")
 
 ### This is the definitions file for running the spatial statistical model for salmon.
 RUN.TYPE  <- "spring-summer" # options: "fall" or "spring-summer"
-GROUP     <- "FRAM_2022_12" ## Define the data file to access options include "CA+COL" "CA+COL+PUSO", others.
+GROUP     <- "FRAM_2023_07" ## Define the data file to access options include "CA+COL" "CA+COL+PUSO", others.
 SHORT     <- "NO" # This is an indicator variable which is now mostly irrelevant.
 loc_18    <- "_two_OR_PUSO_AK"  # Options: "TRUE", "TWO_OR", "NCA_SOR_PUSO" "TWO_OR_SPRING"
 
@@ -38,8 +41,7 @@ TRAWL.BC  <- "FALSE"
 
 TRAWL_VULN_QUADRATIC <- "TRUE"
 
-
-# CLOGLOG   <- "FALSE" # This is a new option for making the vulnerability function a complementary log-log function as opposed to a logit link
+CLOGLOG   <- "FALSE" # This is a new option for making the vulnerability function a complementary log-log function as opposed to a logit link
   
 # GROUPINGS FOR MONTHS
 MONTH.STRUCTURE <- "SPRING" # Options: "FOUR"(original structure) or 
@@ -47,9 +49,9 @@ MONTH.STRUCTURE <- "SPRING" # Options: "FOUR"(original structure) or
                           #          "SPRING" (follows the FOUR model schedule but includes March in the spring season)
 
 # These are are the determining factors for defining the years and locations
-YEARS.RELEASE     <- 1978:2013#2010
+YEARS.RELEASE     <- 1978:2012#2010
 YEARS.RECOVER     <- 1979:2018#2015
-YEARS.BROOD       <- 1977:2012#2009
+YEARS.BROOD       <- 1977:2011#2009
 
 N_years_recover <- length(YEARS.RECOVER)
 N_years_release <- length(YEARS.RELEASE)
@@ -206,9 +208,9 @@ if(MONTH.STRUCTURE=="FOUR"){
 }
 if(MONTH.STRUCTURE=="SPRING"){
   REL.ALL$n.month <- 0
-  REL.ALL$n.month[REL.ALL$n.year == 2] <- 2 - REL.ALL$Median.month.release[REL.ALL$n.year == 2] ## Start keeping track of fish in MArch (spring) of year following release.
-  REL.ALL$n.month[REL.ALL$n.year == 1] <- 12 - REL.ALL$Median.month.release[REL.ALL$n.year == 1] + 2 ## Start keeping track of fish in MArch (spring) of year following release.
-  REL.ALL$n.month[REL.ALL$n.year == 0] <- 12 + 12 - REL.ALL$Median.month.release[REL.ALL$n.year == 0] + 2 ## Start keeping track of fish in MArch (spring) of year following release.
+  REL.ALL$n.month[REL.ALL$n.year == 2] <- 3 - REL.ALL$Median.month.release[REL.ALL$n.year == 2] ## Start keeping track of fish in MArch (spring) of year following release.
+  REL.ALL$n.month[REL.ALL$n.year == 1] <- 12 - REL.ALL$Median.month.release[REL.ALL$n.year == 1] + 3 ## Start keeping track of fish in MArch (spring) of year following release.
+  REL.ALL$n.month[REL.ALL$n.year == 0] <- 12 + 12 - REL.ALL$Median.month.release[REL.ALL$n.year == 0] + 3 ## Start keeping track of fish in MArch (spring) of year following release.
 }
 if(MONTH.STRUCTURE=="FRAM"){
   REL.ALL$n.month <- 0
@@ -302,7 +304,7 @@ K_hake_shoreside <- K.hake.shoreside
 K_pollock_shoreside <- K.pollock.shoreside
 K_rockfish_AK_shoreside <-K.rockfish.shoreside
 K_rockfish_AK_CP <- K.rockfish.CP
-
+ 
 ###################################################################################################
 # Make intermediate recovery files.
 ###################################################################################################
@@ -358,7 +360,6 @@ source("./_R code for processing raw data/Trim releases based on recoveries Spr-
 source("./_R code for processing raw data/Make catch files Spr-Sum.r",local=T)
 source("./_R code for processing raw data/Make in-river recovery files Spr-Sum.r",local=T)
 
-  
 # This is where C, Z_catch, Lambda2, and E arrays are created.
 # They all have the form C[model.month,location,release.id,gear.type]
 # This also creates the E matrix (fish that make it into the river (both to hatchery and caught in fisheries))
@@ -443,8 +444,7 @@ C_rockfish_AK_zero <- abs(C_rockfish_AK_pos - 1)
 # C_net_zero <- abs(C_net_pos - 1)
  
 ### OBSERVED CATCH by catch type:
-
-####3 INITIAL RELEASES
+### INITIAL RELEASES
 N0 <- REL$N.released
 ####################################################################################################
 # Create Movement matrices
@@ -476,15 +476,30 @@ source("./_R code for processing raw data/Make PIT survival files Spr-Sum.R",loc
 ### see CWT Maturity Proportion for this and Make catch and Escapement CLIMATE.R
 
 source("./_R code for processing raw data/CWT Maturity Proportions Spr-Sum.R",local=T)
-escape_diri <- read.csv(paste0("./Processed Data/Escapement/Escape_Dirichlet_region ",RUN.TYPE," ",GROUP,".csv"))
-escape_diri <- escape_diri[order(escape_diri$number),]
-N.diri      <- nrow(escape_diri)
-escape_diri$init.loc <- 1:nrow(escape_diri)
+# This is for fingerlings (n_year==1) and yearlings (n_year==2)
+escape_diri_1 <- read.csv(paste0("./Processed Data/Escapement/Escape_Dirichlet_region ",RUN.TYPE," ",GROUP,"; n_year==1.csv"))
+escape_diri_2 <- read.csv(paste0("./Processed Data/Escapement/Escape_Dirichlet_region ",RUN.TYPE," ",GROUP,"; n_year==2.csv"))
+
+escape_diri_1 <- escape_diri_1[order(escape_diri_1$number),]
+escape_diri_2 <- escape_diri_2[order(escape_diri_2$number),]
+
+all_pop <- bind_rows(escape_diri_1,escape_diri_2) %>% distinct(ocean.region,number)
+
+escape_diri_1 <- left_join(all_pop,escape_diri_1) %>% arrange(number,ocean.region) %>%
+                    left_join(.,move_id %>% dplyr::select(init.loc=move_id_idx,ocean.region=ocean_region)) %>%
+                    mutate(n_year=1)
+escape_diri_2 <- left_join(all_pop,escape_diri_2) %>% arrange(number,ocean.region) %>%
+                    left_join(.,move_id %>% dplyr::select(init.loc=move_id_idx,ocean.region=ocean_region)) %>%
+                    mutate(n_year=2)
+escape_diri_1[is.na(escape_diri_1)] <- -99 
+escape_diri_2[is.na(escape_diri_2)] <- -99
+
+N.diri      <- nrow(escape_diri_1)
 diri_constant <- 100
 
 # Map the correct movement group their movement matrices
 REL$move_idx <- move_id$move_id_idx[match(REL$ocean.region,move_id$ocean_region)]
-move_idx    <- REL$move_idx
+move_idx     <- REL$move_idx
 
 #source(paste(base.dir,"/Orca_Salmon_Code/_R code for processing raw data/Make files for movement matrices.r",sep=""))
 
@@ -501,6 +516,7 @@ if(MONTH.STRUCTURE == "FOUR"){
 if(MONTH.STRUCTURE == "SPRING"){
   # For fall. time_fraction = 0.33 is September 1 migration
   # For spring run, time_fraction = 0 is March 1, time_fraction = 0.33 is April 1, 0.667 is May 1 
+  # For summer run, time_fraction = 0 is June 1, time_fraction = 0.5 is July 1
   REL <- REL %>% ungroup() %>% left_join(., ORIGIN.LAB %>% dplyr::select(ocean.region=origin.code,spawn_time_fraction) )
 }
 
@@ -549,10 +565,6 @@ if(MONTH.STRUCTURE == "FRAM"){
 #     ocean.temp <- ocean.temp %>% dplyr::select(year,season,CHAR)
 #   }
 #   
-#   #### MAKE A new index for working with temperature deviation data.
-#   REL$origin_start_year_idx <- 1+(REL$start_year - 1)*N_month  
-#   origin_year_idx <- matrix(seq(0,N.mod.month-1),N.REL,N.mod.month,byrow=T) + matrix(REL$origin_start_year_idx,N.REL,N.mod.month)
-# 
 #   if(MONTH.STRUCTURE =="FOUR"|MONTH.STRUCTURE=="SPRING"){
 #     first <- which(rownames(ocean.temp.dev)==paste(min(YEARS.RECOVER),"Spr",sep="."))
 #     last <- which(rownames(ocean.temp.dev)==paste(max(YEARS.RECOVER),"Fal",sep="."))
@@ -564,18 +576,24 @@ if(MONTH.STRUCTURE == "FRAM"){
 #     last <- which(rownames(ocean.temp.dev)==paste(max(YEARS.RECOVER),"Fal",sep="."))
 #     ocean.temp.dev <- ocean.temp.dev[first:last,]
 #   }
-#     
-#   temperature_season_idx    <- rep(0,nrow(ocean.temp.dev))
-#   temperature_season_idx[grep("Win",rownames(ocean.temp.dev))] <- 1
-#   temperature_season_idx[grep("Spr",rownames(ocean.temp.dev))] <- 1
-#   temperature_season_idx[grep("Sum",rownames(ocean.temp.dev))] <- 2
-#   temperature_season_idx[grep("Fal",rownames(ocean.temp.dev))] <- 3
+# 
+
+  #### MAKE A new index for working with temperature deviation data.
+  REL$origin_start_year_idx <- 1+(REL$start_year - 1)*N_month
+  origin_year_idx <- matrix(seq(0,N.mod.month-1),N.REL,N.mod.month,byrow=T) + matrix(REL$origin_start_year_idx,N.REL,N.mod.month)
+
+  # Make an index for temperature and season.
+  temperature_season_idx    <- rep(0,nrow(K_troll_flat))
+  temperature_season_idx[grep("winter",rownames(K_troll_flat))] <- 1
+  temperature_season_idx[grep("spring",rownames(K_troll_flat))] <- 1
+  temperature_season_idx[grep("summer",rownames(K_troll_flat))] <- 2
+  temperature_season_idx[grep("fall",rownames(K_troll_flat))] <- 3
 
 #################################################################################################
 ### Create Priors for maturity, vulnerability, fishing mortality parameters
 ###################################################################################################
 
-source("./Base_Code/_R code for processing raw data/Priors maturity, mortality, vuln, fishing CLIMATE.R",local=T)
+source("./_R code for processing raw data/Priors maturity, mortality, vuln, fishing Spr-Sum.R",local=T)
 # important values are:
 # MU_gamma, Sigma_gamma : multivariate normal values (3 param, gamma_0, gamma_age, gamma_lat) (for use with ocean ages 1:5 (recast so that the intercept is for age 5... aka ages = -4:0), latitude on 100s of km with 0 at northern limit)
 # MU_m, Sigma_m : multivariate normal (2 param: m0 and m1) (for use with ocean months 1:50+, converted into annual mortality of ~ 0.5, 0.70, 0.85, 0.90
@@ -599,15 +617,17 @@ source("./Base_Code/_R code for processing raw data/Priors maturity, mortality, 
 #     M2.t.loc[i,j] <- M2.t[i] * M2.loc[j] * Trans_month[i]
 #   }
 # }
-spawn_loc <- escape_diri[,c("ocean.region","number","init.loc")]
-
+spawn_loc_1 <- escape_diri_1[,c("ocean.region","number","init.loc")]
+spawn_loc_2 <- escape_diri_2[,c("ocean.region","number","init.loc")]
 #################################################
 ### Calculate the matrix that informs where fish can enter the river from the ocean.
-source("./_R code for processing raw data/Make river entry matrices.R",local=T)
+source("./_R code for processing raw data/Make river entry matrices Spr-Sum.R",local=T)
+# Relevant object from this is river_entry.
+
 
 #### MAKE A DATA FILE FOR log_n_fin_ratio_data to ensure very few fish are left in the ocean at the end of the simulation
-REL$log_N_ratio_mean <- -7
-REL$log_N_ratio_sd   <- 1.5
+# REL$log_N_ratio_mean <- -7
+# REL$log_N_ratio_sd   <- 1.5
 
 #### READ IN SIZE LIMITS THAT DETERMINE VULNERABILITY
 
@@ -639,19 +659,28 @@ if(loc_18 =="NCA_SOR_PUSO"){
   vuln.treaty.mat  <-   vuln.treaty.mat %>% mutate(NCA = (NCA + SOR )/2) %>% dplyr::select(-SOR)#%>% rename(SOR=COR)
   vuln.rec.mat  <-   vuln.rec.mat %>% mutate(NCA = (NCA + SOR )/2) %>% dplyr::select(-SOR)#%>% rename(SOR=COR)
 }
-if(loc_18 != "TRUE" & loc_18 != "TWO_OR" & loc_18 != "NCA_SOR_PUSO"){
-  vuln.rec.mat    <- vuln.rec.mat %>% dplyr::select(-PUSO_out)
-  vuln.treaty.mat <- vuln.treaty.mat %>% dplyr::select(-PUSO_out)
-  vuln.troll.mat  <- vuln.troll.mat %>% dplyr::select(-PUSO_out)
-}
+# if(loc_18 != "TRUE" & loc_18 != "TWO_OR" & loc_18 != "NCA_SOR_PUSO" & loc_18 == "_two_OR_PUSO_AK"){
+#   vuln.rec.mat    <- vuln.rec.mat %>% dplyr::select(-PUSO_out)
+#   vuln.treaty.mat <- vuln.treaty.mat %>% dplyr::select(-PUSO_out)
+#   vuln.troll.mat  <- vuln.troll.mat %>% dplyr::select(-PUSO_out)
+# }
 
 vuln.troll.mat  <- vuln.troll.mat %>% filter(Year %in% YEARS.RECOVER)
 vuln.treaty.mat <- vuln.treaty.mat %>% filter(Year %in% YEARS.RECOVER)
 vuln.rec.mat    <- vuln.rec.mat %>% filter(Year %in% YEARS.RECOVER)
 
-vuln.troll.mat <- vuln.troll.mat[2:nrow(vuln.troll.mat),]
-vuln.treaty.mat <- vuln.treaty.mat[2:nrow(vuln.treaty.mat),]
-vuln.rec.mat <- vuln.rec.mat[2:nrow(vuln.rec.mat),]
+# Keep only winter and spring of year == YEARS.RECOVER
+vuln.troll.mat <- vuln.troll.mat[1:(nrow(vuln.troll.mat)-2),]
+rownames(vuln.troll.mat) = paste0(vuln.troll.mat$Year,".",vuln.troll.mat$Season)
+vuln.rec.mat <- vuln.rec.mat[1:(nrow(vuln.rec.mat)-2),]
+rownames(vuln.rec.mat) = paste0(vuln.rec.mat$Year,".",vuln.rec.mat$Season)
+vuln.treaty.mat <- vuln.treaty.mat[1:(nrow(vuln.treaty.mat)-2),]
+rownames(vuln.treaty.mat) = paste0(vuln.treaty.mat$Year,".",vuln.treaty.mat$Season)
+
+
+# vuln.troll.mat <- vuln.troll.mat[2:nrow(vuln.troll.mat),]
+# vuln.treaty.mat <- vuln.treaty.mat[2:nrow(vuln.treaty.mat),]
+# vuln.rec.mat <- vuln.rec.mat[2:nrow(vuln.rec.mat),]
 
 # clip off the year and season columns
 vuln_troll_mat  <- vuln.troll.mat %>% dplyr::select(-Year,-Season) * 0.01
@@ -663,10 +692,12 @@ vuln_rec_mat    <- vuln.rec.mat %>% dplyr::select(-Year,-Season) * 0.01
 ############################################################################################################
 source("./_R code for processing raw data/Make smooth ocean distribution matrices Spr-Sum.R",local=T)
 
+LOCATIONS.plot <- LOCATIONS %>% 
+  mutate(location.name2=location.name) %>% 
+  mutate(location.name = ifelse(location.name=="PUSO_out","SJDF",location.name))
 
 ######## PLOT EFFORT AND CPUE FILES
 source("./_R code for processing raw data/Make heatmap functions.R",local=T)
-
 source("./_R code for processing raw data/Plot effort, CPUE heatmaps Spr-Sum.R",local=T)
 ############# MAKE A PDF of the various hatchery and release attributes.
 #write REL to file:
@@ -704,26 +735,28 @@ CATCH = list(
   C_hake_shoreside_true = C_hake_shoreside_true,
   C_pollock_GOA_true =C_pollock_GOA_true,
   C_rockfish_AK_true = C_rockfish_AK_true,
-  C_ocean_total = C_ocean_total,
+  C_ocean_total = C_ocean_total
   )
 
 FRESH = list(
   PIT.dat.fin = PIT.dat.fin,
-  
+  dat.cwt.fresh = dat.sum,
+  ESCAPE = ESCAPE,
+  escape_diri_1=escape_diri_1,
+  escape_diri_2=escape_diri_2
 )
-
-
 
 save(file=paste0(base.dir,"/spring-chinook-distribution/Processed Data/Effort ",RUN.TYPE," ",GROUP,".RData"),EFFORT)
 save(file=paste0(base.dir,"/spring-chinook-distribution/Processed Data/Catch ",RUN.TYPE," ",GROUP,".RData"),CATCH )
+save(file=paste0(base.dir,"/spring-chinook-distribution/Processed Data/Fresh ",RUN.TYPE," ",GROUP,".RData"),FRESH)
 
 
-#setwd(paste(base.dir,"/GSI_CWT_Chinook/Output plots/  __Markdown",sep=""))
-#rmarkdown::render("./Output plots/  __Markdown/release-summaries.rmd",
-#                  output_format = "pdf_document")
+#setwd(paste(base.dir,"/spring-chinook-distribution/Output plots/__Markdown",sep=""))
+rmarkdown::render(paste0(base.dir,"/spring-chinook-distribution/Output plots/__Markdown/release-summaries.rmd"),
+                  output_format = "pdf_document")
                   #output_file = "./Output plots/")
 
 #### CALL THE ACTUAL STAN CODE:
-#source(paste0(base.dir,"/GSI_CWT_Chinook/Base_Code/Mixed bin+pos SS + PROC logit prob_age CLIMATE ts-q SMOOTH.R"),local=T)
+source(paste0(base.dir,"/spring-chinook-distribution/Mixed Model/03_Mixed SS Chinook spring-summer.R"),local=T)
 
 

@@ -1,18 +1,20 @@
 library(readxl)
 library(dplyr)
 library(lubridate)
-#### Consolideted CWT releases file for Climate analysis
+#### Consolidated CWT releases file for Climate analysis
 #base.dir <- "/Users/ole.shelton/GitHub"
 ##rmis.base.dir <- "C:/Users/jense/Documents/GitHub/rmis-data" # MODIFIED TO REFLECT MY LOCAL DIRECTORY
 
 rmis.base.dir <- "/Users/ole.shelton/GitHub/rmis-data"
 base.dir <- "/Users/ole.shelton/GitHub"
 
-RUN.TYPE = "spring-summer" ### options: fall, spring-summer, south, case_study, case_study_south
+RUN.TYPE = "spring-summer" ### options: fall, spring-summer, south, case_study, case_study_south, spring-summer-fall
 
-GROUP <- "FRAM_2022_12"  ### Options "CA", "CA+" "COL" "CA+COL" "CA+COL_AWG" "CA+COL+PUSO" , FRAM_v1, FRAM_v2 # THIS IS WHAT YOU READ IN WITH
+#GROUP <- "OR_ESA"
+GROUP <- "FRAM_2023_07"  ### Options "CA", "CA+" "COL" "CA+COL" "CA+COL_AWG" "CA+COL+PUSO" , FRAM_v1, FRAM_v2 # THIS IS WHAT YOU READ IN WITH
                      ###  "FRAM_EXP" is an experimental one for looking at                 
-GROUP.2 <- "FRAM_2022_12"  # THIS IS WHAT GETS WRITTEN TO FILE.  Unless == "CA+COL_AWG" this should be the same as GROUP
+#GROUP <- "OR_ESA"
+GROUP.2 <- "FRAM_2023_07"  # THIS IS WHAT GETS WRITTEN TO FILE.  Unless == "CA+COL_AWG" this should be the same as GROUP
                           #A CLUGE SO CAN READ IN THE SAME DATA BUT END UP WITH A SLIGHTLY DIFFERENT DATA FRAME
 loc_18 <- "_two_OR_PUSO_AK" ## THIS IS THE MAPPING TO RECOVERIES AREA CODING.  Options I have tried:
                               ## options for this are a null string ("", should be default) 
@@ -40,6 +42,9 @@ all.release.dat$hatchery_location_code	<- as.character(all.release.dat$hatchery_
 # }
 if(RUN.TYPE=="spring-summer"){
   NOM <- paste(base.dir,"/Orca_Salmon_DATA/Releases/SPR-SUM/river releases spring-summer chinook ",GROUP," SPR-SUM.csv",sep="")
+}
+if(RUN.TYPE=="OR_ESA"){
+  NOM <- paste(base.dir,"/Orca_Salmon_DATA/Releases/OR_ESA/river releases chinook ",GROUP," 2023_04.csv",sep="")
 }
 
 chosen.release	<-	read.csv(NOM)
@@ -87,6 +92,13 @@ for(i in 1:nrow(chosen.release)){
                               #all.release.dat$first.release.month >= chosen.release$month.start[i] &
                               #all.release.dat$last.release.month <= chosen.release$month.stop[i] ,]
   }
+  
+  if(is.na(chosen.release$month.start[i])==FALSE & is.na(chosen.release$month.stop[i])==FALSE){
+    temp <- temp %>% filter(first.release.month >= chosen.release$month.start[i], 
+                            last.release.month <= chosen.release$month.stop[i])
+  }
+  
+  
   
   # Deal with rare NA run data in release data.  Common in Alaska.
   if(chosen.release$State[i] == "AK"){
@@ -143,7 +155,11 @@ trim.temp      <- data.frame(tag_code=unique(focal.releases$tag_code))
 # get rid of codes that are not at least 6 characters long.
 trim.temp <- trim.temp %>% mutate(n_char =  nchar(tag_code)) %>% filter(n_char>=6) 
 
-focal.releases <- focal.releases %>% filter(tag_code %in% trim.temp$tag_code) %>%
+focal.releases <- focal.releases %>%   
+                      group_by(tag_code) %>% 
+                      filter(tag_code == min(tag_code)) %>% 
+                      slice(1) %>% # takes the first occurrence if there is a tie
+                      ungroup() %>%
                         distinct(
                         ID, river,ocean.region,          
                         run,stock_location_code,hatchery_location_code,
@@ -165,8 +181,15 @@ focal.releases <- focal.releases %>% filter(cwt.released>0)
 # # Make indicator variable in the focal.releases data frame that indicates if this code group is used by the CTC model.
 # focal.releases <- focal.releases %>% arrange(ID,brood_year)
 
+if(RUN.TYPE=="spring-summer"){
 write.csv(focal.releases,
           file = paste0(base.dir,"/Orca_Salmon_DATA/Releases/SPR-SUM/Tag codes ",RUN.TYPE," chinook ",GROUP," Spr-Sum",loc_18,".csv"),row.names=FALSE)
+}
+if(RUN.TYPE=="OR_ESA"){
+  write.csv(focal.releases,
+            file = paste0(base.dir,"/Orca_Salmon_DATA/Releases/OR_ESA/Tag codes ",RUN.TYPE," chinook ",GROUP," ",loc_18,".csv"),row.names=FALSE)
+}
+
 ###############################################################################################
 ###############################################################################################
 ###############################################################################################
@@ -193,7 +216,12 @@ write.csv(focal.releases,
 ### Pull out recoveries for the tag groups of interest.
 ################### Go get the tag code file
 # this data comes from above script
+if(RUN.TYPE=="spring-summer"){
 tag.dat	<- read.csv(paste0(base.dir,"/Orca_Salmon_DATA/Releases/SPR-SUM/Tag codes ",RUN.TYPE," chinook ",GROUP," Spr-Sum",loc_18,".csv"))
+}
+if(RUN.TYPE=="OR_ESA"){
+  tag.dat	<- read.csv(paste0(base.dir,"/Orca_Salmon_DATA/Releases/OR_ESA/Tag codes ",RUN.TYPE," chinook ",GROUP," ",loc_18,".csv"))
+}
 
 # Go get the AWG data. 
 dat.awg <- readRDS(paste0(base.dir,"/Orca_Salmon_DATA/AWG chinook CTC data/2022-09/CWDBRecovery.rds"))
@@ -204,9 +232,10 @@ dat.awg <- dat.awg %>% mutate(RecDate = as.Date(RecoveryDate,"%m/%d/%Y"),
 dat.wire.code <- read.csv(paste0(base.dir,"/Orca_Salmon_DATA/AWG chinook CTC data/2022-09/WireTagCode.csv")) 
 
 #label the tag codes that are in the AWG database so they can be kept separate during aggregation
-awg.codes <- dat.awg %>% distinct(TagCode) %>% rename(tag_code=TagCode)
+awg.codes <- dat.awg %>% distinct(TagCode) %>% dplyr::rename(tag_code=TagCode)
 
-tag.dat <- tag.dat %>% mutate(ID = ifelse(tag_code %in% awg.codes$tag_code, paste0(ID,"_awg"),ID ))
+tag.dat <- tag.dat %>% mutate(ID = ifelse(tag_code %in% awg.codes$tag_code, paste0(ID,"_awg"),ID )) %>%
+                      mutate(first.release.month = ifelse(is.na(first.release.month),last.release.month,first.release.month))
 
 A	<-	aggregate(tag.dat$cwt.released,by=list(ID=tag.dat$ID,ocean.region=tag.dat$ocean.region,brood_year=tag.dat$brood_year,
                                             release_year=tag.dat$release.year,release_month=tag.dat$first.release.month),sum)
@@ -232,7 +261,12 @@ D <- merge(B,C)
 
 releases <- list(releases=D)
 ### Save Results to File
-save(releases,file=paste0(base.dir,"/spring-chinook-distribution/Processed Data/Releases ",RUN.TYPE," ",GROUP,".RData"))	    
+if(RUN.TYPE=="spring-summer"){
+  save(releases,file=paste0(base.dir,"/spring-chinook-distribution/Processed Data/Releases ",RUN.TYPE," ",GROUP,".RData"))	    
+}
+if(RUN.TYPE=="OR_ESA"){
+  save(releases,file=paste0(base.dir,"/Oregon_Chinook_BRT_2023/Data/CWT Data/Releases ",RUN.TYPE," ",GROUP,".RData"))	    
+}
 
 ###########################################################################################################################################		
 #### Modify the tag code file here, if desired.
@@ -338,6 +372,7 @@ dat.awg.M <- dat.awg.M %>% filter(!CWDBFishery %in% FISH.CODE) %>%
 recover.marine$rec.area.code <- NA
 
 #Add in extra recoveries from the Auxiliary data (AWG data)
+if(GROUP!= "OR_ESA"){
 recover.marine <- dat.awg.M %>% 
   mutate(gear=NA,
          recovery_location_name =NA,
@@ -363,8 +398,7 @@ recover.marine <- dat.awg.M %>%
                 detection_method = detection_method,
                 rec.year=year,rec.month=month) %>%
     bind_rows(recover.marine, .)
-
-
+}
 # #### USE THIS FOR FIRST RUN 
 # recover.marine$rec.area.code <- dat.loc.key$Rec.area.Shelton[match(recover.marine$recovery_location_code, dat.loc.key$location_code)]
 # 
@@ -476,6 +510,7 @@ marine.1 <- recover.marine %>%
 #This is the high seas for the Gulf of Alaska 
 # This does not actually get used in the model, it is primarily calculated for comparing with 
 # the data pulled from AFSC observer data.
+
 marine.GOA.HS <- recover.marine %>% 
                     filter(grepl("HIGH SEAS 3",recovery_location_name),
                            fishery %in% c(81,82,812)) %>%
@@ -491,15 +526,17 @@ marine.GOA.HS <- recover.marine %>%
                   summarise(count=length(estimated_number)) %>%
                   as.data.frame() 
 
+marine.GOA.HS <- left_join(marine.GOA.HS,tag.dat,by="tag_code")
+
+
 ## Merge with release group
 marine.all	<- left_join(tag.dat,marine.1,by="tag_code")
 marine.all <- marine.all %>% arrange(tag_code,fishery,rec.year,rec.month) %>%
-                  rename(est.numb = count, count = x) %>%
+                  dplyr::rename(est.numb = count, count = x) %>%
                   filter(est.numb > 0) %>%
                   mutate(frac.samp = count / est.numb,
                          frac.samp = ifelse(frac.samp > 1,1,frac.samp))
 
-marine.GOA.HS <- left_join(marine.GOA.HS,tag.dat,by="tag_code")
 
 #Check to make sure the sums are equivalent after merge.
 # A<-marine.merge %>% group_by(rec.year) %>%summarise(a2=sum(count))
@@ -599,7 +636,7 @@ marine.by.hatchery <- marine.all %>% group_by(ID,
                                 summarise(est.number =sum(est.numb),
                                           Count = sum(count),
                                           median.frac.samp=median(frac.samp)) %>%
-                                rename(count=Count,est.numb=est.number) %>% 
+                                dplyr::rename(count=Count,est.numb=est.number) %>% 
                                 filter(!is.na(rec.month)) # this gets rid of one entry from the Bering (5/3/2022)
 
 # Systematically exclude recoveries are not of interest and those that will be added in later
@@ -704,8 +741,12 @@ for(i in 1:length(ocean.region)){
 names(catch.by.region) <- ocean.region
 
 ocean.recover = list(ocean.recover=catch.by.region,dat=marine.by.hatchery)
+if(RUN.TYPE=="spring-summer"){
 save(ocean.recover,file=paste0(base.dir,"/spring-chinook-distribution/Processed Data/Ocean Recoveries ",RUN.TYPE," ",GROUP,loc_18,".RData"))	    
-
+}
+if(RUN.TYPE=="OR_ESA"){
+  save(ocean.recover,file=paste0(base.dir,"/Oregon_Chinook_BRT_2023/Data/CWT Data/Ocean Recoveries ",RUN.TYPE," ",GROUP,loc_18,".RData"))	    
+}
 
 ####################################################
 ####################################################
@@ -747,13 +788,12 @@ trawl.all <- dat.trawl.target %>%
       group_by(ID,brood_year,release.year,first.release.month,ocean.region,fishery,rec.year,rec.month,rec.area.code) %>% 
       dplyr::summarise(N.samp=length(count),tot.count = sum(count),median.frac.samp = median(median.frac.samp)) %>%
       mutate(est.numb = tot.count / median.frac.samp) %>% 
-      rename(brood.year=brood_year,rel.year=release.year,rel.month=first.release.month,count=tot.count) %>%
+      dplyr::rename(brood.year=brood_year,rel.year=release.year,rel.month=first.release.month,count=tot.count) %>%
       dplyr::select(ID,brood.year,rel.year,rel.month,ocean.region,fishery,rec.year,rec.month,
               rec.area.code,N.samp,est.numb,count,median.frac.samp)
 
 ocean.recover.trawl = list(dat=trawl.all)
 save(ocean.recover.trawl,file=paste0(base.dir,"/spring-chinook-distribution/Processed Data/Ocean Recoveries Hake Trawl ",RUN.TYPE," ",GROUP,loc_18,".RData"))	    
-
 
 ### OK DRAW IN THE POLLOCK DATA FROM ALASKA.
 
@@ -789,9 +829,9 @@ trawl.pollock <- dat.trawl.pollock %>%
   dplyr::summarise(tot.count=length(year)) %>%
   mutate(fishery="pollock") %>%
   left_join(.,sampling.fraction,by=c("rec.area.code","year","month"="month.numb")) %>%
-  rename(median.frac.samp = final.samp.fraction) %>%
+  dplyr::rename(median.frac.samp = final.samp.fraction) %>%
   mutate(est.numb = tot.count / median.frac.samp) %>% 
-  rename(brood.year=brood_year,rel.year=release.year,rel.month=first.release.month,count=tot.count) %>%
+  dplyr::rename(brood.year=brood_year,rel.year=release.year,rel.month=first.release.month,count=tot.count) %>%
   dplyr::select(ID,brood.year,rel.year,rel.month,ocean.region,fishery,rec.year=year,rec.month=month,
                 rec.area.code,est.numb,count,median.frac.samp)
 
@@ -810,12 +850,18 @@ samp.frac.missing <- left_join(samp.frac.missing, extra.samp.frac,
                                by=c("rec.month"="month.numb","rec.area.code"="rec.area.code")) %>%
                                mutate(est.numb = count / median.frac.samp)
 
-trawl.pollock <- trawl.pollock %>% filter(is.na(median.frac.samp)==F) %>%
+trawl.pollock <- trawl.pollock %>% filter(is.na(median.frac.samp)==FALSE) %>%
                         bind_rows(.,samp.frac.missing)
 
 ## Write to File
 ocean.recover.pollock.trawl = list(dat=trawl.pollock)
-save(ocean.recover.pollock.trawl,file=paste0(base.dir,"/spring-chinook-distribution/Processed Data/Ocean Recoveries Pollock Trawl ",RUN.TYPE," ",GROUP,loc_18,".RData"))	    
+
+if(RUN.TYPE=="spring-summer"){
+  save(ocean.recover.pollock.trawl,file=paste0(base.dir,"/spring-chinook-distribution/Processed Data/Ocean Recoveries Pollock Trawl ",RUN.TYPE," ",GROUP,loc_18,".RData"))
+}
+if(RUN.TYPE=="OR_ESA"){
+  save(ocean.recover.pollock.trawl,file=paste0(base.dir,"/Oregon_Chinook_BRT_2023/Data/CWT Data/Ocean Recoveries Pollock Trawl ",RUN.TYPE," ",GROUP,loc_18,".RData"))
+}
 
 ####################################################
 ####################################################
@@ -827,7 +873,7 @@ save(ocean.recover.pollock.trawl,file=paste0(base.dir,"/spring-chinook-distribut
 # This reads in the dates of rockfish fisheries effort from fish tickets 
 source(paste0(base.dir,"/spring-chinook-distribution/_R code for processing raw data/Process ALASKA rockfish effort.R"))
 
-trawl.rockfish.AK <- read.csv(paste0(data.cwt.dir,"/Rockfish CWT.csv")) %>%
+trawl.rockfish.AK <- read.csv(paste0(base.dir,"/Orca_Salmon_DATA/Recoveries/Alaska Trawl/Rockfish CWT.csv")) %>%
   dplyr::mutate(Long=-1*Long, tag_code= str_pad(tag_code, pad = "0", width = 6, side = c("left"))) %>%
   tidyr::separate(recovery_date, into =c("rec.year", "rec_monthrec_day"), sep = 4) %>%
   tidyr::separate(rec_monthrec_day, into =c("rec.month", "rec.day"), sep = 2) %>%
@@ -838,7 +884,7 @@ trawl.rockfish.AK <- read.csv(paste0(data.cwt.dir,"/Rockfish CWT.csv")) %>%
   dplyr::mutate(rec.area.code = case_when(Area == 620 ~ "EAPEN",   
                                           Area == 630 ~ "NWGOA",
                                           Long <= -147 & Long > -154 ~ "NWGOA", #"X630",
-                                          Long <= -154 & Long > -159  ~ "WAPEN", #"X620",
+                                          Long <= -154 & Long > -159  ~ "EAPEN", #"X620",
                                           TRUE~ "FIX" )) %>%  # 5 fish from 2013 from ship Cape Kiwanda that do not have any location info. 
   filter(#!Missing_Fins %in% c("None", "none"), 
          !rec.area.code=="FIX", 
@@ -851,7 +897,7 @@ dat.trawl.rockfish.AK <- trawl.rockfish.AK %>%
   dplyr::summarise(tot.count=length(rec.year)) %>%
   mutate(median.frac.samp = 1) %>% # FULL CENSUS MEANS COMPLETE DETECTION.
   mutate(est.numb = tot.count / median.frac.samp,fishery="rockfish.AK") %>% 
-  rename(brood.year=brood_year,rel.year=release.year,rel.month=first.release.month,count=tot.count) %>%
+  dplyr::rename(brood.year=brood_year,rel.year=release.year,rel.month=first.release.month,count=tot.count) %>%
   dplyr::select(ID,brood.year,rel.year,rel.month,ocean.region,fishery,rec.year,rec.month,
                 rec.area.code,est.numb,count,median.frac.samp) %>%
   mutate(rec.month = as.numeric(rec.month), rec.year = as.numeric(rec.year))
@@ -860,7 +906,14 @@ dat.trawl.rockfish.AK <- trawl.rockfish.AK %>%
 ## Write to File
 ocean.recover.rockfish.AK.shoreside = list(dat=dat.trawl.rockfish.AK)
 
-save(ocean.recover.rockfish.AK.shoreside,file=paste0(base.dir,"/spring-chinook-distribution/Processed Data/Ocean Recoveries Rockfish AK Shoreside ",RUN.TYPE," ",GROUP,loc_18,".RData"))	    
+#save(ocean.recover.rockfish.AK.shoreside,file=paste0(base.dir,"/spring-chinook-distribution/Processed Data/Ocean Recoveries Rockfish AK Shoreside ",RUN.TYPE," ",GROUP,loc_18,".RData"))	    
+
+if(RUN.TYPE=="spring-summer"){
+  save(ocean.recover.rockfish.AK.shoreside,file=paste0(base.dir,"/spring-chinook-distribution/Processed Data/Ocean Recoveries Rockfish AK Shoreside ",RUN.TYPE," ",GROUP,loc_18,".RData"))	    
+}
+if(RUN.TYPE=="OR_ESA"){
+  save(ocean.recover.rockfish.AK.shoreside,file=paste0(base.dir,"/Oregon_Chinook_BRT_2023/Data/CWT Data/Ocean Recoveries Rockfish AK Shoreside ",RUN.TYPE," ",GROUP,loc_18,".RData"))	    
+}
 
 ####################################################
 ####################################################
@@ -884,19 +937,21 @@ save(ocean.recover.rockfish.AK.shoreside,file=paste0(base.dir,"/spring-chinook-d
 ####################################################
 ####################################################
 
-setwd(paste0(base.dir,"/spring-chinook-distribution"))
+setwd(paste0(base.dir))
 
 #Merge recovery code names with areas used.
 #### Assign recoveries into regions delineated by Weitkamp 2002 and 2010
 recover.fresh$rec.area.code <- NA
 # get rid of sample type =5 to avoid double counting
 recover.fresh <- recover.fresh[recover.fresh$sample_type !=5,]
+recover.fresh <- recover.fresh[recover.fresh$sample_type !=4,]
 
 # Area, year, month, release group, fishery
 fresh.all	<- recover.fresh %>% 
               group_by(tag_code=tag_code,
                       fishery,
                       rec.year,
+                      rec.month,
                       rec.area.code = recovery_location_code,
                       sample.type=sample_type,
                       auxiliary) %>%
@@ -980,44 +1035,48 @@ fresh.all		<-	fresh.all[fresh.all$sample.type !=5 &fresh.all$sample.type !=4,]
 #fresh.all		<-	fresh.all[fresh.all$est.numb > 0,]
 
 # Break the fresh recoveries into two groups.  One with estimated numbers, one without.
-fresh.zero <- fresh.all[fresh.all$est.numb==0,]
-fresh.pos <- fresh.all %>% filter(est.numb!=0)
-
-fresh.pos$frac.samp<-fresh.pos$count/fresh.pos$est.numb
-fresh.pos$frac.samp[fresh.pos$frac.samp > 1] <- 1
+# fresh.zero <- fresh.all[fresh.all$est.numb==0,]
+# fresh.pos <- fresh.all %>% filter(est.numb!=0)
+# 
+# fresh.pos$frac.samp<-fresh.pos$count/fresh.pos$est.numb
+# fresh.pos$frac.samp[fresh.pos$frac.samp > 1] <- 1
 
 ######################################################################################
-# Deal with the positives first	
-fresh.by.hatchery	<-	fresh.pos %>% 
+# DON"T WORRY ABOUT CALCULATING SAMPLING FRACTIONS.  THEY ARE ASSUMED TO BE OFF FOR ALL STOCKS.
+# Partiucularly for spawning ground counts
+
+fresh.by.hatchery	<-	fresh.all %>%
                               group_by(
                                 ID,
                                 brood.year = brood_year,
                                 rel.year = release.year,
                                 #rel.month = first.release.month,
                                 ocean.region = ocean.region,
-                                fishery		= fishery,	
+                                fishery		= fishery,
                                 rec.year  = rec.year,
-                                auxiliary) %>% 
+                                rec.month = rec.month,
+                                auxiliary) %>%
                             summarise(est.numb=sum(est.numb,na.rm=T),
-                                      count=sum(count,na.rm=T),
-                                      median.frac.samp = median(frac.samp))
-# Next the zeros.
-fresh.by.hatchery.count.zero	<-	fresh.zero %>% 
-    group_by(
-      ID,
-      brood.year = brood_year,
-      rel.year = release.year,
-      #rel.month = first.release.month,
-      ocean.region = ocean.region,
-      fishery		= fishery,	
-      rec.year  = rec.year,
-      auxiliary) %>% 
-    summarise(count.zero=sum(count,na.rm=T))
-
-fresh.w.fishery <- full_join(fresh.by.hatchery, fresh.by.hatchery.count.zero)    
-
-# Eliminated a NA row
-fresh.w.fishery <- fresh.w.fishery %>% filter(!is.na(ocean.region))
+                                      count=sum(count,na.rm=T))
+                                      #median.frac.samp = median(frac.samp))
+# # Next the zeros.
+# fresh.by.hatchery.count.zero	<-	fresh.zero %>% 
+#     group_by(
+#       ID,
+#       brood.year = brood_year,
+#       rel.year = release.year,
+#       #rel.month = first.release.month,
+#       ocean.region = ocean.region,
+#       fishery		= fishery,	
+#       rec.year  = rec.year,
+#       rec.month = rec.month,
+#       auxiliary) %>% 
+#     summarise(count.zero=sum(count,na.rm=T))
+# 
+# fresh.w.fishery <- full_join(fresh.by.hatchery, fresh.by.hatchery.count.zero)    
+# 
+# # Eliminated a NA row
+# fresh.w.fishery <- fresh.w.fishery %>% filter(!is.na(ocean.region))
 
 ######################################################################################
 #### COMBINE THE VARIOUS FISHERIES
@@ -1025,16 +1084,17 @@ fresh.w.fishery <- fresh.w.fishery %>% filter(!is.na(ocean.region))
 
 # Deal with the positives first	
 fresh.consolidated	<-	
-  fresh.w.fishery %>% group_by(ID,
+            fresh.by.hatchery %>% group_by(ID,
                          brood.year,
                          rel.year,
                          #rel.month,
                          ocean.region,
+                         rec.month,
                          rec.year,auxiliary) %>%
             summarise(est.numb=sum(est.numb,na.rm=T),
-                      count = sum(count,na.rm=T),
-                      median.frac.samp = median(median.frac.samp,na.rm=T),
-                      count.zero = sum(count.zero,na.rm=T))
+                      count = sum(count,na.rm=T))
+                      # median.frac.samp = median(median.frac.samp,na.rm=T),
+                      # count.zero = sum(count.zero,na.rm=T))
 
 ####################################################
 ####################################################
@@ -1051,11 +1111,20 @@ fresh.consolidated	<-
 
 fresh.recover = list(#fresh.recover.simple=fresh.recover.simple,
   #fresh.recover.complex=fresh.recover.complex,
-  dat.fish=fresh.w.fishery, # this is a data frame with the fisheries still included.
+  dat.fish=fresh.by.hatchery, # this is a data frame with the fisheries still included.
   dat.consolidated =fresh.consolidated, # This is summed across FW fisheries (including spawning)
   river.entry = fresh.by.hatchery.river) #
 
-save(fresh.recover,file=paste0("./Processed Data/Fresh Recoveries ",RUN.TYPE," ",GROUP,loc_18,".RData"))	  
+
+
+
+if(RUN.TYPE=="spring-summer"){
+  save(fresh.recover,file=paste0("./spring-chinook-distribution/Processed Data/Fresh Recoveries ",RUN.TYPE," ",GROUP,loc_18,".RData"))	  
+}
+if(RUN.TYPE=="OR_ESA"){
+  save(fresh.recover,file=paste0("./Oregon_Chinook_BRT_2023/Data/CWT Data/Fresh Recoveries ",RUN.TYPE," ",GROUP,loc_18,".RData"))	  
+}
+
 
 ####################################################
 #############################################
@@ -1118,7 +1187,7 @@ pit.summary <- dat.pit %>% group_by(area,GroupDescription,SAR_Reach) %>%
 pit.sar.data <- list(dat.pit = dat.pit,
                      pit.summary = pit.summary)
 
-save(pit.sar.data,file=paste0("./Processed Data/PIT SAR ",RUN.TYPE," ",GROUP,loc_18,".RData"))	  
+save(pit.sar.data,file=paste0("./spring-chinook-distribution/Processed Data/PIT SAR ",RUN.TYPE," ",GROUP,loc_18,".RData"))	  
 
 
 # 	Sample Type

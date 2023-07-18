@@ -12,6 +12,7 @@ library(here)
 
 # These are needed for the end of this script to match up with ASHOP and SHORESIDE DATA
 shoreside_chinook = read.csv(paste0(base.dir,"/Orca_Salmon_DATA/Recoveries/Shoreside_CWT/Final_Dataset/shoreside_chinook_tagcode_FTID.csv"))
+shoreside_chinook_17_21 = read.csv(paste0(base.dir,"/Orca_Salmon_DATA/Recoveries/Shoreside_CWT/Final_Dataset/shoreside_chinook_tagcode_2017_2021.csv"))
 ashop_all_salmon = read.csv(paste0(base.dir,"/Orca_Salmon_DATA/Hake Trawl/ASHOP/final_datasets/ashop_chinook.csv"))
 ashop_chinook_CWT1 = read.csv(paste0(base.dir,"/Orca_Salmon_DATA/Recoveries/ASHOP/snoutbase/A-SHOP_Snoutbase_122118.csv"))
 ashop_chinook_CWT2 = read.csv(paste0(base.dir,"/Orca_Salmon_DATA/Recoveries/ASHOP/snoutbase/A-SHOP_ChinookBio_2012-2021_Matson_061622 for Ole.csv"))
@@ -162,7 +163,15 @@ hs_dat <- df_recovery %>%
   mutate(rec_year= as.numeric(rec_year)) %>%
   unite("id", c("rec_year", "rec_month", "rec_day", "tag_code"), remove = FALSE )
 
-all_dat <- left_join(hs_dat, snout, by =  "id") %>% #combine so that rmis lat and longs can be replaced by snout 
+all_dat <- left_join(hs_dat, snout, by =  "id",relationship="many-to-many") %>% #combine so that rmis lat and longs can be replaced by snout 
+  # Get rid of of one troublesome pair of ids
+  #filter(!id == "2013_5_21_635095")
+  
+# pull out the troublesome observations and make sure there are only in the data once. 
+# all_dat <-  left_join (hs_dat %>% filter(id=="2013_5_21_635095"),snout %>% filter(id=="2013_5_21_635095"),
+#              by="id",relationship="many-to-many") %>%
+#   slice(.,c(1,4)) %>%
+#   bind_rows(all_dat,.)%>%
   filter(!is.na(Year)) %>%
   mutate(Lat = as.numeric(as.character(Lat))) %>%
   mutate(Long = as.numeric(as.character(Long))) %>%
@@ -179,6 +188,32 @@ all_dat <- left_join(hs_dat, snout, by =  "id") %>% #combine so that rmis lat an
   dplyr::select(id,rec_year, rec_month, rec_day, tag_code, recovery_id,rec.area.code,
         fishery, fishery_type, fishery_name, gear, latitude, longitude, recovery_location_name,
         Lat, Long, estimated_number, estimation_level, detection_method, recovery_description)
+
+# This accidentally duplicates a few observations.  
+
+# Find them and manually ensure only one is present.
+these <- all_dat %>% distinct(id,recovery_id,rec.area.code) %>% group_by(id) %>% 
+              summarise(N=length(id)) %>% filter(N>1)
+
+all_dat_dup <- all_dat %>% filter(id %in% these$id)
+
+
+trim <-NULL
+for(i in 1:length(these$id)){
+  temp <- all_dat_dup %>% filter(id ==these$id[i])
+  #print(nrow(temp))
+  #if(nrow(temp)==2){temp <- temp %>% slice(c(1,4))}
+  if(nrow(temp)==4){temp <- temp %>% slice(c(1,4))}
+  if(nrow(temp)==9){temp <- temp %>% slice(c(1,5,9))}
+  if(nrow(temp)==16){temp <- temp %>% slice(c(1,6,11,16))}
+  trim <- rbind(trim,temp)
+}
+
+all_dat <- all_dat %>% filter(!id %in% these$id) %>% bind_rows(.,trim)
+
+# all_dat %>% distinct(id) %>% dim()
+# all_dat %>% distinct(id,recovery_id) %>% dim()
+# all_dat %>% distinct(id,recovery_id,rec.area.code) %>% dim()
 
 df_recovery$Haul <- NA
 df_recovery$Lat  <- NA
@@ -351,7 +386,28 @@ B <- A %>% group_by(ID_UNIQUE,DRVID,sector,gear,FTID,LANDING_MONTH,LANDING_DAY,
                                                                    "WAC"))) %>%
             rename(Lat=Lat.fin,Long=Long.fin)
             
-shoreside_chinook_reduced <- shoreside_chinook_reduced %>% filter(!ID_UNIQUE %in% shoreside_chinook_new_area$ID_UNIQUE) %>% bind_rows(.,B)
+shoreside_chinook_reduced <- shoreside_chinook_reduced %>% 
+                            filter(!ID_UNIQUE %in% shoreside_chinook_new_area$ID_UNIQUE) %>% 
+                            bind_rows(.,B)
+
+# Add leading zeros to Tag_code for 2017 on.
+shoreside_chinook_17_21 <- shoreside_chinook_17_21 %>% 
+                              mutate(Tag_Code = as.character(Tag_Code),
+                                     Tag_Code = ifelse(nchar(Tag_Code)==5,paste0("0",Tag_Code),Tag_Code))
+
+shoreside_chinook2 <- shoreside_chinook_17_21 %>% 
+                        mutate(DATE = as.Date(LANDING_DATE,"%m/%d/%y"),
+                               rec.year = year(DATE),
+                               rec.month = month(DATE)) %>%
+                        mutate(rec.area.code=case_when(PORT=="ASTORIA" ~ "A",
+                                                       PORT=="ILWACO" ~ "B",
+                                                       PORT=="WESTPORT" ~ "C",
+                                                       PORT=="NEWPORT" ~ "D",
+                                                       TRUE ~ PORT))
+                               
+
+
+
 
 shoreside_chinook1 <- shoreside_chinook_reduced %>%  #this is data that kayleigh gave me. 
   mutate(tag.code = as.character(Tag.Code)) %>%  

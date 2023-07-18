@@ -5,7 +5,7 @@
 REL <- REL %>% filter(N.released > 4000) %>% as.data.frame()
 
 # This culling occurs because of the lack of in-river recoveries.
-if(GROUP == "FRAM_2022_12"){
+if(GROUP == "FRAM_2022_12" | GROUP == "FRAM_2023_05_TEST" | GROUP == "FRAM_2023_07"){
   # Also eliminate some Alaskan groups that have virtually no recoveries in the ocean.
   REL <- REL %>% filter(!ocean.region %in% 
                           c("CHIG_spr","KOD_spr","PWS_spr","COOK_spr","COPP_spr","YAK_spr",
@@ -97,7 +97,7 @@ if(GROUP == "FRAM_2022_12"){
   REL <- REL %>% filter(# Cull some of SGEO and FRAS,
     !ID %in% c("Kendall_Nooksack_spr",
                "Kendall_spr",
-               "Marblemount_Clark_spr_awg",
+               #"Marblemount_Clark_spr_awg",
                "Hupp_spr",
                "Bernie_G_Sky_sum",
                "Bernie_G_Wallace_sum",
@@ -146,6 +146,26 @@ if(GROUP == "FRAM_2022_12"){
     REL <- REL %>% filter(# Cull some of WILL_spr
       !ID %in% c("OPSR_spr",
                  "Rogue_spr"))
+
+    ### Get rid of some outliers in terms of release timing
+    
+    REL <- REL %>% mutate(lab =paste0(ocean.region,"_",n.year)) %>%
+            filter(!lab %in% c("NCA_spr_2","SOR_spr_2","LCOL_spr_1","SNAK_low_spr_1",
+                         "UCOL_spr_1","WAC_sum_2","FRAS_TH_spr_1",
+                         "SSEAK_Stikine_spr_1","NSEAK_Taku_spr_1","SFB_spr_2")) %>%
+            dplyr::select(!lab)
+                      
+    
+    
+    ### FIND CATCH DATA and only include releases that have non-zero ocean recoveries.
+    # catch.dat.mod <- catch.dat %>% mutate(matchy = paste(ID,brood.year,rel.year,sep="_")) %>%
+    #                     filter(!fishery.type %in% c("Gillnet & Seine & Other","Terminal")) %>%
+    #                     group_by(matchy) %>% summarise(Sum =sum(est.numb),count=sum(count)) %>%
+    #                     arrange(Sum,matchy) %>% as.data.frame()
+    #                     
+    # REL <- REL %>% mutate(matchy = paste(ID,brood_year,release_year,sep="_"))
+    # REL2 <- left_join(REL,catch.dat.mod) %>% filter(is.na(Sum))
+    # REL <- REL %>% filter(!matchy %in% REL2$matchy) %>% dplyr::select(-matchy)
 }
 
 if(GROUP == "FRAM_2022_05"){

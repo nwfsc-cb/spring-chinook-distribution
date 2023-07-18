@@ -122,22 +122,22 @@ year.month$Var2<- str_pad(year.month$Var2, width= 2, pad = "0", side="left") #ad
 year.month <- unite(year.month, "year.month", c("Var1", "Var2"), sep = ".", remove= TRUE) #join month and year in its own dataframe 
 
 #general plot of all effort. 
-join_data_shoreside %>%  
-  ungroup() %>%
-  dplyr::select(year,month,rec.area.code,pscnq_processing_sector,unobs_boat_days,observed_boat_days,frac_boat_days_obs) %>%   
-  mutate(month = str_pad(month, "left", pad=0, width = 2)) %>%
-  unite("year.month",c("year","month"), sep = ".") %>%
-  gather(4:5, key = "category", value = "boat_days") %>%
-  merge(year.month, all = TRUE) %>% # add in labels
-  mutate(boat_days= replace_na(boat_days,0)) %>%
-  filter(!boat_days<0) %>%
-  ggplot() +
-  geom_bar(aes(x=year.month,y=boat_days, fill = category), position="stack", stat="identity",alpha = 0.8) +
-  facet_wrap(~rec.area.code, scales = "free", ncol=1) +
-  ggtitle("Boat Days (Shoreside Pollock)") + # no small CP's
-  theme_classic() +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1,size=7))  +
-  scale_x_discrete(breaks = every_nth(n = 12))
+# join_data_shoreside %>%  
+#   ungroup() %>%
+#   dplyr::select(year,month,rec.area.code,pscnq_processing_sector,unobs_boat_days,observed_boat_days,frac_boat_days_obs) %>%   
+#   mutate(month = str_pad(month, "left", pad=0, width = 2)) %>%
+#   unite("year.month",c("year","month"), sep = ".") %>%
+#   gather(4:5, key = "category", value = "boat_days") %>%
+#   merge(year.month, all = TRUE) %>% # add in labels
+#   mutate(boat_days= replace_na(boat_days,0)) %>%
+#   filter(!boat_days<0) %>%
+#   ggplot() +
+#   geom_bar(aes(x=year.month,y=boat_days, fill = category), position="stack", stat="identity",alpha = 0.8) +
+#   facet_wrap(~rec.area.code, scales = "free", ncol=1) +
+#   ggtitle("Boat Days (Shoreside Pollock)") + # no small CP's
+#   theme_classic() +
+#   theme(axis.text.x = element_text(angle = 90, hjust = 1,size=7))  +
+#   scale_x_discrete(breaks = every_nth(n = 12))
 
 
 ### Stacked bar plots summarized by season
@@ -153,87 +153,87 @@ temp<- expand.grid(year=temp.year, category=category,rec.area.code=temp.rec.area
 
 
 #SPRING
-join_data_shoreside %>%  
-  ungroup() %>%
-  filter(month %in% c(3,4,5)) %>%
-  dplyr::select(1:3,8,10) %>%
-  gather(4:5, key = "category", value = "boat_days") %>%
-  group_by(year,rec.area.code,category) %>%
-  dplyr::summarise(boat_days=sum(boat_days))%>%
-  ungroup() %>%
-  merge(temp, all = TRUE) %>%
-  mutate(boat_days= replace_na(boat_days,0)) %>%
-  ggplot() +
-  geom_bar(aes(x=year,y=boat_days, fill = category), position="stack", stat="identity",alpha = 0.8) +
-  facet_grid(~rec.area.code, scales = "free") +
-  ggtitle("Spring Boat Days (Shoreside Pollock)") + 
-  theme_classic() +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1,size=7))  +
-  scale_x_discrete(breaks = every_nth(n = 5))
+# join_data_shoreside %>%  
+#   ungroup() %>%
+#   filter(month %in% c(3,4,5)) %>%
+#   dplyr::select(1:3,8,10) %>%
+#   gather(4:5, key = "category", value = "boat_days") %>%
+#   group_by(year,rec.area.code,category) %>%
+#   dplyr::summarise(boat_days=sum(boat_days))%>%
+#   ungroup() %>%
+#   merge(temp, all = TRUE) %>%
+#   mutate(boat_days= replace_na(boat_days,0)) %>%
+#   ggplot() +
+#   geom_bar(aes(x=year,y=boat_days, fill = category), position="stack", stat="identity",alpha = 0.8) +
+#   facet_grid(~rec.area.code, scales = "free") +
+#   ggtitle("Spring Boat Days (Shoreside Pollock)") + 
+#   theme_classic() +
+#   theme(axis.text.x = element_text(angle = 90, hjust = 1,size=7))  +
+#   scale_x_discrete(breaks = every_nth(n = 5))
 
 ## SUMMER
-join_data_shoreside %>%  
-  ungroup() %>%
-  filter(month %in% c(6,7)) %>%
-  dplyr::select(1:3,8,10) %>%
-  gather(4:5, key = "category", value = "boat_days") %>%
-  group_by(year,rec.area.code,category) %>%
-  dplyr::summarise(boat_days=sum(boat_days))%>%
-  ungroup() %>%
-  merge(temp, all = TRUE) %>%
-  mutate(boat_days= replace_na(boat_days,0)) %>%
-  ggplot() +
-  geom_bar(aes(x=year,y=boat_days, fill = category), position="stack", stat="identity",alpha = 0.8) +
-  facet_grid(~rec.area.code, scales = "free") +
-  ggtitle("Summer Boat Days (Shoreside Pollock)") + 
-  theme_classic() +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1,size=7))  +
-  scale_x_discrete(breaks = every_nth(n = 5))
-
-#FALL
-join_data_shoreside %>%  
-  ungroup() %>%
-  filter(month %in% c(8,9,10)) %>%
-  dplyr::select(1:3,8,10) %>%
-  gather(4:5, key = "category", value = "boat_days") %>%
-  group_by(year,rec.area.code,category) %>%
-  dplyr::summarise(boat_days=sum(boat_days))%>%
-  ungroup() %>%
-  merge(temp, all = TRUE) %>%
-  mutate(boat_days= replace_na(boat_days,0)) %>%
-  ggplot() +
-  geom_bar(aes(x=year,y=boat_days, fill = category), position="stack", stat="identity",alpha = 0.8) +
-  facet_grid(~rec.area.code, scales = "free") +
-  ggtitle("Fall Boat Days (Shoreside Pollock)") + 
-  theme_classic() +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1,size=7))  +
-  scale_x_discrete(breaks = every_nth(n = 5))
+# join_data_shoreside %>%  
+#   ungroup() %>%
+#   filter(month %in% c(6,7)) %>%
+#   dplyr::select(1:3,8,10) %>%
+#   gather(4:5, key = "category", value = "boat_days") %>%
+#   group_by(year,rec.area.code,category) %>%
+#   dplyr::summarise(boat_days=sum(boat_days))%>%
+#   ungroup() %>%
+#   merge(temp, all = TRUE) %>%
+#   mutate(boat_days= replace_na(boat_days,0)) %>%
+#   ggplot() +
+#   geom_bar(aes(x=year,y=boat_days, fill = category), position="stack", stat="identity",alpha = 0.8) +
+#   facet_grid(~rec.area.code, scales = "free") +
+#   ggtitle("Summer Boat Days (Shoreside Pollock)") + 
+#   theme_classic() +
+#   theme(axis.text.x = element_text(angle = 90, hjust = 1,size=7))  +
+#   scale_x_discrete(breaks = every_nth(n = 5))
+# 
+# #FALL
+# join_data_shoreside %>%  
+#   ungroup() %>%
+#   filter(month %in% c(8,9,10)) %>%
+#   dplyr::select(1:3,8,10) %>%
+#   gather(4:5, key = "category", value = "boat_days") %>%
+#   group_by(year,rec.area.code,category) %>%
+#   dplyr::summarise(boat_days=sum(boat_days))%>%
+#   ungroup() %>%
+#   merge(temp, all = TRUE) %>%
+#   mutate(boat_days= replace_na(boat_days,0)) %>%
+#   ggplot() +
+#   geom_bar(aes(x=year,y=boat_days, fill = category), position="stack", stat="identity",alpha = 0.8) +
+#   facet_grid(~rec.area.code, scales = "free") +
+#   ggtitle("Fall Boat Days (Shoreside Pollock)") + 
+#   theme_classic() +
+#   theme(axis.text.x = element_text(angle = 90, hjust = 1,size=7))  +
+  # scale_x_discrete(breaks = every_nth(n = 5))
 
 #WINTER
-join_data_shoreside %>%  
-  ungroup() %>%
-  dplyr::select(1:3,8,10) %>%
-  filter(month %in% c(1,2,11,12)) %>%
-  mutate(season.temp = case_when(month %in% c(11,12) ~ "winter.1",
-                                 month %in% c(1:2) ~ "winter.2",
-                                 TRUE ~ "NA")) %>%
-  gather(4:5, key = "category", value = "boat_days") %>%
-  group_by(year, season.temp,rec.area.code,category) %>%
-  dplyr::summarise(boat_days=sum(boat_days)) %>%
-  ungroup() %>%
-  mutate(year=as.numeric(year), year.new = case_when(season.temp == "winter.2" ~ year -1,
-                                                     TRUE ~ year)) %>%
-  group_by(year.new, rec.area.code, category) %>%
-  dplyr::summarise(boat_days=sum(boat_days)) %>%
-  dplyr::rename(year=year.new) %>%
-  merge(temp) %>%
-  mutate(boat_days= replace_na(boat_days,0)) %>%
-  ggplot() +
-  geom_bar(aes(x=year,y=boat_days, fill = category), position="stack", stat="identity",alpha = 0.8) +
-  facet_grid(~rec.area.code, scales = "free") +
-  ggtitle("Winter Boat Days ( Shoreside Pollock)") + # no small CP's
-  theme_classic() +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1,size=7)) 
+# join_data_shoreside %>%  
+#   ungroup() %>%
+#   dplyr::select(1:3,8,10) %>%
+#   filter(month %in% c(1,2,11,12)) %>%
+#   mutate(season.temp = case_when(month %in% c(11,12) ~ "winter.1",
+#                                  month %in% c(1:2) ~ "winter.2",
+#                                  TRUE ~ "NA")) %>%
+#   gather(4:5, key = "category", value = "boat_days") %>%
+#   group_by(year, season.temp,rec.area.code,category) %>%
+#   dplyr::summarise(boat_days=sum(boat_days)) %>%
+#   ungroup() %>%
+#   mutate(year=as.numeric(year), year.new = case_when(season.temp == "winter.2" ~ year -1,
+#                                                      TRUE ~ year)) %>%
+#   group_by(year.new, rec.area.code, category) %>%
+#   dplyr::summarise(boat_days=sum(boat_days)) %>%
+#   dplyr::rename(year=year.new) %>%
+#   merge(temp) %>%
+#   mutate(boat_days= replace_na(boat_days,0)) %>%
+#   ggplot() +
+#   geom_bar(aes(x=year,y=boat_days, fill = category), position="stack", stat="identity",alpha = 0.8) +
+#   facet_grid(~rec.area.code, scales = "free") +
+#   ggtitle("Winter Boat Days ( Shoreside Pollock)") + # no small CP's
+#   theme_classic() +
+#   theme(axis.text.x = element_text(angle = 90, hjust = 1,size=7)) 
 
 #####################################
 #How long do trips tend to be?  
@@ -268,19 +268,19 @@ all_data_trip_length<-readRDS(paste0(data.dir,"fishtix_snippet.RDS")) %>%
             sd_fish_days=sd(fish_days)) %>%
   filter(!rec.area.code == "MISSING_LOCATION_INFO")
 
-all_data_trip_length %>% 
-  ungroup() %>%
-  # mutate(month = str_pad(month, "left", pad=0, width = 2)) %>%
-  #unite("year.month",c("year","month"), sep = ".") %>%
-  ggplot(aes(x=year,y=mean_trip_length)) +
-  geom_line()+ 
-  geom_point(alpha = 0.8) +
-  #geom_errorbar(aes(ymin=mean_trip_length-sd_fish_days, ymax=mean_trip_length+sd_fish_days))+
-  facet_wrap(~rec.area.code, scales = "free", ncol=1) +
-  ggtitle("Spring Boat Days (Shoreside Pollock)") + 
-  theme_classic() +
-  theme(axis.text.x = element_text(angle = 90#, hjust = 1,size=7
-  ))  
+# all_data_trip_length %>% 
+#   ungroup() %>%
+#   # mutate(month = str_pad(month, "left", pad=0, width = 2)) %>%
+#   #unite("year.month",c("year","month"), sep = ".") %>%
+#   ggplot(aes(x=year,y=mean_trip_length)) +
+#   geom_line()+ 
+#   geom_point(alpha = 0.8) +
+#   #geom_errorbar(aes(ymin=mean_trip_length-sd_fish_days, ymax=mean_trip_length+sd_fish_days))+
+#   facet_wrap(~rec.area.code, scales = "free", ncol=1) +
+#   ggtitle("Spring Boat Days (Shoreside Pollock)") + 
+#   theme_classic() +
+#   theme(axis.text.x = element_text(angle = 90#, hjust = 1,size=7
+#   ))  
 
 
 ############################################################################
@@ -322,24 +322,24 @@ temp <- as.data.frame(temp.lab[rep(1:nrow(temp.lab),1,each=12),]) #duplicate eac
 temp$`temp.lab[rep(1:nrow(temp.lab), 1, each = 12), ]`[duplicated(temp$`temp.lab[rep(1:nrow(temp.lab), 1, each = 12), ]`)] <- " " #fill duplicates with a space
 temp$label<-  temp$`temp.lab[rep(1:nrow(temp.lab), 1, each = 12), ]`  #change column name and remove old column
 
-heatmap.2(matrix, Rowv=FALSE, Colv=FALSE, 
-          xlab = "Year.Month",  
-          scale="none", margins=c(4,6), 
-          dendrogram="none", trace="none",
-          col=col.br(20), #breaks=pairs.breaks,
-          na.color = "black",
-          key =TRUE,
-          keysize = 1.5, #labRow = year_list,
-          key.title = "log scale",
-          adjCol = c(0.5,1.1),
-          labCol = temp$label, #tell it to use dummy variable for X axis years
-          labRow = rec.area.code, #use dummy variable for Y axis rec.area.codes so they can be north to south 
-          cexCol = 0.6,
-          sepcolor = "black",
-          main = "Fraction of Observed Boat Days", 
-          density.info = ("none"),
-          #( "bottom.margin", "left.margin", "top.margin", "right.margin" )
-          key.par=list(mar=c(2,1, 1,0.1)))
+ # heatmap.2(matrix, Rowv=FALSE, Colv=FALSE, 
+ #          xlab = "Year.Month",  
+ #          scale="none", margins=c(4,6), 
+ #          dendrogram="none", trace="none",
+ #          col=col.br(20), #breaks=pairs.breaks,
+ #          na.color = "black",
+ #          key =TRUE,
+ #          keysize = 1.5, #labRow = year_list,
+ #          key.title = "log scale",
+ #          adjCol = c(0.5,1.1),
+ #          labCol = temp$label, #tell it to use dummy variable for X axis years
+ #          labRow = rec.area.code, #use dummy variable for Y axis rec.area.codes so they can be north to south 
+ #          cexCol = 0.6,
+ #          sepcolor = "black",
+ #          main = "Fraction of Observed Boat Days", 
+ #          density.info = ("none"),
+ #          #( "bottom.margin", "left.margin", "top.margin", "right.margin" )
+ #          key.par=list(mar=c(2,1, 1,0.1)))
 
 ####################################################################
 ####################################################################
@@ -679,16 +679,16 @@ TWO <-left_join(dat.squash.goa %>% group_by(year) %>% tally ,
           dat.squash.goa.obs.shore %>% group_by(year) %>% tally %>% rename(n.samp = n)) %>% 
           mutate(prop.samp = round(n.samp/n,3) )
     
-  ggplot(TWO,aes(x=year,y=prop.samp)) + 
-          geom_point() +
-          geom_line()
-
-fish.sampled.tot.v.in.pollock <-  ggplot(TWO) +
-    geom_point(aes(x=year,y=n),color="blue") +
-    geom_line(aes(x=year,y=n),color="blue") +
-    geom_point(aes(x=year,y=n.samp),color="red") +
-    geom_line(aes(x=year,y=n.samp), color= "red") +
-    ggtitle("Blue is total fish sampled, Red are from pollock fleet")
+#   ggplot(TWO,aes(x=year,y=prop.samp)) + 
+#           geom_point() +
+#           geom_line()
+# 
+# fish.sampled.tot.v.in.pollock <-  ggplot(TWO) +
+#     geom_point(aes(x=year,y=n),color="blue") +
+#     geom_line(aes(x=year,y=n),color="blue") +
+#     geom_point(aes(x=year,y=n.samp),color="red") +
+#     geom_line(aes(x=year,y=n.samp), color= "red") +
+#     ggtitle("Blue is total fish sampled, Red are from pollock fleet")
 
 # It sure looks like it worked ok.
   # and it sure looks like those are just fish multiple fish that happen to be the same size and sex in a single observer trip.
@@ -762,12 +762,12 @@ all.chin <- full_join(tot.chin,obs.chin) %>% arrange(year,month) %>%
 
 all.chin <- all.chin %>% mutate(month.numb = as.numeric(month))
 
-samp.frac.raw <- ggplot(all.chin,aes(x=year,y=sampling.fraction,color=month),alpha=0.5) + 
-  geom_point(alpha=0.5) +
-  geom_line(alpha=0.2) +
-  facet_wrap(~rec.area.code) +
-  #lims(y=c(0,1)) +
-  theme_bw()
+# samp.frac.raw <- ggplot(all.chin,aes(x=year,y=sampling.fraction,color=month),alpha=0.5) + 
+#   geom_point(alpha=0.5) +
+#   geom_line(alpha=0.2) +
+#   facet_wrap(~rec.area.code) +
+#   #lims(y=c(0,1)) +
+#   theme_bw()
 
 ## There is one observation from October 2009 where sampling fraction is >1.  
 # This occurs because there were observations that show up in one database as occurring on Sept 30 and another on Oct 1
@@ -831,12 +831,12 @@ temp <- all.chin %>% filter(year>=2003) %>%
 all.chin <- left_join(all.chin,temp) %>% 
             mutate(samp.frac.smooth=ifelse(is.na(samp.frac.smooth)==T,ann.avg.frac,samp.frac.smooth))
 
-samp.frac.smooth <- ggplot(all.chin,aes(x=year,y=samp.frac.smooth,color=month),alpha=0.5) + 
-  geom_point(alpha=0.5) +
-  geom_line(alpha=0.2) +
-  facet_wrap(~rec.area.code) +
-  #lims(y=c(0,1)) +
-  theme_bw()
+# samp.frac.smooth <- ggplot(all.chin,aes(x=year,y=samp.frac.smooth,color=month),alpha=0.5) + 
+#   geom_point(alpha=0.5) +
+#   geom_line(alpha=0.2) +
+#   facet_wrap(~rec.area.code) +
+#   #lims(y=c(0,1)) +
+#   theme_bw()
 
 ### OK. Plot of Boat Days observed from the very top of this document
 join_data_shoreside$rec.area.code <- factor(join_data_shoreside$rec.area.code,levels=c("WAPEN","EAPEN","NWGOA","NEGOA"))
@@ -880,30 +880,30 @@ temp <- left_join(join_data_shoreside %>% filter(year %in% YR),
 #temp %>% dplyr::select(year,month,rec.area.code,nmfs_area,frac_boat_days_obs,sampling.fraction) %>% ungroup()
 
 # plot of raw, monthly data
-ggplot(join_data_shoreside %>% filter(year>=1997),aes(x=year,y=frac_boat_days_obs,color=as.factor(month)),alpha=0.5) + 
-  geom_point(alpha=0.5) +
-  geom_line(alpha=0.2) +
-  facet_wrap(~rec.area.code) +
-  lims(y=c(0,1)) +
-  theme_bw()
+# ggplot(join_data_shoreside %>% filter(year>=1997),aes(x=year,y=frac_boat_days_obs,color=as.factor(month)),alpha=0.5) + 
+#   geom_point(alpha=0.5) +
+#   geom_line(alpha=0.2) +
+#   facet_wrap(~rec.area.code) +
+#   lims(y=c(0,1)) +
+#   theme_bw()
 
 # plot of smoothed data.
-ggplot(join_data_shoreside %>% filter(year>=1997,year<2020),aes(x=year,y=frac_boat_days_obs_smooth,color=as.factor(month)),alpha=0.5) + 
-  geom_point(alpha=0.5) +
-  geom_line(alpha=0.2) +
-  facet_wrap(~rec.area.code) +
-#  lims(y=c(0,1)) +
-  theme_bw()
+# ggplot(join_data_shoreside %>% filter(year>=1997,year<2020),aes(x=year,y=frac_boat_days_obs_smooth,color=as.factor(month)),alpha=0.5) + 
+#   geom_point(alpha=0.5) +
+#   geom_line(alpha=0.2) +
+#   facet_wrap(~rec.area.code) +
+# #  lims(y=c(0,1)) +
+#   theme_bw()
 
 # plot of bivariate relationship, raw.
-ggplot(temp) +
-  geom_point(aes(x=frac_boat_days_obs,y=sampling.fraction,color=as.factor(rec.area.code))) +
-  lims(y=c(0,0.4))
+# ggplot(temp) +
+#   geom_point(aes(x=frac_boat_days_obs,y=sampling.fraction,color=as.factor(rec.area.code))) +
+#   lims(y=c(0,0.4))
 
 # plot of bivariate relationship, smooth
-ggplot(temp) +
-  geom_point(aes(x=frac_boat_days_obs_smooth,y=samp.frac.smooth,color=as.factor(rec.area.code))) +
-  lims(y=c(0,0.4))
+# ggplot(temp) +
+#   geom_point(aes(x=frac_boat_days_obs_smooth,y=samp.frac.smooth,color=as.factor(rec.area.code))) +
+#   lims(y=c(0,0.4))
 
 # Well that doesn't seem to work.
 # Fall back on using the month-rec.area.code average from 2003-2007 for 1997-2002.  
@@ -937,18 +937,18 @@ sampling.fraction <- sampling.fraction %>% mutate(final.samp.fraction =
                                                 sampling.fraction %>% filter(year==2011, month.numb %in% c(2,3) ,rec.area.code=="EAPEN") %>% pull(final.samp.fraction) %>% mean(),
                                          TRUE ~ final.samp.fraction))
 # MAke a plot
-samp.frac.final <-  ggplot(sampling.fraction,aes(x=year,y=final.samp.fraction,color=month),alpha=0.5) + 
-  geom_point(alpha=0.5) +
-  geom_line(alpha=0.2) +
-  facet_wrap(~rec.area.code) +
-  #lims(y=c(0,1)) +
-  theme_bw()
+# samp.frac.final <-  ggplot(sampling.fraction,aes(x=year,y=final.samp.fraction,color=month),alpha=0.5) + 
+#   geom_point(alpha=0.5) +
+#   geom_line(alpha=0.2) +
+#   facet_wrap(~rec.area.code) +
+#   #lims(y=c(0,1)) +
+#   theme_bw()
 
 
-fish.sampled.tot.v.in.pollock 
-samp.frac.raw 
-samp.frac.smooth
-samp.frac.final
+# fish.sampled.tot.v.in.pollock 
+# samp.frac.raw 
+# samp.frac.smooth
+# samp.frac.final
 
 ##########################################################################
 ##########################################################################
@@ -1010,49 +1010,46 @@ temp.eff <- final_shoreside %>%
   full_join(.,expand_grid(year=YRS,month=MTH)) %>% arrange(year,month)
 temp.eff[is.na(temp.eff)==T] <- -99
 
-
-
 ###
 
-
-plot.heatmap.samp.frac <- function(temp,Title){
-  
-  temp <- as.matrix(temp[,3:(ncol(temp))])
-  
-  z.lim	<- c(1e-6,1)
-  lab.new <- levels(final_shoreside$rec.area.code)
-  x.lab	=	lab.new
-  col.br<- colorRampPalette(c("blue", "cyan", "yellow", "red"))
-  par(mfrow=c(1,1),oma=c( 0,1,0,4) )
-  image(z=temp,x=1:nrow(temp),y=1:length(lab.new),axes=FALSE,ylab="",xlab="",
-        col=1,zlim=c(-9999,0))
-  image(z=temp,x=1:nrow(temp),y=1:length(lab.new),axes=FALSE,ylab="",xlab="",
-        col=col.br(32),zlim=z.lim,add=T)
-  box(bty="o",lwd=2)
-  axis(2,las=2,at=1:ncol(temp),labels=x.lab)
-  axis(1,las=2,at=seq(1,nrow(temp),by=12),labels=YRS)
-  title(main=Title)
-  par(mfrow=c(1,1),oma=c( 0,1,0,0) )
-  ticks <- seq(min(z.lim),max(z.lim),length.out=6)
-  
-  image.plot(temp,legend.only=T,col=col.br(32),zlim=z.lim,axis.args=list( at= ticks, labels=round(ticks,2),0))
-}
-# YRS <- unique(sampling.fraction$year) %>% sort()
-# MTH <- 1:12
-temp.samp <- sampling.fraction %>% 
-  pivot_wider(.,names_from=rec.area.code,values_from = final.samp.fraction,id_cols = c("year","month")) %>%
-  mutate(month=as.numeric(month)) %>%
-  full_join(.,expand_grid(year=YRS,month=MTH)) %>% arrange(year,month)
-temp.samp[is.na(temp.samp)==T] <- -99
-
-
-
-pdf(file=paste0(plot.dir,"Shoreside Pollock GOA.pdf"),onefile=T,height=8.5,width=11)
-  
-  plot.heatmap( temp=temp.eff,Title="Shoreside Pollock GOA Effort (Boat Days)")
-  plot.heatmap.samp.frac( temp=temp.samp,Title="Shoreside Pollock GOA Sample Fraction")
-  print(fish.sampled.tot.v.in.pollock)
-  #print(samp.frac.raw )
-  print(samp.frac.smooth)
-  print(samp.frac.final)
-dev.off()
+# plot.heatmap.samp.frac <- function(temp,Title){
+#   
+#   temp <- as.matrix(temp[,3:(ncol(temp))])
+#   
+#   z.lim	<- c(1e-6,1)
+#   lab.new <- levels(final_shoreside$rec.area.code)
+#   x.lab	=	lab.new
+#   col.br<- colorRampPalette(c("blue", "cyan", "yellow", "red"))
+#   par(mfrow=c(1,1),oma=c( 0,1,0,4) )
+#   image(z=temp,x=1:nrow(temp),y=1:length(lab.new),axes=FALSE,ylab="",xlab="",
+#         col=1,zlim=c(-9999,0))
+#   image(z=temp,x=1:nrow(temp),y=1:length(lab.new),axes=FALSE,ylab="",xlab="",
+#         col=col.br(32),zlim=z.lim,add=T)
+#   box(bty="o",lwd=2)
+#   axis(2,las=2,at=1:ncol(temp),labels=x.lab)
+#   axis(1,las=2,at=seq(1,nrow(temp),by=12),labels=YRS)
+#   title(main=Title)
+#   par(mfrow=c(1,1),oma=c( 0,1,0,0) )
+#   ticks <- seq(min(z.lim),max(z.lim),length.out=6)
+#   
+#   image.plot(temp,legend.only=T,col=col.br(32),zlim=z.lim,axis.args=list( at= ticks, labels=round(ticks,2),0))
+# }
+# # YRS <- unique(sampling.fraction$year) %>% sort()
+# # MTH <- 1:12
+# temp.samp <- sampling.fraction %>% 
+#   pivot_wider(.,names_from=rec.area.code,values_from = final.samp.fraction,id_cols = c("year","month")) %>%
+#   mutate(month=as.numeric(month)) %>%
+#   full_join(.,expand_grid(year=YRS,month=MTH)) %>% arrange(year,month)
+# temp.samp[is.na(temp.samp)==T] <- -99
+# 
+# 
+# 
+# pdf(file=paste0(plot.dir,"Shoreside Pollock GOA.pdf"),onefile=T,height=8.5,width=11)
+#   
+#   plot.heatmap( temp=temp.eff,Title="Shoreside Pollock GOA Effort (Boat Days)")
+#   plot.heatmap.samp.frac( temp=temp.samp,Title="Shoreside Pollock GOA Sample Fraction")
+#   print(fish.sampled.tot.v.in.pollock)
+#   #print(samp.frac.raw )
+#   print(samp.frac.smooth)
+#   print(samp.frac.final)
+# dev.off()

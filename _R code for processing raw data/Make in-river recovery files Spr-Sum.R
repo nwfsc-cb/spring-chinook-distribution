@@ -36,59 +36,155 @@ RIV <- merge(RIV,peak.month,all=T)
 RIV$first.month <- RIV$peak.month -1
 RIV$last.month <- RIV$peak.month 
 
-# Manually adjust a few rivers based on visual examination
-#RIV[RIV==13]<-1
-#RIV[RIV== -1 ]<- 11
 
-# Assert all fish enter river starting in August and lasting til October. 
-
-#RIV$first.month <- 8
-#RIV$last.month  <- 10
-
-##### PARSE RIVER ENTRY FOR WORKING WITH AWG tag codes.
-
-# RIV[RIV$ID == "Capilano",c("first.month","last.month")] <- c(6,9)
-# RIV[RIV$ID == "Chilliwack",c("first.month","last.month")] <- c(7,10)
-# RIV[RIV$ID == "Chetco",c("first.month","last.month")] <- c(9,10)
-# RIV[RIV$ID == "Conuma",c("first.month","last.month")] <- c(9,10)
-# #RIV[RIV$ID == "Cowichan",c("first.month","last.month")] <- c(7,10)
-# #RIV[RIV$ID == "Cowlitz_small",c("first.month","last.month")] <- c(7,10)
-# #RIV[RIV$ID == "Hoko",c("first.month","last.month")] <- c(10,11)
-# #RIV[RIV$ID == "HoodCanal",c("first.month","last.month")] <- c(8,10)
-# #RIV[RIV$ID == "Issaquah",c("first.month","last.month")] <- c(7,10)
-# #RIV[RIV$ID == "Lyons_large",c("first.month","last.month")] <- c(8,11)
-# #RIV[RIV$ID == "Lyons_small",c("first.month","last.month")] <- c(8,11)
-# #RIV[RIV$ID == "Nanaimo",c("first.month","last.month")] <- c(8,11)
-# RIV[RIV$ID == "Elk",c("first.month","last.month")] <- c(9,10)
-# RIV[RIV$ID == "Nitinat",c("first.month","last.month")] <- c(7,8)
-# RIV[RIV$ID == "Puntledge",c("first.month","last.month")] <- c(8,9)
-# RIV[RIV$ID == "Quinsam",c("first.month","last.month")] <- c(10,11)
-# RIV[RIV$ID == "Salmon_WA",c("first.month","last.month")] <- c(9,10)
-# 
-# 
-# RIV[RIV$ID == "Salmon(OR)",c("first.month","last.month")] <- c(9,10)
-# 
-# # Columbia
-# RIV[RIV$ID == "Stayton",c("first.month","last.month")] <- c(7,8)
-# RIV[RIV$ID == "Stayton",c("first.month","last.month")] <- c(7,8)
-# RIV[RIV$ID == "Stayton",c("first.month","last.month")] <- c(7,8)
-# RIV[RIV$ID == "Stayton",c("first.month","last.month")] <- c(7,8)
-# RIV[RIV$ID == "Stayton",c("first.month","last.month")] <- c(7,8)
-# RIV[RIV$ID == "Stayton",c("first.month","last.month")] <- c(7,8)
-# RIV[RIV$ID == "Stayton",c("first.month","last.month")] <- c(7,8)
-# RIV[RIV$ID == "Stayton",c("first.month","last.month")] <- c(7,8)
-# 
-# RIV[RIV$ID == "Stayton",c("first.month","last.month")] <- c(8,9)
-# #RIV[RIV$ID == "Soos",c("first.month","last.month")] <- c(9,10)
-# 
-# #Trinity, Klamath
-# RIV[RIV$ID == "Irongate_small",c("first.month","last.month")] <- c(9,10)
-# RIV[RIV$ID == "Irongate_large",c("first.month","last.month")] <- c(9,10)
-# RIV[RIV$ID == "Trinity_small",c("first.month","last.month")] <- c(9,10)
-# RIV[RIV$ID == "Trinity_large",c("first.month","last.month")] <- c(9,10)
-
+######
 dat  <- fresh.recover$dat.consolidated
+# Look at the distribution of FW recovery months
+dat.month <- dat %>% group_by(ID,ocean.region)%>%
+              summarise(min.month=min(rec.month,na.rm=T),
+                        max.month=max(rec.month,na.rm=T)) %>% 
+              left_join(.,REL %>% distinct(ocean.region,loc.numb)) %>%
+              arrange(loc.numb)
+
+# OK. Looking at dat.month, here are the weird things:
+# 1) there are some with INF for month (e.g. Comox_sum).  Those are just data with no rec month.
+# 2) most others have a min month of the late-spring / summer and a max of nov or earlier.
+#     these are easy because FW recoveries fall in one recovery year.
+# 3) There are others who have recoveries in dec/ jan / feb... which leads to problems with age of returns
+
+# filter out the runs that don't have recoveries around the turn of the year.
+dat.month.trim <- dat.month %>% filter(is.infinite(min.month)==F) %>%
+                      filter(min.month<3 | max.month>11)
+# This gets us down to 71 stocks.
+# get rid of stocks that occuring only April or later or October or earlier
+dat.month.trim <- dat.month.trim %>% 
+                    filter(min.month < 4) %>%
+                    filter(max.month > 10) 
+# down to 34, dominated by Columbia river stocks and Central Valley stocks.
+
+# Deal with this region by region.
+#SFB first
+sfb.dat <- dat %>% filter(ocean.region %in% c("SFB_wint","SFB_spr")) %>% 
+              group_by(ID,ocean.region,rec.month,rec.year) %>%
+              summarise(N=sum(est.numb))
+
+ggplot(sfb.dat %>% filter(ocean.region=="SFB_wint")) +
+  geom_point(aes(x=rec.month,y=rec.year,size=N))+
+  facet_wrap(~ID)+
+  scale_x_continuous(breaks=1:12)
+    
+ # this says that anything for the spring runs belong to runs of the previous years.
+dat <- dat %>% mutate(rec.year= ifelse(ocean.region == "SFB_spr" & rec.month==1,rec.year-1,rec.year))
+# Winter Runs are weird...move late year to year + 1 so they all occur in a single cal year.
+dat <- dat %>% mutate(rec.year= ifelse(ocean.region == "SFB_wint" & rec.month>=11,rec.year+1,rec.year))
+
+#sor next
+sor.dat <- dat %>% filter(ocean.region %in% c("SOR_spr")) %>% 
+  group_by(ID,ocean.region,rec.month,rec.year) %>%
+  summarise(N=sum(est.numb))
+
+ggplot(sor.dat) +
+  geom_point(aes(x=rec.month,y=rec.year,size=log(N)))+
+  facet_wrap(~ID)+
+  scale_x_continuous(breaks=1:12)
+
+# There are only two years with january recoveries for SOR.  I think there are not wrap arounds.
+# Make no changes for these.
+
+#nor next
+nor.dat <- dat %>% filter(ocean.region %in% c("NOR_spr")) %>% 
+  group_by(ID,ocean.region,rec.month,rec.year) %>%
+  summarise(N=sum(est.numb))
+
+ggplot(nor.dat) +
+  geom_point(aes(x=rec.month,y=rec.year,size=log(N)))+
+  facet_wrap(~ID)+
+  scale_x_continuous(breaks=1:12)
+# There is only one year with january recoveries for NOR.  I think there are not wrap arounds.
+# Make no changes for these.
+
+lcol.dat <- dat %>% filter(grepl("LCOL",ocean.region)) %>% 
+  group_by(ID,ocean.region,rec.month,rec.year) %>%
+  summarise(N=sum(est.numb))
+
+ggplot(lcol.dat) +
+  geom_point(aes(x=rec.month,y=rec.year,size=N))+
+  facet_wrap(~ID)+
+  scale_x_continuous(breaks=1:12)
+# LCOL:January recoveries and Dec recoveries are very rare.  I think there are not wrap arounds.
+# Make no changes for these.
+
+mcol.dat <- dat %>% filter(grepl("MCOL",ocean.region)) %>% 
+  group_by(ID,ocean.region,rec.month,rec.year) %>%
+  summarise(N=sum(est.numb))
+
+ggplot(mcol.dat) +
+  geom_point(aes(x=rec.month,y=rec.year,size=N))+
+  facet_wrap(~ID)+
+  scale_x_continuous(breaks=1:12)
+# MCOL:January recoveries and Dec recoveries are very rare.  I think there are not wrap arounds.
+# Make no changes for these.
+
+ucol.dat <- dat %>% filter(grepl("UCOL",ocean.region)) %>% 
+  group_by(ID,ocean.region,rec.month,rec.year) %>%
+  summarise(N=sum(est.numb))
+
+ggplot(ucol.dat) +
+  geom_point(aes(x=rec.month,y=rec.year,size=N))+
+  facet_wrap(~ID)+
+  scale_x_continuous(breaks=1:12)
+# UCOL:January recoveries and Dec recoveries are very rare.  I think there are not wrap arounds.
+# Make no changes for these.
+
+will.dat <- dat %>% filter(grepl("WILL",ocean.region)) %>% 
+  group_by(ID,ocean.region,rec.month,rec.year) %>%
+  summarise(N=sum(est.numb))
+
+ggplot(will.dat) +
+  geom_point(aes(x=rec.month,y=rec.year,size=N))+
+  facet_wrap(~ID)+
+  scale_x_continuous(breaks=1:12)
+# WILL:January recoveries and Dec recoveries are very rare.  I think there are not wrap arounds.
+# Make no changes for these.
+
+snak.dat <- dat %>% filter(grepl("SNAK",ocean.region)) %>% 
+  group_by(ID,ocean.region,rec.month,rec.year) %>%
+  summarise(N=sum(est.numb))
+
+ggplot(snak.dat) +
+  geom_point(aes(x=rec.month,y=rec.year,size=N))+
+  facet_wrap(~ID)+
+  scale_x_continuous(breaks=1:12)
+# snak:January recoveries and Dec recoveries are very rare.  I think there are not wrap arounds.
+# Make no changes for these.
+
+fras_th.dat <- dat %>% filter(grepl("FRAS_TH_sum",ocean.region)) %>% 
+  group_by(ID,ocean.region,rec.month,rec.year) %>%
+  summarise(N=sum(est.numb))
+
+ggplot(fras_th.dat) +
+  geom_point(aes(x=rec.month,y=rec.year,size=N))+
+  facet_wrap(~ID)+
+  scale_x_continuous(breaks=1:12)
+# fras_th:January recoveries and Dec recoveries are rare and only come from AWG data.  
+# Make no changes for these.
+
+sseak.dat <- dat %>% filter(grepl("SSEAK",ocean.region)) %>% 
+  group_by(ID,ocean.region,rec.month,rec.year) %>%
+  summarise(N=sum(est.numb))
+
+ggplot(sseak.dat) +
+  geom_point(aes(x=rec.month,y=rec.year,size=N))+
+  facet_wrap(~ID)+
+  scale_x_continuous(breaks=1:12)
+# sseak:January recoveries and Dec recoveries are rare and only come from AWG data.  
+# Make no changes for these.
+
 dat$age <- dat$rec.year - dat$brood.year ##### RECOGNIZE THAT "OCEAN.YEAR" is actually just "age"
+
+# Get rid of extra releases present in the FW data.
+TMP <- REL %>% dplyr::select(ID,brood_year,release_year,ocean.region)
+dat <- semi_join(dat,TMP)
 
 # Merge in information from the REL data.frame
 dat <- dat %>% 
@@ -99,11 +195,11 @@ dat <- dat %>%
                                   ocean.region,
                                   Median.month.release,
                                   N.released,
-                                  loc.numb)) %>%
-        filter(!ocean.region=="PWS_spr")
+                                  loc.numb)) #%>%
+        #filter(!ocean.region=="PWS_spr")
 
 # trim out really old fish as data entry errors
-dat <- dat %>% filter(age<=7)
+dat <- dat %>% filter(age<=8)
 
 # Look at where the AWG data shows up by ocean.region
 
@@ -128,7 +224,19 @@ dat.ratio <- dat %>% ungroup() %>% left_join(.,
 
 # Combine the auxiliary == 0 and auxiliary == 1
 dat <- dat %>% mutate(auxiliary=paste0("aux.",auxiliary)) %>% ungroup()
-dat.sum <- dat %>% ungroup() %>% 
+dat.sum <- dat %>%  
+            group_by(ID,
+                     brood.year,
+                     rel.year,
+                     rec.year,
+                     auxiliary,
+                     ocean.region,
+                     age,
+                     N.released,
+                     Median.month.release,
+                     loc.numb) %>%
+            summarise(est.numb=sum(est.numb)) %>%
+            ungroup() %>%
             pivot_wider(., 
                         id_cols=c("ID",
                           "brood.year",
@@ -145,9 +253,6 @@ dat.sum <- dat %>% ungroup() %>%
                  fw.prop.tot = est.numb.sum / N.released,
                  fw.prop.0 = aux.0 / N.released,
                  fw.prop.1 = aux.1 / N.released)
-
-# Only include the groups in REL
-dat.sum <- dat.sum %>% semi_join(.,REL)
 
 # Add in data that never show up in the freshwater
 dat.sum.extra <- anti_join(REL %>% dplyr::select(ID,
@@ -168,7 +273,7 @@ dat.sum$ocean.region <- factor(dat.sum$ocean.region,
                             pull(ocean.region))
 
 # Try out a few plots of this data.
-p1 <- ggplot(dat.sum ) +
+p1 <- ggplot(dat.sum) +
         geom_point(aes(y=fw.prop.0,x=brood.year,color=as.factor(age)),alpha=0.5) +
         theme_bw() +
         ggtitle("No AWG only")+
@@ -176,7 +281,7 @@ p1 <- ggplot(dat.sum ) +
         facet_wrap(~ocean.region)
 p1
 
-p2 <- ggplot(dat.sum ) +
+p2 <- ggplot(dat.sum) +
   geom_point(aes(y=fw.prop.1,x=brood.year,color=as.factor(age)),alpha=0.5) +
   theme_bw() +
   ggtitle("AWG only")+
@@ -205,9 +310,6 @@ pdf(file=paste0(base.dir,"/spring-chinook-distribution/Output plots/FW_plots/Fre
     print(p2)
     print(p.sum)
 dev.off()
-
-
-
 
 
 ####
@@ -269,152 +371,86 @@ dev.off()
  }
  dev.off()
 
- 
- 
- 
-
-### Add in fish caught in terminal (or semi-terminal fisheries)
-# escape.net$age <- escape.net$model.year
-# escape.net$rel.month <- NA
-# escape.net$rec.year  <- escape.net$rel.year + escape.net$age
-# escape.net$count.zero <- NA
-# escape.temp <- escape.net[,c("ID","brood.year","rel.year","rel.month","ocean.region","rec.year","est.numb","count","median.frac.samp","count.zero","age")]
-# 
-# dat <- rbind(dat,escape.temp)
-# 
-escape.dat <- aggregate(dat[,c("est.numb","count","count.zero")],by=list(
-  ID = dat$ID,
-  brood.year = dat$brood.year,
-  rel.year = dat$rel.year,
-  #rec.month = fresh.recover$dat$rec.month,
-  rec.year = dat$rec.year,
-  ocean.region = dat$ocean.region,
-  age = dat$age),
-  sum,na.rm=T)
-
-escape.dat.frac <- aggregate(dat$median.frac.samp,by=list(
-  ID = dat$ID,
-  brood.year = dat$brood.year,
-  rel.year = dat$rel.year,
-  #rec.month = fresh.recover$dat$rec.month,
-  rec.year = dat$rec.year,
-  ocean.region = dat$ocean.region),
-  mean,na.rm=T)
-
-colnames(escape.dat.frac)[ncol(escape.dat.frac)] <- "mean.frac.samp"
-
-### Do some adjustments for fish that appear in fresh water in november or later following year.
-riv.temp <- river.entry[river.entry$rec.month >=11,]
-riv.temp.spr <- riv.temp %>% filter(grepl("_spr",ID))
-riv.temp.wint <- riv.temp %>% filter(grepl("_wint",ID))
-
-riv.temp.spr.wint <- bind_rows(riv.temp.spr,riv.temp.wint)
-
-adjust <- riv.temp.spr.wint %>% 
-  group_by(ID,brood.year,rel.year,
-           rec.year,ocean.region) %>%
-  summarise(x= sum(est.numb))
-
-adjust.add <- adjust
-adjust.add$rec.year <-adjust.add$rec.year+1
-
-escape.dat1<- merge(escape.dat,adjust.add,all=T)
-escape.dat1$x[is.na(escape.dat1$x)==T] <- 0
-escape.dat1$est.numb <- escape.dat1$est.numb + escape.dat1$x
-
-escape.dat <- escape.dat1[,1:9]
-
-escape.dat2<- merge(escape.dat,adjust,all=T)
-escape.dat2$x[is.na(escape.dat2$x)==T] <- 0
-escape.dat2$est.numb <- escape.dat2$est.numb - escape.dat2$x
-
-escape.dat <- escape.dat1[,1:9]
-escape.dat$est.numb[escape.dat$est.numb < 0] <- 0
-
-escape.dat <- merge(escape.dat,escape.dat.frac)
-
-#######################
-#######################
-# Manually inflate the variance of SFB returning fish (median frac samp = 0.3)
-# also inflate NWVI (Conuma) to 0.01
-#######################
-#######################
-# escape.dat$mean.frac.samp[escape.dat$ocean.region =="NCA"] <- 0.2
-# escape.dat$mean.frac.samp[escape.dat$ocean.region =="SFB"] <- 0.2
-# escape.dat$mean.frac.samp[escape.dat$ocean.region =="NWVI"] <- 0.01
-###############################################################################################################
-
-escape.dat$mod.year <- escape.dat$age 
-
-# escape.dat$mod.year[escape.dat$model.age <= 7] <- 1
-# escape.dat$mod.year[escape.dat$model.age >7 & escape.dat$model.age <=14 ]  <- 2
-# escape.dat$mod.year[escape.dat$model.age >14 & escape.dat$model.age <=21 ] <- 3
-# escape.dat$mod.year[escape.dat$model.age >21 & escape.dat$model.age <=28 ] <- 4
-# escape.dat$mod.year[escape.dat$model.age >28 & escape.dat$model.age <=35 ] <- 5
-# escape.dat$mod.year[escape.dat$model.age >35 & escape.dat$model.age <=42 ] <- 6
-
-escape.year <- escape.dat %>% group_by(ID,mod.year,brood.year,rel.year) %>%
-  summarise(est.numb=sum(est.numb), count=sum(count),count.zero=sum(count.zero))
-escape.year.frac <- escape.dat %>% group_by(ID,mod.year,brood.year,rel.year) %>% 
-  summarise(mean.frac.samp = mean(mean.frac.samp))
-escape.year <- merge(escape.year,escape.year.frac)
-escape.year$cal.year <- escape.year$rel.year + escape.year$mod.year - 1
-
-escape.year <- escape.year[order(escape.year$ID, escape.year$rel.year,escape.year$cal.year),]
+####
+dat.sum$mod.year <- dat.sum$age - 1 #  is the new escape.dat 
 
 ##### 
 #Create Escapement Matrix 
 ##### 
-N.mod.year <- 6
+N.mod.year <- 6 
 
-E <- array(NA,dim=c(N.REL,N.mod.year,5),dimnames = list(paste("rel.ID",1:N.REL,sep="."),1:N.mod.year,c("mod.year","est.numb","count","count.zero","lambda2")))
-for(i in 1:N.REL){
-  E[i,,1] <- 1:N.mod.year
-  temp <- escape.year %>% filter(ID == REL$ID[i],
-                                 brood.year == REL$brood_year[i],
-                                 rel.year == REL$release_year[i])
-  
-  #  escape.year[escape.year$ID == REL$ID[i] & escape.year$brood.year == REL$brood_year[i] & escape.year$rel.year == REL$release_year[i],]
-  for(j in 1:N.mod.year){
-    if(nrow(temp[temp$mod.year == j,])==1){
-      E[i,j,2] <- temp$est.numb[temp$mod.year == j]
-      E[i,j,3] <- temp$count[temp$mod.year == j]
-      E[i,j,4] <- temp$count.zero[temp$mod.year == j]
-      E[i,j,5] <- (1/temp$mean.frac.samp[temp$mod.year == j])^2
-    }
-    #     if(is.na(RIV$peak.month[which(RIV$ID == REL$ID[i])])==T){
-    #       E[i,j,2] <- 0
-    #       E[i,j,3] <- 0
-    #       E[i,j,4] <- 0
-    #     }      
-  }
-}
+dat.E <- dat.sum %>% group_by(ID,brood.year,rel.year) %>% 
+            # Drop fish that are spawning in the same year the model starts.
+            # drop the small number of fish that are older than BY+7
+            filter(mod.year >=1,mod.year<=N.mod.year) %>%
+            # Could get rid of fish returning in the same year they are released here. 
+            mutate(tot.est.numb = sum(est.numb.sum )) %>%
+            dplyr::select(ID,brood.year,rel.year,rec.year,
+                          ocean.region,age,est.numb.sum,
+                          mod.year,tot.est.numb) %>%
+            ungroup() %>%
+            mutate(prop.age = est.numb.sum / tot.est.numb) 
 
-N.mod.month <- max(OCEAN.MODEL.AGE$model.age)
-tot.escape <- data.frame(apply(E[,,2]+E[,,4],1,sum,na.rm=T))
-tot.escape.trim <- tot.escape
+# make an array padded with zeros
+A <-left_join(expand.grid(ID_numb=1:N.REL,mod.year=1:N.mod.year),
+          REL %>% dplyr::select(ID,ID_numb,
+                                brood.year=brood_year,
+                                rel.year=release_year))
 
-## Replace NA with zeros in the appropriate spots
-E_true <- E[,,"est.numb"]
-E_true[is.na(E_true)] <- 0
-E_lambda2 <- E[,,"lambda2"]
-E_lambda2[is.na(E_lambda2)] <- 0
-E_count <- E[,,"count"]
-E_count[is.na(E_count)] <- 0
+# merge into dat.E
+dat.E <- full_join(dat.E ,A) %>% 
+          # Get rid of NA ID_numb in dat.
+          filter(!is.na(ID_numb)) %>%
+          mutate(est.numb.sum=ifelse(is.na(est.numb.sum),0,est.numb.sum)) %>%
+          group_by(ID,brood.year,rel.year) %>%
+          mutate(tot.est.numb=sum(est.numb.sum)) %>%
+          ungroup() %>%
+          mutate(prop.age=est.numb.sum / tot.est.numb) %>%
+          arrange(ID_numb,mod.year)
 
-E_var <- (E_count + 1) * E_lambda2 + 1
-E_sd  <- sqrt(E_var)
-
-#### Based on the visual examination of the total freshwater escapement, I decided these sites did not have freshwater recoveries 
-#### (or had obviously erratic recoveries)
-
-# TREAT THIS AS EFFECTIVELY UNINFORMATIVE ESCACAPEMENT DATA
-# E_true[THESE.no.fresh,] <- 0
-# E_lambda2[THESE.no.fresh,] <- 1e10
-E_true_lab <- data.frame(REL[,c("ID_numb","ID","ocean.region")],E_true)
-
-E_true_AWG <- E_true_lab[grep("AWG",E_true_lab$ID),]
+ESCAPE <- dat.E
 
 
 
-
+# E <- array(NA,dim=c(N.REL,N.mod.year,2),
+#            dimnames = list(paste("rel.ID",1:N.REL,sep="."),
+#                            paste0("X",1:N.mod.year),c("mod.year","est.numb")))
+# for(i in 1:N.REL){
+#   E[i,,1] <- 1:N.mod.year
+#   temp <- dat.sum %>% filter(ID == REL$ID[i],
+#                                  brood.year == REL$brood_year[i],
+#                                  rel.year == REL$release_year[i])
+#   
+#   #  escape.year[escape.year$ID == REL$ID[i] & escape.year$brood.year == REL$brood_year[i] & escape.year$rel.year == REL$release_year[i],]
+#   for(j in 1:(N.mod.year)){
+#     if(nrow(temp[temp$mod.year == j,])==1){
+#       E[i,j,2] <- temp$est.numb.sum[temp$mod.year == j]
+# 
+#     }
+#   }
+# }
+# 
+# N.mod.month <- max(OCEAN.MODEL.AGE$model.age)
+# # tot.escape <- data.frame(apply(E[,,2]+E[,,4],1,sum,na.rm=T))
+# # tot.escape.trim <- tot.escape
+# 
+# ## Replace NA with zeros in the appropriate spots
+# E_true <- E[,,"est.numb"]
+# E_true[is.na(E_true)] <- 0
+# # E_lambda2 <- E[,,"lambda2"]
+# # E_lambda2[is.na(E_lambda2)] <- 0
+# # E_count <- E[,,"count"]
+# # E_count[is.na(E_count)] <- 0
+# # 
+# # E_var <- (E_count + 1) * E_lambda2 + 1
+# # E_sd  <- sqrt(E_var)
+# 
+# #### Based on the visual examination of the total freshwater escapement, I decided these sites did not have freshwater recoveries 
+# #### (or had obviously erratic recoveries)
+# 
+# # TREAT THIS AS EFFECTIVELY UNINFORMATIVE ESCACAPEMENT DATA
+# # E_true[THESE.no.fresh,] <- 0
+# # E_lambda2[THESE.no.fresh,] <- 1e10
+# E_true_lab <- data.frame(REL[,c("ID_numb","ID","ocean.region")],E_true)
+# 
+# #E_true_AWG <- E_true_lab[grep("AWG",E_true_lab$ID),]
