@@ -12,6 +12,9 @@ gini.simp.div <- function(prop){
  MEDIAN  <- origin_loc_median
  QUANT <- apply(origin_loc,c(2,3,4),quantile,probs=c(0.025,0.05,0.25,0.5,0.75,0.95,0.975))
 
+ LOCATIONS <- LOCATIONS %>% mutate(plot.name=ifelse(location.name == "PUSO_out","SJDF",location.name))
+ 
+ 
  # mean.long <- melt(MEAN) 
  #  colnames(mean.long)[1] <- "origin"
  #  colnames(mean.long)[2] <- "ocean.loc"
@@ -21,7 +24,7 @@ gini.simp.div <- function(prop){
     par(mar=c(5,5,1,1))
     z.lim	<- c(0.0,0.60)
     y.lab <- spawn_loc$ocean.region  
-    x.lab	<-	LOCATIONS$location.name
+    x.lab	<-	LOCATIONS$plot.name
     #col.br <- colorRampPalette(c("blue", "cyan", "yellow", "red"))
     col.br <- colorRampPalette(c(grey(0.9), "red"))
     par(mfrow=c(1,1),oma=c( 0,0,0,4) )
@@ -64,8 +67,13 @@ gini.simp.div <- function(prop){
   
 quartz(file=paste(base.dir,"/spring-chinook-distribution/Output plots/Spatial Average Distribution plot ",NAME,".jpeg",sep=""),
            type="jpeg",dpi=600,width=4.5,height=9)
+<<<<<<< HEAD
     
     layout.matrix <- matrix(c(c(1:8)), nrow = 4, ncol = 2)
+=======
+
+    layout.matrix <- matrix(c(c(1:8),c(9,9,9,9)), nrow = 4, ncol = 3)
+>>>>>>> 40cb967febcac9c38b26c5a304a308a9b56aef25
     layout(mat=layout.matrix,
                  widths=c(1,0.1))
 
@@ -77,7 +85,7 @@ for(i in 1:N_season){
   temp <- MEAN[,i,] 
   z.lim	<- c(0.0,1)
   y.lab <- spawn_loc$ocean.region
-  x.lab	<-	LOCATIONS$location.name
+  x.lab	<-	LOCATIONS$plot.name
   #col.br <- colorRampPalette(c("blue", "cyan", "yellow", "red"))
   col.br <- colorRampPalette(c(grey(0.9),"orange","orangered", "red3"))
   #col.br <- colorRampPalette(COL)
@@ -113,6 +121,7 @@ for(i in 1:N_season){
 }
 
 #Colorbar
+<<<<<<< HEAD
   #  ticks <- seq(min(z.lim),max(z.lim),length.out=6)
   #  #par(mar=c(3,1,1,1))
   #  imagePlot(z=t(temp$Mean),x=1,y=1,
@@ -123,6 +132,18 @@ for(i in 1:N_season){
   #             add=FALSE,
   #             legend.cex=1.2)
   # 
+=======
+   ticks <- seq(min(z.lim),max(z.lim),length.out=6)
+   #par(mar=c(3,1,1,1))
+   imagePlot(z=t(temp$Mean),x=1,y=1,
+              legend.only=TRUE,smallplot=c(0.91,0.94, 0.6,0.9),
+              zlim=z.lim,
+              axis.args=list(at= ticks,cex.axis=0.7,hadj=0.5,tcl=-0.3),
+              col=col.br(32),
+              add=FALSE,
+              legend.cex=1.2)
+
+>>>>>>> 40cb967febcac9c38b26c5a304a308a9b56aef25
   #  
   #  colorBar(breaks=ticks,
   #            smallplot=c(0.91,0.94, 0.6,0.9),
@@ -135,30 +156,82 @@ for(i in 1:N_season){
   # temp$plot.numb[temp$season=="spring"] <- 1
   # temp$plot.numb[temp$season=="summer"] <- 2
   # temp$plot.numb[temp$season=="fall"]   <- 3
+<<<<<<< HEAD
   # 
+=======
+  dev.off()
+  
+  
+  #### FALL ONLY PUB PLOT
+  quartz(file=paste(base.dir,"/spring-chinook-distribution/Output plots/Spatial Average Distribution plot SPRING ",NAME,".jpeg",sep=""),
+         type="jpeg",dpi=600,width=6,height=4)
+  
+  layout.matrix <- matrix(c(1,2), nrow = 1, ncol = 2)
+  layout(mat=layout.matrix,
+         widths=c(1,0.15))
+  
+  TEXT <- c("Spring")
+  
+  #COL <- brewer.pal(32,Yl)
+  par(mar=c(3.25,5,1,1))
+  temp <- MEAN[,1,] 
+  z.lim	<- c(0.0,0.6)
+  y.lab <- spawn_loc$ocean.region
+  x.lab	<-	LOCATIONS$plot.name
+  #col.br <- colorRampPalette(c("blue", "cyan", "yellow", "red"))
+  col.br <- colorRampPalette(c(grey(0.9),"orange","orangered", "red3"))
+  #col.br <- colorRampPalette(COL)
+  
+  temp[temp > z.lim[2]] <- z.lim[2]-1e-8
+  #par(oma=c( 0,0,0,4) )
+  image(z=t(temp),y=1:nrow(temp),x=LOCATIONS$location.number,axes=F,ylab="",xlab="",
+        col=col.br(32),zlim=z.lim)
+  box(bty="o",lwd=2)
+  axis(1,las=2,at=LOCATIONS$location.number,labels=x.lab,hadj=0.6,cex.axis=0.7,tcl=-0.2)
+  axis(2,las=2,at=spawn_loc$init.loc,labels=y.lab,hadj=0.8,tcl=-0.2,cex.axis=0.5)
+  title(ylab="Stock",line=3.7,cex.lab=1)
+  title(xlab="Ocean region",line=2.25,cex.lab=1)
+  mtext("Spring",side=3,adj=0,cex=0.7)
+  
+  # Offshore
+  temp <- origin_off_summary %>% filter(season==2) %>% dplyr::select(Mean)
+  temp <- temp %>% mutate(Mean=ifelse(Mean>z.lim[2],z.lim[2],Mean))
+  par(mar=c(3.25,0,1,2.5))
+  image(z=t(temp$Mean),y=1:nrow(temp),x=1,axes=F,ylab="",xlab="",
+        col=col.br(32),zlim=z.lim)
+  box(bty="o",lwd=2)
+  axis(1,las=2,at=1,labels="Offshore",hadj=0.7,cex.axis=0.8,tcl=-0.2)  
+  
+  # Color Bar
+  ticks <- seq(min(z.lim),max(z.lim),length.out=6)
+  ticks.lab <- ticks; ticks.lab[6] <- paste0(">",ticks.lab[6])
+  image.plot(temp,legend.only=T,smallplot=c(0.45,0.60, 0.25,0.9),col=col.br(32),
+             zlim=z.lim,axis.args=list(at= ticks,labels=ticks.lab,cex.axis=0.5,hadj=0.8,tcl=-0.3),add=T,legend.cex=0.7)
+  
+>>>>>>> 40cb967febcac9c38b26c5a304a308a9b56aef25
   dev.off()
   
   
   
   #### SUMMER ONLY PUB PLOT
+  quartz(file=paste(base.dir,"/spring-chinook-distribution/Output plots/Spatial Average Distribution plot SUMMER ",NAME,".jpeg",sep=""),
+         type="jpeg",dpi=600,width=6,height=4)
   
+  layout.matrix <- matrix(c(1,2), nrow = 1, ncol = 2)
+  layout(mat=layout.matrix,
+         widths=c(1,0.15))
   
-  quartz(file=paste(base.dir,"/Salmon-Climate/Output plots/Spatial Average Distribution plot SUMMER ",NAME,".jpeg",sep=""),
-         type="jpeg",dpi=600,width=6,height=3)
-  
-  par(mfrow=c(1,1))
   TEXT <- c("Summer")
   
   #COL <- brewer.pal(32,Yl)
-    par(mar=c(3.25,4,1,4))
+    par(mar=c(3.25,5,1,1))
     temp <- MEAN[,2,] 
-    z.lim	<- c(0.0,0.40)
+    z.lim	<- c(0.0,0.6)
     y.lab <- spawn_loc$ocean.region
-    x.lab	<-	LOCATIONS$location.name
+    x.lab	<-	LOCATIONS$plot.name
     #col.br <- colorRampPalette(c("blue", "cyan", "yellow", "red"))
     col.br <- colorRampPalette(c(grey(0.9),"orange","orangered", "red3"))
     #col.br <- colorRampPalette(COL)
-    
     
     temp[temp > z.lim[2]] <- z.lim[2]-1e-8
     #par(oma=c( 0,0,0,4) )
@@ -166,15 +239,127 @@ for(i in 1:N_season){
           col=col.br(32),zlim=z.lim)
     box(bty="o",lwd=2)
     axis(1,las=2,at=LOCATIONS$location.number,labels=x.lab,hadj=0.6,cex.axis=0.7,tcl=-0.2)
-    axis(2,las=2,at=spawn_loc$init.loc,labels=y.lab,hadj=0.68,tcl=-0.2,cex.axis=0.7)
-    title(ylab="Stock",line=2.7,cex.lab=1)
+    axis(2,las=2,at=spawn_loc$init.loc,labels=y.lab,hadj=0.8,tcl=-0.2,cex.axis=0.5)
+    title(ylab="Stock",line=3.7,cex.lab=1)
     title(xlab="Ocean region",line=2.25,cex.lab=1)
+    mtext("Summer",side=3,adj=0,cex=0.7)
     
+    # Offshore
+      temp <- origin_off_summary %>% filter(season==2) %>% dplyr::select(Mean)
+      temp <- temp %>% mutate(Mean=ifelse(Mean>z.lim[2],z.lim[2],Mean))
+      par(mar=c(3.25,0,1,2.5))
+      image(z=t(temp$Mean),y=1:nrow(temp),x=1,axes=F,ylab="",xlab="",
+            col=col.br(32),zlim=z.lim)
+      box(bty="o",lwd=2)
+      axis(1,las=2,at=1,labels="Offshore",hadj=0.7,cex.axis=0.8,tcl=-0.2)  
+    
+    # Color Bar
       ticks <- seq(min(z.lim),max(z.lim),length.out=6)
-      image.plot(temp,legend.only=T,smallplot=c(0.88,0.92, 0.25,0.9),col=col.br(32),
-                 zlim=z.lim,axis.args=list(at= ticks,cex.axis=0.7,hadj=0.5,tcl=-0.3),add=T,legend.cex=0.7)
-    
+      ticks.lab <- ticks; ticks.lab[6] <- paste0(">",ticks.lab[6])
+      image.plot(temp,legend.only=T,smallplot=c(0.45,0.60, 0.25,0.9),col=col.br(32),
+                 zlim=z.lim,axis.args=list(at= ticks,labels=ticks.lab,cex.axis=0.5,hadj=0.8,tcl=-0.3),add=T,legend.cex=0.7)
+      
   dev.off()
+  
+  #### FALL ONLY PUB PLOT
+  quartz(file=paste(base.dir,"/spring-chinook-distribution/Output plots/Spatial Average Distribution plot FALL ",NAME,".jpeg",sep=""),
+         type="jpeg",dpi=600,width=6,height=4)
+  
+  layout.matrix <- matrix(c(1,2), nrow = 1, ncol = 2)
+  layout(mat=layout.matrix,
+         widths=c(1,0.15))
+  
+  TEXT <- c("Fall")
+  
+  #COL <- brewer.pal(32,Yl)
+  par(mar=c(3.25,5,1,1))
+  temp <- MEAN[,3,] 
+  z.lim	<- c(0.0,0.6)
+  y.lab <- spawn_loc$ocean.region
+  x.lab	<-	LOCATIONS$plot.name
+  #col.br <- colorRampPalette(c("blue", "cyan", "yellow", "red"))
+  col.br <- colorRampPalette(c(grey(0.9),"orange","orangered", "red3"))
+  #col.br <- colorRampPalette(COL)
+  
+  temp[temp > z.lim[2]] <- z.lim[2]-1e-8
+  #par(oma=c( 0,0,0,4) )
+  image(z=t(temp),y=1:nrow(temp),x=LOCATIONS$location.number,axes=F,ylab="",xlab="",
+        col=col.br(32),zlim=z.lim)
+  box(bty="o",lwd=2)
+  axis(1,las=2,at=LOCATIONS$location.number,labels=x.lab,hadj=0.6,cex.axis=0.7,tcl=-0.2)
+  axis(2,las=2,at=spawn_loc$init.loc,labels=y.lab,hadj=0.8,tcl=-0.2,cex.axis=0.5)
+  title(ylab="Stock",line=3.7,cex.lab=1)
+  title(xlab="Ocean region",line=2.25,cex.lab=1)
+  mtext("Fall",side=3,adj=0,cex=0.7)
+  
+  # Offshore
+  temp <- origin_off_summary %>% filter(season==2) %>% dplyr::select(Mean)
+  temp <- temp %>% mutate(Mean=ifelse(Mean>z.lim[2],z.lim[2],Mean))
+  par(mar=c(3.25,0,1,2.5))
+  image(z=t(temp$Mean),y=1:nrow(temp),x=1,axes=F,ylab="",xlab="",
+        col=col.br(32),zlim=z.lim)
+  box(bty="o",lwd=2)
+  axis(1,las=2,at=1,labels="Offshore",hadj=0.7,cex.axis=0.8,tcl=-0.2)  
+  
+  # Color Bar
+  ticks <- seq(min(z.lim),max(z.lim),length.out=6)
+  ticks.lab <- ticks; ticks.lab[6] <- paste0(">",ticks.lab[6])
+  image.plot(temp,legend.only=T,smallplot=c(0.45,0.60, 0.25,0.9),col=col.br(32),
+             zlim=z.lim,axis.args=list(at= ticks,labels=ticks.lab,cex.axis=0.5,hadj=0.8,tcl=-0.3),add=T,legend.cex=0.7)
+  
+  dev.off()
+  
+  
+  #### FALL ONLY PUB PLOT
+  quartz(file=paste(base.dir,"/spring-chinook-distribution/Output plots/Spatial Average Distribution plot WINTER ",NAME,".jpeg",sep=""),
+         type="jpeg",dpi=600,width=6,height=4)
+  
+  layout.matrix <- matrix(c(1,2), nrow = 1, ncol = 2)
+  layout(mat=layout.matrix,
+         widths=c(1,0.15))
+  
+  TEXT <- c("WINTER")
+  
+  #COL <- brewer.pal(32,Yl)
+  par(mar=c(3.25,5,1,1))
+  temp <- MEAN[,3,] 
+  z.lim	<- c(0.0,0.6)
+  y.lab <- spawn_loc$ocean.region
+  x.lab	<-	LOCATIONS$plot.name
+  #col.br <- colorRampPalette(c("blue", "cyan", "yellow", "red"))
+  col.br <- colorRampPalette(c(grey(0.9),"orange","orangered", "red3"))
+  #col.br <- colorRampPalette(COL)
+  
+  temp[temp > z.lim[2]] <- z.lim[2]-1e-8
+  #par(oma=c( 0,0,0,4) )
+  image(z=t(temp),y=1:nrow(temp),x=LOCATIONS$location.number,axes=F,ylab="",xlab="",
+        col=col.br(32),zlim=z.lim)
+  box(bty="o",lwd=2)
+  axis(1,las=2,at=LOCATIONS$location.number,labels=x.lab,hadj=0.6,cex.axis=0.7,tcl=-0.2)
+  axis(2,las=2,at=spawn_loc$init.loc,labels=y.lab,hadj=0.8,tcl=-0.2,cex.axis=0.5)
+  title(ylab="Stock",line=3.7,cex.lab=1)
+  title(xlab="Ocean region",line=2.25,cex.lab=1)
+  mtext("Winter",side=3,adj=0,cex=0.7)
+  
+  # Offshore
+  temp <- origin_off_summary %>% filter(season==2) %>% dplyr::select(Mean)
+  temp <- temp %>% mutate(Mean=ifelse(Mean>z.lim[2],z.lim[2],Mean))
+  par(mar=c(3.25,0,1,2.5))
+  image(z=t(temp$Mean),y=1:nrow(temp),x=1,axes=F,ylab="",xlab="",
+        col=col.br(32),zlim=z.lim)
+  box(bty="o",lwd=2)
+  axis(1,las=2,at=1,labels="Offshore",hadj=0.7,cex.axis=0.8,tcl=-0.2)  
+  
+  # Color Bar
+  ticks <- seq(min(z.lim),max(z.lim),length.out=6)
+  ticks.lab <- ticks; ticks.lab[6] <- paste0(">",ticks.lab[6])
+  image.plot(temp,legend.only=T,smallplot=c(0.45,0.60, 0.25,0.9),col=col.br(32),
+             zlim=z.lim,axis.args=list(at= ticks,labels=ticks.lab,cex.axis=0.5,hadj=0.8,tcl=-0.3),add=T,legend.cex=0.7)
+  
+  dev.off()
+  
+  
+  
   
 #########################################################################
 #########################################################################

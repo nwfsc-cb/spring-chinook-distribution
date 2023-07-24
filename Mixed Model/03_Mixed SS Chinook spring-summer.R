@@ -3,10 +3,10 @@ print(SAMP.FILE)
 
 MODEL    = "Joint"
 
-Warm        = 200
-Iter        = 200
+Warm        = 500
+Iter        = 2000
 N_CHAIN     = 1
-Treedepth   = 9
+Treedepth   = 10
 Adapt_delta = 0.7
 
 ##########################################################################################
@@ -1249,6 +1249,7 @@ if(MONTH.STRUCTURE=="SPRING"){
   # Make 4 levels - CA, OR & WA, BC, AK
   if(loc_18 == "_two_OR_PUSO_AK") { 
     troll_idx <- c(rep(1,4),rep(2,6),rep(3,5),rep(4,6))
+    #troll_idx <- c(rep(1,10),rep(2,11))
     N_troll_idx <- length(unique(troll_idx)) #cbind(LOCATIONS,troll_idx)
     
     #rec_us_idx <- c(rep(1,4),rep(2,13))
@@ -1256,8 +1257,9 @@ if(MONTH.STRUCTURE=="SPRING"){
     N_rec_us_idx <- length(unique(rec_us_idx)) #cbind(LOCATIONS,troll_idx)
     
     # Make index for observation CV
-    sigma_cv_idx <- c(rep(1,4),rep(2,6),rep(3,5),rep(4,2));
-    N_sigma_cv_idx <- length(unique(sigma_cv_idx));
+    #sigma_cv_idx <- c(rep(1,10),rep(2,11),rep(3,5),rep(4,2));
+    #sigma_cv_idx <- c(rep(1,4),rep(2,6),rep(3,5),rep(4,6))
+    #N_sigma_cv_idx <- length(unique(sigma_cv_idx));
   }
   
   
@@ -1684,6 +1686,7 @@ stan_data = list(
 
 # parameters to monitor
 stan_pars = c(
+  # "log_q_troll_mu",
   "log_q_troll_pos","log_q_troll_start","log_q_troll_slope",
   "log_q_treaty_pos","log_q_treaty_start","log_q_treaty_slope",
   "log_q_rec_pos","log_q_rec_start","log_q_rec_slope",
@@ -1790,6 +1793,7 @@ stan_pars = c(
         A <- list()
   for(i in 1:n.chain){
     A[[i]] <- list(
+      # log_q_troll_mu = rnorm(1,-10,0.1),
       log_q_troll_start  = rnorm(N_troll_idx,-10,0.5),
       log_q_troll_slope  = rnorm(1,1,0.2),
       log_q_treaty_start  = rnorm(1,-10,0.5),
@@ -1906,24 +1910,25 @@ SEASON <- TRUE
 ###############################################################################
 ###############################################################################
 ###############################################################################
-setwd(paste0(base.dir,"/spring-chinook-distribution/Mixed Model"))
-
-
-A <- stan_init_f1(n.chain=N_CHAIN,N_loc_spawn=N_loc_spawn,
-                  MU_m =MU_m,Sigma_m=Sigma_m,
-                  N_rel=N.REL,N_loc=N.LOC,
-                  N_f_rec_idx_param=N_f_rec_idx_param,
-                  N_knot_sf=N_knot_sf, N_knot_ws=N_knot_ws,
-                  #W_star_sf = W_star_sf, W_star_ws = W_star_ws, W_star_salish =W_star_salish,
-                  N_troll_idx=N_troll_idx,N_rec_us_idx=N_rec_us_idx,
-                  N_origin=N_origin,N_sigma_cv_idx=N_sigma_cv_idx,
-                  N_season=N_season,N_year=N_year,N_juv=N_juv)
-m <- stan_model(file = MOD.NAME)
-optMod <- optimizing( m,
-                     data = stan_data,
-                     init = A[[1]],verbose=TRUE,iter=100000,refresh=500,
-                     init_alpha=0.0001,sample_file="../Output Files/NB_optim.csv",hessian=TRUE)
-                     #init_alpha=0.01)
+# setwd(paste0(base.dir,"/spring-chinook-distribution/Mixed Model"))
+# 
+# 
+# A <- stan_init_f1(n.chain=N_CHAIN,N_loc_spawn=N_loc_spawn,
+#                   MU_m =MU_m,Sigma_m=Sigma_m,
+#                   N_rel=N.REL,N_loc=N.LOC,
+#                   N_f_rec_idx_param=N_f_rec_idx_param,
+#                   N_knot_sf=N_knot_sf, N_knot_ws=N_knot_ws,
+#                   #W_star_sf = W_star_sf, W_star_ws = W_star_ws, W_star_salish =W_star_salish,
+#                   N_troll_idx=N_troll_idx,N_rec_us_idx=N_rec_us_idx,
+#                   N_origin=N_origin,N_sigma_cv_idx=N_sigma_cv_idx,
+#                   N_season=N_season,N_year=N_year,N_juv=N_juv)
+# m <- stan_model(file = MOD.NAME)
+# optMod <- optimizing( m,
+#                      data = stan_data,
+#                      init = A[[1]],verbose=TRUE,iter=100000,refresh=500,
+#                      init_alpha=0.0001,sample_file="../Output Files/POIS_optim_test.csv")
+#         ,hessian=TRUE)
+#                      #init_alpha=0.01)
 
 
 ###############################################################################

@@ -19,7 +19,11 @@ code.dir    <- "/Users/ole.shelton/GitHub/spring-chinook-distribution/Mixed mode
 markdown.dir <- "/Users/ole.shelton/GitHub/spring-chinook-distribution/Writing/Markdown"
   
 setwd(results.dir)
+<<<<<<< HEAD
 load("FRAM_2023_07 P1-pois_hake!=pollock,cv=hake,pollock,vuln=hake,pollock_4-season(single offshore,wint=avg),year+fing,ZEROS.RData")
+=======
+load("FRAM_2023_07 P1-pois;hake!=pollock,cv=hake,pollock,vuln=hake,pollock;4-season(single offshore,wint=avg),year+fing,ZEROS.RData")
+>>>>>>> 40cb967febcac9c38b26c5a304a308a9b56aef25
 # load("CA+COL CLIMATE Troll_Rec_Treaty_SS+PROC_E100_M2EST_vulnfix_07-26-2017.RData")
 
 LOCATIONS <- read.csv(paste(base.dir,"/spring-chinook-distribution/Processed Data/locations",Output$loc_18,".csv",sep=""))
