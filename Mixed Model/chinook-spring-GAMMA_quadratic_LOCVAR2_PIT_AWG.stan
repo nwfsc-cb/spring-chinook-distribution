@@ -677,6 +677,9 @@ transformed parameters { ///////////////////////////////////////////////////////
           //     origin_sea_int[j,i,4] = origin_sea_int[1,i,4] ; // make winter == spring for NCA
           //    }
           // }
+          //if(j==3){
+           origin_sea_int[j,i,21] = origin_sea_int[j,i,20] ; // make WAPEN==EAPEN, all seasons
+          //}
           if(i <= 3 ){  // Kluge to make Central Alaska stop having stupid abundances in all seasons (only for SOR and south)
               origin_sea_int[j,i,21] = origin_sea_int[j,i,17] ; // make WAPEN==NSEAK, all seasons
               origin_sea_int[j,i,20] = origin_sea_int[j,i,17] ; // make EAPEN==NSEAK, all seasons
@@ -688,8 +691,7 @@ transformed parameters { ///////////////////////////////////////////////////////
               origin_sea_int[j,i,19] = origin_sea_int[j,i,17] ; // make NWGOA==NSEAK, all seasons
               origin_sea_int[j,i,18] = origin_sea_int[j,i,17] ; // make NEGOA== NSEAK, all seasons
           }
-          
-          
+
           for(k in 1:N_pred_loc_salish){ // this is the value for the salish sea (SGEO and PUSO and PUSO_out) and not 
               origin_sea_int[j,i,knot_idex_salish[k]] = w_star_salish[j,i,k] ;
           }
@@ -764,8 +766,9 @@ transformed parameters { ///////////////////////////////////////////////////////
             }else if(j == 4){ // Make winter half way between fall and spring.
             origin_mat[i,j] =   0.5 * (origin_mat[i,1] + origin_mat[i,3]) ;
             }
-
-            origin_mat[i,j] = origin_mat[i,j] * (1-origin_off[i]) ; // Adjust for the offshore component
+       }
+       for(j in 1:N_season){
+        origin_mat[i,j] = origin_mat[i,j] * (1-origin_off[i]) ; // Adjust for the offshore component
        }
     }
     

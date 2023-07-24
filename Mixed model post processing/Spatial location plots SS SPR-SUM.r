@@ -90,6 +90,14 @@ origin_all$ocean.region <- factor(origin_all$ocean.region,
 origin_all$season <- factor(origin_all$season,
                                  levels = SEAS)
 
+
+#######
+write.csv(origin_loc_long,file="Spring Ocean Dist long-form.csv")
+
+write.csv(origin_loc_long %>% pivot_wider(.,id_cols = c("origin","ocean.region","season"),names_from = c("Site"),values_from = "prop"),
+          file="Spring Ocean Dist wide-form.csv")
+
+
 #################
 
 ### OK .
@@ -296,3 +304,25 @@ pdf(file=paste(base.dir,"/spring-chinook-distribution/Output plots/Spatial Dist 
 dev.off()
 
     
+ALP = 0.4
+origin_off_summary <- origin_off_summary %>% filter( season==3)
+origin_off_summary$ocean.reg <- factor(origin_off_summary$ocean.reg,levels=origin_off_summary$ocean.reg)
+  
+OFF.PLOT2 <- ggplot(origin_off_summary) +
+  geom_point(aes(y=Mean,x=ocean.reg),alpha=1) +
+  geom_errorbar(aes(ymax=q.0.95,ymin=q.0.05,x=ocean.reg),alpha=ALP) +
+  #scale_x_continuous(breaks=AT,labels=LABS) +
+  scale_y_continuous("Offshore proportion",expand = expansion(mult=c(0.0001,0.01)))+
+  scale_x_discrete("Stock") +
+  #annotation_custom(grob) +
+  theme_bw()+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.5)) 
+#facet_wrap(~season,scales="free_y")
+
+  
+  quartz(file=paste(base.dir,"/spring-chinook-distribution/Output plots/Offshore Dist ",NAME,".pdf",sep=""),
+      width=6,height=3.5,type = "pdf",dpi=600)
+    print(OFF.PLOT2)
+  dev.off()
+  
+  

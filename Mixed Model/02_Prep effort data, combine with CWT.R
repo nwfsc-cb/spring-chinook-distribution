@@ -11,7 +11,7 @@ library(MASS)
 library(extrafont)
 library(gtable)
 
-set.seed(8)
+set.seed(12)
 #test
 rm(list=ls())
 gc()
@@ -22,7 +22,7 @@ if(getwd()!=paste0(base.dir,"/spring-chinook-distribution")){
   setwd(paste0(base.dir,"/spring-chinook-distribution"))
 }#mn
   
-NAME <- "R1-pois;hake!=pollock,cv=hake,pollock,vuln=hake,pollock;4-season(single offshore,wint=avg),year+fing,ZEROS"
+NAME <- "AA1-pois;TROLL_4_param,hake!=pollock,WAPEN=EAPEN,cv=hake,pollock,vuln=hake,pollock;4-season(single offshore,wint=avg),year+fing,ZEROS"
 MOD.NAME  <- 'chinook-spring-GAMMA_quadratic_LOCVAR2_PIT_AWG.stan'
 
 SAMP.FILE <- paste0("../Output Files/",NAME,".csv")
@@ -698,7 +698,7 @@ LOCATIONS.plot <- LOCATIONS %>%
 
 ######## PLOT EFFORT AND CPUE FILES
 source("./_R code for processing raw data/Make heatmap functions.R",local=T)
-source("./_R code for processing raw data/Plot effort, CPUE heatmaps Spr-Sum.R",local=T)
+# source("./_R code for processing raw data/Plot effort, CPUE heatmaps Spr-Sum.R",local=T)
 ############# MAKE A PDF of the various hatchery and release attributes.
 #write REL to file:
 saveRDS(REL,file=paste0(base.dir,"/spring-chinook-distribution/Processed Data/REL matrix ",RUN.TYPE," ",GROUP,".rds"))

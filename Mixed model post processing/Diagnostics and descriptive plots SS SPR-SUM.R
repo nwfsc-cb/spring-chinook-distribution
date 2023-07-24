@@ -19,7 +19,7 @@ code.dir    <- "/Users/ole.shelton/GitHub/spring-chinook-distribution/Mixed mode
 markdown.dir <- "/Users/ole.shelton/GitHub/spring-chinook-distribution/Writing/Markdown"
   
 setwd(results.dir)
-load("FRAM_2022_12 H1-pois;hake!=pollock,cv=hake,pollock,vuln=hake,pollock;4-season(single offshore,wint=avg),year+fing,ZEROS.RData")
+load("FRAM_2023_07 P1-pois;hake!=pollock,cv=hake,pollock,vuln=hake,pollock;4-season(single offshore,wint=avg),year+fing,ZEROS.RData")
 # load("CA+COL CLIMATE Troll_Rec_Treaty_SS+PROC_E100_M2EST_vulnfix_07-26-2017.RData")
 
 LOCATIONS <- read.csv(paste(base.dir,"/spring-chinook-distribution/Processed Data/locations",Output$loc_18,".csv",sep=""))
@@ -129,8 +129,6 @@ if(Output$loc_18=="TRUE"){LOCATIONS <- read.csv(paste(base.dir,"/Salmon-Climate/
 if(Output$loc_18=="TWO_OR"){LOCATIONS <- read.csv(paste(base.dir,"/Salmon-Climate/Processed Data/locations_plus_two_OR.csv",sep=""))}
 if(Output$loc_18 =="NCA_SOR_PUSO"){LOCATIONS <- read.csv(paste(base.dir,"/Salmon-Climate/Processed Data/locations_plus_NCA_SOR_PUSO.csv",sep=""))}
 if(Output$loc_18 =="_two_OR_PUSO_AK"){LOCATIONS <- read.csv(paste(base.dir,"/spring-chinook-distribution/Processed Data/locations",Output$loc_18,".csv",sep=""))}
-
-
 
 # Extract the necessary information from the fitted model object.
 setwd(code.dir)
