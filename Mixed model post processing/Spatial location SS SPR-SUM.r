@@ -59,16 +59,15 @@ gini.simp.div <- function(prop){
 #}  
 
 ###################################################################################################  
-####### 3x1 Panel plot for Publication
+####### 4x1 Panel plot for Publication
 ###################################################################################################
   
-quartz(file=paste(base.dir,"/Salmon-Climate/Output plots/Spatial Average Distribution plot ",NAME,".jpeg",sep=""),
+quartz(file=paste(base.dir,"/spring-chinook-distribution/Output plots/Spatial Average Distribution plot ",NAME,".jpeg",sep=""),
            type="jpeg",dpi=600,width=4.5,height=9)
-
-  
-    layout.matrix <- matrix(c(c(1:8),c(9,9,9,9)), nrow = 4, ncol = 3)
+    
+    layout.matrix <- matrix(c(c(1:8)), nrow = 4, ncol = 2)
     layout(mat=layout.matrix,
-                 widths=c(1,0.1,0.1))
+                 widths=c(1,0.1))
 
 TEXT <- c("a) Spring","b) Summer", "c) Fall", "d) Winter")
 
@@ -114,30 +113,29 @@ for(i in 1:N_season){
 }
 
 #Colorbar
-   ticks <- seq(min(z.lim),max(z.lim),length.out=6)
-   #par(mar=c(3,1,1,1))
-   imagePlot(z=t(temp$Mean),x=1,y=1,
-              legend.only=TRUE,smallplot=c(0.91,0.94, 0.6,0.9),
-              zlim=z.lim,
-              axis.args=list(at= ticks,cex.axis=0.7,hadj=0.5,tcl=-0.3),
-              col=col.br(32),
-              add=FALSE,
-              legend.cex=1.2)
-
-   
-   colorBar(breaks=ticks,
-             smallplot=c(0.91,0.94, 0.6,0.9),
-             axis.args=list(at= ticks,cex.axis=0.7,hadj=0.5,tcl=-0.3),
-             col=col.br(32))
-   
-   
-  SEASON.lab <- c("spring","summer","fall")  
-  temp <- expand.grid(origin=spawn_loc$ocean.region,season=SEASON.lab)
-  temp$plot.numb[temp$season=="spring"] <- 1
-  temp$plot.numb[temp$season=="summer"] <- 2
-  temp$plot.numb[temp$season=="fall"]   <- 3
-  
-  
+  #  ticks <- seq(min(z.lim),max(z.lim),length.out=6)
+  #  #par(mar=c(3,1,1,1))
+  #  imagePlot(z=t(temp$Mean),x=1,y=1,
+  #             legend.only=TRUE,smallplot=c(0.91,0.94, 0.6,0.9),
+  #             zlim=z.lim,
+  #             axis.args=list(at= ticks,cex.axis=0.7,hadj=0.5,tcl=-0.3),
+  #             col=col.br(32),
+  #             add=FALSE,
+  #             legend.cex=1.2)
+  # 
+  #  
+  #  colorBar(breaks=ticks,
+  #            smallplot=c(0.91,0.94, 0.6,0.9),
+  #            axis.args=list(at= ticks,cex.axis=0.7,hadj=0.5,tcl=-0.3),
+  #            col=col.br(32))
+  #  
+  #  
+  # SEASON.lab <- c("spring","summer","fall")  
+  # temp <- expand.grid(origin=spawn_loc$ocean.region,season=SEASON.lab)
+  # temp$plot.numb[temp$season=="spring"] <- 1
+  # temp$plot.numb[temp$season=="summer"] <- 2
+  # temp$plot.numb[temp$season=="fall"]   <- 3
+  # 
   dev.off()
   
   
