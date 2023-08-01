@@ -1836,7 +1836,7 @@ stan_pars = c(
      # rel_year_all = runif(N_rel,1,2),
       log_F_rec_mean = rnorm(1,-4,0.5),
       log_F_troll_mean = rnorm(1,-4,0.5),
-      #logit_offset_slope = rnorm(1,1,0.1),
+      #logit_offset_slope = rnorm(1 ,1,0.1),
       F_troll = runif(N_f_troll_idx_param,0.001,0.04),
       F_rec = runif(N_f_rec_idx_param,0.001,0.04),
       #gamma_pay = matrix(runif(N_origin*N_juv,-1,-0.5),N_origin,N_juv),
@@ -1989,7 +1989,7 @@ samp_params <- get_sampler_params(stanMod)
 #                  # "kappa_troll", "kappa_treaty",
 #                  # "kappa_rec", "kappa_rec_can"
 #                  )#"prob_age_year") #"beta_age_month""vuln_int"
-
+#
 #print(traceplot(stanMod,pars=c("lp__"),inc_warmup=F))
 # summary(stanMod,pars=base_params)$summary
 # 
@@ -1997,7 +1997,7 @@ stanMod_summary <- summary(stanMod)$summary
 # summary(stanMod,pars=base_params)$summary
 #summary(stanMod,pars=c("alpha_pay","beta_pay"))
 
- origin_summary <-summary(stanMod,pars=c("origin_sea_int")) # "origin_sea_slope"
+origin_summary <-summary(stanMod,pars=c("origin_sea_int")) # "origin_sea_slope"
 # origin_summary <- summary(stanMod,pars=c("origin_sea_int","origin_sea_slope"))$summary
 origin_mat_summary <- as.data.frame(summary(stanMod,pars=c("origin_mat"))$summary)
 
@@ -2022,6 +2022,7 @@ Output <- list(stanMod=stanMod,stanMod_summary=stanMod_summary,
                raw.dat.all=dat.all,raw.dat.pos=dat.pos.fin,N_CHAIN=N_CHAIN,
                PIT.dat.fin=PIT.dat.fin,
                AWG_dat = AWG_dat,
+               
                PRIORS = PRIORS,cum_M2_fixed = cum_M2_fixed, origin_vec=origin_vec,
                diri_constant=diri_constant,
                ashop_year_break=ashop_year_break,
@@ -2029,6 +2030,8 @@ Output <- list(stanMod=stanMod,stanMod_summary=stanMod_summary,
                AGE = AGE,
                COV = COV, age_month_cal=age_month_cal,
                #ocean_temp_dev = ocean.temp.dev, ocean_temp = ocean.temp, ocean_temp_avg =time.avg.deep.trim,
+               E_prop_1 = E_prop_1,
+               E_prop_2 = E_prop_2,
                river_entry=river_entry,
                shaker_mort = shaker_mort,
                knot.loc.sum.fall = knot.loc.sum.fall, knot.loc.wint.spr = knot.loc.wint.spr,
