@@ -130,8 +130,6 @@ origin_vec  <- Output$origin_vec
 #   }
 # }
 
-
-
 origin_loc <- samp$origin_mat
 
 origin_loc_mean   <- apply(origin_loc,c(2,3,4),mean)

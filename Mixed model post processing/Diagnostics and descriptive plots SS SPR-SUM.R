@@ -1,6 +1,6 @@
 rm(list=ls()); gc()
 library(ggplot2)
-library(reshape2)
+library(data.table)
 library(dplyr)
 library(tidyr)
 library(rstan)
@@ -19,11 +19,9 @@ code.dir    <- "/Users/ole.shelton/GitHub/spring-chinook-distribution/Mixed mode
 markdown.dir <- "/Users/ole.shelton/GitHub/spring-chinook-distribution/Writing/Markdown"
   
 setwd(results.dir)
-<<<<<<< HEAD
-load("FRAM_2023_07 P1-pois_hake!=pollock,cv=hake,pollock,vuln=hake,pollock_4-season(single offshore,wint=avg),year+fing,ZEROS.RData")
-=======
-load("FRAM_2023_07 P1-pois;hake!=pollock,cv=hake,pollock,vuln=hake,pollock;4-season(single offshore,wint=avg),year+fing,ZEROS.RData")
->>>>>>> 40cb967febcac9c38b26c5a304a308a9b56aef25
+
+load("FRAM_2023_07 V1-pois;TROLL_2_param,hake!=pollock,WAPEN=EAPEN,cv=hake,pollock,vuln=hake,pollock;4-season(single offshore,wint=avg),year+fing,ZEROS.RData")
+
 # load("CA+COL CLIMATE Troll_Rec_Treaty_SS+PROC_E100_M2EST_vulnfix_07-26-2017.RData")
 
 LOCATIONS <- read.csv(paste(base.dir,"/spring-chinook-distribution/Processed Data/locations",Output$loc_18,".csv",sep=""))
@@ -158,7 +156,7 @@ source("Obs-Pred SS SPR-SUM.r")          # Script for making observed vs. predic
 source("Spatial location SS SPR-SUM.r")  # Script for making proportions in each area.
 source("Spatial location plots SS SPR-SUM.r")
 # source("Spatial location Future Projections SS Climate.r")
-source("Mat, Vuln plot SS SPR-SUM.r") 
+source("Mat, Vuln plot SS SPR-SUM.r")  
 source("Juv_mort SS CLIMATE.r")          # Script for looking at initial mortality rates among sites.
 #source("Juv_mort to AUG1 by+2 CLIMATE.R")
 #source("Adult_mort SS CLIMATE.r")
