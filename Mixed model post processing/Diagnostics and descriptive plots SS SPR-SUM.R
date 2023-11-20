@@ -20,7 +20,7 @@ markdown.dir <- "/Users/ole.shelton/GitHub/spring-chinook-distribution/Writing/M
   
 setwd(results.dir)
 
-load("FRAM_2023_07 V1-pois;TROLL_2_param,hake!=pollock,WAPEN=EAPEN,cv=hake,pollock,vuln=hake,pollock;4-season(single offshore,wint=avg),year+fing,ZEROS.RData")
+load("FRAM_2023_08 F1-NB=400;FIX-OFF-TROLL_4_param,hake!=pollock,WAPEN=EAPEN(all),cv=hake,pollock,vuln=hake,pollock;4-season(single offshore,wint=avg),year+fing,ZEROS.RData")
 
 # load("CA+COL CLIMATE Troll_Rec_Treaty_SS+PROC_E100_M2EST_vulnfix_07-26-2017.RData")
 
@@ -38,37 +38,37 @@ if(COMBINE=="TRUE"){
 setwd(results.dir)
 
   # Read in each of the fitted objects.  
-  load("FRAM_v2 AAA DIRI=50 FINAL TWO_OR Salish-temp Mfix PHI-FIX CLIMATE, Mproc error-FOUR LOGIT-vuln Troll_Rec_Treaty_Trawl_SS+PROC_SMOOTH_effort-SLOPE-Q_05-28-2020-24mon-EXTRA F(0.1).RData")
+  load("FRAM_2023_07 DA1-pois;TROLL_2_param,hake!=pollock,WAPEN=EAPEN(all),cv=hake,pollock,vuln=hake,pollock;4-season(single offshore,wint=avg),year+fing,ZEROS.RData")
   
 ## EXTRACT PERMUTED VERSION because lists are easier to deal with than arrays.
 f1 <- rstan::extract(Output$stanMod,permuted = TRUE)
 e1 <- rstan::extract(Output$stanMod,pars=Output$stan_pars, permuted = FALSE)
-out.array <- array(dim=c(dim(e1)[1],5,dim(e1)[3]))
+out.array <- array(dim=c(dim(e1)[1],3,dim(e1)[3]))
 out.array[,1,] <- e1
 rm(e1); gc()
 
-load("FRAM_v2 BBB DIRI=50 FINAL TWO_OR Salish-temp Mfix PHI-FIX CLIMATE, Mproc error-FOUR LOGIT-vuln Troll_Rec_Treaty_Trawl_SS+PROC_SMOOTH_effort-SLOPE-Q_05-28-2020-24mon-EXTRA F(0.1).RData")
+load("FRAM_2023_07 DA2-pois;TROLL_2_param,hake!=pollock,WAPEN=EAPEN(all),cv=hake,pollock,vuln=hake,pollock;4-season(single offshore,wint=avg),year+fing,ZEROS.RData")
 f2 <- rstan::extract(Output$stanMod,permuted = TRUE)
 e2 <- rstan::extract(Output$stanMod,pars=Output$stan_pars, permuted = FALSE)
 out.array[,2,] <- e2
 rm(e2); gc()
 
-load("FRAM_v2 CCC DIRI=50 FINAL TWO_OR Salish-temp Mfix PHI-FIX CLIMATE, Mproc error-FOUR LOGIT-vuln Troll_Rec_Treaty_Trawl_SS+PROC_SMOOTH_effort-SLOPE-Q_05-28-2020-24mon-EXTRA F(0.1).RData")
+load("FRAM_2023_07 DA3-pois;TROLL_2_param,hake!=pollock,WAPEN=EAPEN(all),cv=hake,pollock,vuln=hake,pollock;4-season(single offshore,wint=avg),year+fing,ZEROS.RData")
 f3 <- rstan::extract(Output$stanMod,permuted = TRUE)
 e3 <- rstan::extract(Output$stanMod,pars=Output$stan_pars, permuted = FALSE)
 out.array[,3,] <- e3
 rm(e3); gc()
 
-load("FRAM_v2 DDD DIRI=50 FINAL TWO_OR Salish-temp Mfix PHI-FIX CLIMATE, Mproc error-FOUR LOGIT-vuln Troll_Rec_Treaty_Trawl_SS+PROC_SMOOTH_effort-SLOPE-Q_05-28-2020-24mon-EXTRA F(0.1).RData")
-f4 <- rstan::extract(Output$stanMod,permuted = TRUE)
-e4 <- rstan::extract(Output$stanMod,pars=Output$stan_pars, permuted = FALSE)
-out.array[,4,] <- e4
-rm(e4); gc()
-
-load("FRAM_v2 EEE DIRI=50 FINAL TWO_OR Salish-temp Mfix PHI-FIX CLIMATE, Mproc error-FOUR LOGIT-vuln Troll_Rec_Treaty_Trawl_SS+PROC_SMOOTH_effort-SLOPE-Q_05-28-2020-24mon-EXTRA F(0.1).RData")
-f5 <- rstan::extract(Output$stanMod,permuted = TRUE)
-e5 <- rstan::extract(Output$stanMod,pars=Output$stan_pars, permuted = FALSE)
-out.array[,5,] <- e5
+# load("FRAM_v2 DDD DIRI=50 FINAL TWO_OR Salish-temp Mfix PHI-FIX CLIMATE, Mproc error-FOUR LOGIT-vuln Troll_Rec_Treaty_Trawl_SS+PROC_SMOOTH_effort-SLOPE-Q_05-28-2020-24mon-EXTRA F(0.1).RData")
+# f4 <- rstan::extract(Output$stanMod,permuted = TRUE)
+# e4 <- rstan::extract(Output$stanMod,pars=Output$stan_pars, permuted = FALSE)
+# out.array[,4,] <- e4
+# rm(e4); gc()
+# 
+# load("FRAM_v2 EEE DIRI=50 FINAL TWO_OR Salish-temp Mfix PHI-FIX CLIMATE, Mproc error-FOUR LOGIT-vuln Troll_Rec_Treaty_Trawl_SS+PROC_SMOOTH_effort-SLOPE-Q_05-28-2020-24mon-EXTRA F(0.1).RData")
+# f5 <- rstan::extract(Output$stanMod,permuted = TRUE)
+# e5 <- rstan::extract(Output$stanMod,pars=Output$stan_pars, permuted = FALSE)
+# out.array[,5,] <- e5
 #rm(e5); gc()
 # 
 # load("FRAM_v2 FFF FINAL TWO_OR Salish-temp Mfix PHI-FIX CLIMATE, Mproc error-FOUR LOGIT-vuln Troll_Rec_Treaty_Trawl_SS+PROC_SMOOTH_effort-SLOPE-Q_05-15-2020-24mon-EXTRA F(0.1).RData")
@@ -84,18 +84,17 @@ for(i in 1:length(stan_pars)){
   A <- f1[[stan_pars[i]]]
   B <- f2[[stan_pars[i]]]
   C <- f3[[stan_pars[i]]]
-  D <- f4[[stan_pars[i]]]
-  E <- f5[[stan_pars[i]]]
+  # D <- f4[[stan_pars[i]]]
+  # E <- f5[[stan_pars[i]]]
 
   temp <- abind(A,B,along=1)
   temp <- abind(temp,C,along=1)
-  temp <- abind(temp,D,along=1)
-  temp <- abind(temp,E,along=1)
+  # temp <- abind(temp,D,along=1)
+  # temp <- abind(temp,E,along=1)
   # temp <- abind(temp,F1,along=1)
   
   pars[[stan_pars[i]]] <- temp
 }
-
 
 # rm(f1,f2,f3,f4); gc()
 # rm(f1,f2,f3,f4,f5,f6); gc()
@@ -105,16 +104,14 @@ for(i in 1:length(stan_pars)){
 ### Save reordered extracted objects.
 #rm(pars); gc()
 
-
-
 ## Convergence diagnostics
 mon <- rstan::monitor(out.array, print = F, warmup = 0)
-rownames(mon) <- dimnames(e5)[3]$parameters
+rownames(mon) <- dimnames(e3)[3]$parameters
 mon <- as.data.frame(mon)
 
 Output$pars <- pars
 Output$stanMod_summary=mon
-NAME <- "05-28-2020 CLIMATE-MODEL"
+NAME <- "08-14-2023 SPR-SUM MODEL"
 Output$NAME <- NAME
 save(Output,file=paste("__OUTPUT ",NAME,".RData",sep=""))
 }
@@ -155,14 +152,17 @@ source("Obs-Pred SS SPR-SUM.r")          # Script for making observed vs. predic
 #source("Log-likelihood tables.R")        # Script for calculating likelihood components
 source("Spatial location SS SPR-SUM.r")  # Script for making proportions in each area.
 source("Spatial location plots SS SPR-SUM.r")
-# source("Spatial location Future Projections SS Climate.r")
+source("In-River Recoveries.r")
+
 source("Mat, Vuln plot SS SPR-SUM.r")  
-source("Juv_mort SS CLIMATE.r")          # Script for looking at initial mortality rates among sites.
+source("Juv_mort SS SPR-SUM.r")          # Script for looking at initial mortality rates among sites.
+source("F_mort SS SPR-SUM.r")
+source("Proc Error SPR-SUM.R")
+
 #source("Juv_mort to AUG1 by+2 CLIMATE.R")
 #source("Adult_mort SS CLIMATE.r")
-source("F_mort SS CLIMATE.r")
-source("Proc Error CLIMATE.R")
-source("Temperature vs Distribution.R")
+# source("Spatial location Future Projections SS Climate.r")
+# source("Temperature vs Distribution.R")
 
 # source("calculate DIC.R")
 

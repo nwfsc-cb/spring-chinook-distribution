@@ -11,8 +11,8 @@ library(sirt)
 # E_true_lab <- data.frame(REL[,c("ID_numb","ID","ocean.region")],E_true)
 
 
-ESCAPE
-ESCAPE <- dat.E
+
+
 
 # remove low sample size cohorts from consideration
 MIN <- 10

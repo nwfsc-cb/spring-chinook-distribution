@@ -11,10 +11,10 @@ base.dir <- "/Users/ole.shelton/GitHub"
 RUN.TYPE = "spring-summer" ### options: fall, spring-summer, south, case_study, case_study_south, spring-summer-fall
 
 #GROUP <- "OR_ESA"
-GROUP <- "FRAM_2023_07"  ### Options "CA", "CA+" "COL" "CA+COL" "CA+COL_AWG" "CA+COL+PUSO" , FRAM_v1, FRAM_v2 # THIS IS WHAT YOU READ IN WITH
+GROUP <- "FRAM_2023_08"  ### Options "CA", "CA+" "COL" "CA+COL" "CA+COL_AWG" "CA+COL+PUSO" , FRAM_v1, FRAM_v2 # THIS IS WHAT YOU READ IN WITH
                      ###  "FRAM_EXP" is an experimental one for looking at                 
 #GROUP <- "OR_ESA"
-GROUP.2 <- "FRAM_2023_07"  # THIS IS WHAT GETS WRITTEN TO FILE.  Unless == "CA+COL_AWG" this should be the same as GROUP
+GROUP.2 <- "FRAM_2023_08"  # THIS IS WHAT GETS WRITTEN TO FILE.  Unless == "CA+COL_AWG" this should be the same as GROUP
                           #A CLUGE SO CAN READ IN THE SAME DATA BUT END UP WITH A SLIGHTLY DIFFERENT DATA FRAME
 loc_18 <- "_two_OR_PUSO_AK" ## THIS IS THE MAPPING TO RECOVERIES AREA CODING.  Options I have tried:
                               ## options for this are a null string ("", should be default) 
@@ -304,6 +304,11 @@ class(all.code.recoveries$tag_code)
 recover.marine	<-	all.code.recoveries[substr(all.code.recoveries$recovery_location_code,2,2)=="M",]
 recover.fresh	  <-	all.code.recoveries[substr(all.code.recoveries$recovery_location_code,2,2)=="F",]
 
+## Move some Marine recoveries to FW recoveries.
+recover.fresh  <- recover.fresh %>% 
+                    bind_rows(.,recover.marine %>% filter(recovery_location_code=="2MN26H006KITI RV 01")) # This is Kitimat river recoveries.
+recover.marine <- recover.marine %>% filter(!recovery_location_code=="2MN26H006KITI RV 01") # This is Kitimat river recoveries.
+
 # use this section to add in Auxiliary recoveries from the AWG data.
 # FOR FRESHWATER ONLY.
 dat.awg.F <- dat.awg %>% filter(Auxiliary == 1, 
@@ -467,7 +472,7 @@ if(nrow(A1)>0|nrow(A2)>0){
 #########################################################################################
 #########################################################################################
 
-### THIS SHOULD BE REWRITTEN IN DPLYR but I don't feel like it.
+###
 ### On 5-2-2022 Ole rewrote this is dplyr.  
 ### He found different results for aggregation methods in base R vs. dplyr
 ### After inspection, all discrepancies were driven by pre-1978 recoveries
@@ -498,6 +503,7 @@ marine.1 <- recover.marine %>%
                        rec.area.code,
                        estimation.level=estimation_level,
                        sampling_site,
+                       recovery_location_code, ##### JUST ADDED THE 11/6/23
                        recovery_location_name,
                        sample.type=sample_type) %>%
               summarise(x=length(estimated_number),
@@ -521,6 +527,7 @@ marine.GOA.HS <- recover.marine %>%
                           rec.area.code,
                           estimation.level=estimation_level,
                           sampling_site,
+                          recovery_location_code, ##### 
                           recovery_location_name,
                           sample.type=sample_type) %>%
                   summarise(count=length(estimated_number)) %>%
@@ -536,6 +543,467 @@ marine.all <- marine.all %>% arrange(tag_code,fishery,rec.year,rec.month) %>%
                   filter(est.numb > 0) %>%
                   mutate(frac.samp = count / est.numb,
                          frac.samp = ifelse(frac.samp > 1,1,frac.samp))
+
+
+### DO SOME MANUAL ADJUSTMENTS FOR SOME STOCKS WITH MARINE TERMINAL FISHERIES
+
+if(GROUP=="FRAM_2023_08"){
+  #make a temporary tmp.ID
+  marine.all$tmp.ID <- 1:nrow(marine.all)
+
+################################## NSEAK
+#Gillnet
+# Start with Taku affiliated stocks
+  A <- marine.all %>% filter(rec.area.code=="NSEAK",fishery>=20,fishery<=30,
+                             rec.month %in% c(3:8))
+                             
+  REM <- A%>% filter( grepl("Taku|Macaulay|Chilkat",ID),
+                      grepl("1M1NE111",recovery_location_code)) %>% 
+                arrange(desc(est.numb))
+  
+# Lynn Canal stocks  
+  REM <- A %>% 
+                filter(grepl("1M1NE115",recovery_location_code), 
+                        grepl("Taku|Macaulay|Chilkat",ID)) %>%
+                arrange(desc(est.numb)) %>% 
+                bind_rows(REM,.)
+##3 Little Port Walter,   
+  REM <- A %>% 
+    filter(grepl("1M1NE112|1M1NESA12|1M1NESACO",recovery_location_code)) %>% 
+    filter(grepl("LPW",ID)) %>%#%>% group_by(ID,recovery_location_code) %>% summarise(SUM=sum(est.numb)) %>%
+      arrange(desc(est.numb)) %>%
+      bind_rows(REM,.)
+  
+  
+  ##### LITTE PORT WALTER.- both rec and troll.
+  # Just pull out small areas immediately adjacent to LPW.
+  A <- marine.all %>% filter(rec.area.code=="NSEAK",#fishery>=20,fishery<=30,
+                             rec.month %in% c(3:7), ### ONLY AFTER THEY SHOULD HAVE BEEN IN THE RIVER...
+                             grepl("109",recovery_location_name)) %>% 
+    group_by(ID,fishery,
+             recovery_location_code,recovery_location_name) %>% 
+    summarise(SUM=sum(est.numb)) %>% arrange(desc(SUM)) %>% as.data.frame()
+  
+  THESE <- c("1M1NE109 10","1M1NE109 62","1M1NE109 61","1M1NE109 11","1M1NE109 63","1M1NE109")
+  
+  REM <- marine.all %>% 
+    filter(rec.area.code=="NSEAK",#fishery>=20,fishery<=30,
+           rec.month %in% c(5:10),
+           grepl("LPW",ID),
+           grepl("109",recovery_location_name)) %>%
+    filter(recovery_location_code %in% THESE) %>%
+    bind_rows(REM,.)
+  
+  
+# Rec Fleet
+  A <- marine.all %>% filter(rec.area.code=="NSEAK",fishery>30, grepl("NSEAK",ocean.region),
+                             rec.month %in% c(3:8)) 
+    
+    # A %>% filter(!recovery_location_code %in% c("1M104MS  NE11150")) %>% 
+    #       filter(!recovery_location_code %in% c("1M104TFF NE11140")) %>% 
+    #   group_by(ID,recovery_location_code) %>% 
+    #                           summarise(SUM=sum(est.numb)) %>% arrange(desc(SUM))
+ # terminal fish area in front of hatchery 
+  REM <- A %>% filter(recovery_location_code %in% c("1M104TFF NE11140")) %>%
+                 arrange(desc(est.numb)) %>%
+                bind_rows(REM,.)     
+  
+  # terminal fishery Auke Bay, backside of Douglas                     
+  REM <- A %>% filter(grepl("1M104MS  NE111",recovery_location_code)) %>%
+        filter(grepl("Taku|Macaulay|Chilkat|LPW_King_Salmon",ID)) %>%
+        arrange(desc(est.numb)) %>%
+        bind_rows(REM,.)                        
+  # terminal fishery Chilkat inlet
+  REM <- A %>% filter(grepl("NE115",recovery_location_code)) %>%
+        filter(grepl("Chilkat",ID)) %>%
+        bind_rows(REM,.)                        
+  
+  B <- A %>% filter(!tmp.ID %in% REM$tmp.ID )
+  
+  REM <- B %>% filter(grepl("NE111|NE115",recovery_location_code)) %>%
+              filter(rec.month %in% c(5:8)) %>% # ONLY FOR MONTHS MAY - Aug
+              filter(grepl("Taku|Macaulay|Chilkat",ID)) %>%
+            bind_rows(REM,.)       
+  
+  
+  NSEAK.FW <- REM
+  
+  marine.all <- marine.all %>% filter(!tmp.ID %in% NSEAK.FW$tmp.ID )
+  
+############################ SSEAK.  
+  # Whitman_Chickamin_spr_awg released in Herring cove (101-45)
+  # Crystal_Whitman_spr_awg is release in 101-90 (Neets Bay)
+  # Neets_Whitman_spr_awg is release in 101-90
+  # Neets_spr_awg is release in 101-90
+  # Deer_mtn_spr_awg is mostly 101-47 (Ketchikan) but some 102-70 (Thorne Bay)
+  # Chickamin_wild_spr_awg  is 101-71 (Behm Canal)
+  # Unuk_wild_spr_awg is 101-75 (Behm Canal)
+  
+  # LPW indicates release at LPW even though southern SEAK stocks. (109-10)
+        # LPW_Chickamin_spr_awg
+        # LPW_Unuk_spr_awg
+  
+  # Stikine_wild_spr_awg enters the ocean in 108-40/
+  
+  # Crystal_Crystal_spr_awg is release in 106-44 Crystal Creek (petersburg) or  107-30 Anita Bay (s of Wrangel)
+
+  
+  # Deal with the SSEAK stocks first.
+  sseak.id <- c("Whitman_Chickamin_spr_awg","Crystal_Whitman_spr_awg",
+             "Neets_Whitman_spr_awg","Neets_spr_awg",
+             "Deer_mtn_spr_awg","Chickamin_wild_spr_awg",
+             "Unuk_wild_spr_awg")
+  
+
+  A <- marine.all %>% filter(rec.area.code=="SSEAK",#fishery>=20,fishery<=30,
+                             rec.month %in% c(3:7),
+                             grepl("101",recovery_location_name)) %>% 
+            group_by(ID,recovery_location_code,recovery_location_name) %>% 
+            summarise(SUM=sum(est.numb)) %>% arrange(desc(SUM))
+  
+  # remove Neets terminal harvest area and Carrol Inlet for all gear types, herring cove harvest area.
+  # and adjacent areas.  Include all 101-9*, 101-8*, 101-4*,101-2*,101-5*,101-29,101-28, and 101-28
+  
+THESE <- c("1M106MS  SE10195","1M106MS  SE10127","1M106DE  SE10190","1M106TFA SE10140","1M1SE101 28","1M106MS  SE10144","1M106MS  SE10180","1M106MB  SE10129",
+  "1M106MS  SE10146","1M106TFA SE10145","1M106DE  SE10145","1M1SE101 90","1M1SE101 90","1M106MS  SE10141","1M106MS  SE10185","1M106MB  SE10140",
+  "1M106MS  SE10129","1M1SE101 29","1M1SE101 95","1M1SE101 48","1M1SE101 40","1M1SE101 45","1M106MS  SE10190","1M106MB  SE10145","1M106MS  SE10145",
+  "1M1SE101 46","1M106MS  SE10147","1M106MB  SE10190","1M106MS  SE10140","1M106DE  SE10129","1M106MB  SE10146","1M106TFA SE10147","1M106MS  SE10143",
+  "1M106DE  SE10141","1M1SE101 41","1M106DE  SE10185","1M107MS  SE10190","1M106MB  SE10195","1M106DT  SE10190","1M106MB  SE10147","1M1SE101 44",
+  "1M106DE  SE10147","1M106DE  SE10146","1M106DT  SE10145","1M106MS  SE10148","1M106MB  SE10141","1M106MB  SE10144","1M106DE  SE10140","1M1SE101 47",
+  "1M1SE101 42","1M106MB  SE10151","1M106DE  SE10153","1M107MB  SE10140","1M106MB  SE10127","1M1SE101 27","1M106MB  SE10185","1M106DE  SE10127")
+
+  REM <- marine.all %>% filter(rec.area.code=="SSEAK",fishery>=20,fishery<=30,
+                               rec.month %in% c(3:8),
+                               grepl("SSEAK_S",ocean.region),
+                               recovery_location_code %in% THESE) 
+  
+  REM <- marine.all %>% filter(!tmp.ID %in% REM$tmp.ID,
+                               rec.area.code=="SSEAK",
+                               rec.month %in% c(5:9), # REC And TROLL FLEETS ONLY MAY-SEPT.
+                               grepl("SSEAK_S",ocean.region),
+                               recovery_location_code %in% THESE) %>%
+                        bind_rows(REM,.)
+  
+  # NEXT CRYSTAL AND STIKINE.
+  # Crystal_Crystal_spr_awg is release in 106-44 Crystal Creek (petersburg) or  107-30 Anita Bay (s of Wrangel)
+  
+  A <- marine.all %>% filter(!tmp.ID %in% REM$tmp.ID,
+                              rec.area.code=="SSEAK",#fishery>=20,fishery<=30,
+                             rec.month %in% c(3:7),
+                             grepl("106|107|108",recovery_location_name)) 
+    
+  # Pull out the terminal recovery in 107.  Predominantly 107-35...  NOT 107-10.
+  THESE <- c("1M1SE107 45","1M1SE107 35","1M112MS  SE10730","1M112MS  SE10740","1M1SE107 20","1M1SE107 30",
+             "1M112MS  SE10720","1M112MS  SE10745","1M112MB  SE10720","1M112MB  SE10745","1M1SE107 47")
+  
+  # this is area 107
+  REM <- A %>% filter(rec.area.code=="SSEAK",#fishery>=20,fishery<=30,
+                                 rec.month %in% c(3:7),
+                                grepl("SSEAK_Stikine|SSEAK_N",ocean.region),
+                                #grepl("Crystal_",ID),
+                                recovery_location_code %in% THESE) 
+                               
+  # Pull all 108 areas (mouth of the Stikine)
+  REM <- marine.all %>% filter(rec.area.code=="SSEAK",#fishery>=20,fishery<=30,
+                               rec.month %in% c(3:7),
+                               grepl("SSEAK_Stikine|SSEAK_N",ocean.region),
+                               grepl("108",recovery_location_code)) %>%
+                        bind_rows(REM,.)
+  
+  
+  # Pull out the terminal recovery in 106. All 106-4*  Predominantly 106-44.
+  # Pull some 106 areas near release sites. All from these areas.
+  THESE1 <- c("1M1SE106 44","1M105TFB SE10644","1M105MS  SE10644","1M1SE106 41","1M1SE106",
+             "1M1SE106 42","1M1SE106 43","1M105DE  SE10644","1M105MS  SE10642", "1M112MS  SE10642",
+             "1M105MB  SE10644","1M112MS  SE10641","1M105MS  SE10643","1M105DE  SE10643")
+  REM <- marine.all %>% filter(rec.area.code=="SSEAK",
+                               rec.month %in% c(3:7),
+                               grepl("SSEAK_Stikine|SSEAK_N",ocean.region),
+                                grepl("106",recovery_location_name),
+                               recovery_location_code %in% THESE1) %>%
+          bind_rows(REM,.)
+  
+  # Pull gillnets from a slightly broader data 
+  THESE2 <- c("1M1SE106 30")
+  REM <- marine.all %>% filter(rec.area.code=="SSEAK",fishery>=20,fishery<30,
+                               rec.month %in% c(3:7),
+                               grepl("SSEAK_Stikine|SSEAK_N",ocean.region),
+                               grepl("106",recovery_location_name),
+                               recovery_location_code %in% THESE2) %>%
+                    bind_rows(REM,.)
+  
+  
+  SSEAK.FW <- REM
+  
+  marine.all <- marine.all %>% filter(!tmp.ID %in% SSEAK.FW$tmp.ID )
+
+################################## SWVI ROBERTSON CREEK.
+# Remove terminal rec fisheries for Robertson in August, September, October in areas
+# 23-1, 23-2...
+A <- marine.all %>% filter(rec.area.code=="SWVI",fishery>=40,rec.month %in% c(8,9,11)) %>% 
+  filter(!grepl("123",recovery_location_name),!grepl("124",recovery_location_name)) %>% # remove offshore recoveries
+  arrange(desc(est.numb))
+
+#Remove these Robertson recoveries and move them to FW.
+REM <- A%>% filter(grepl("Robertson",ID),grepl("23-1",recovery_location_name),
+                   !grepl("23-11",recovery_location_name),!grepl("23-11",recovery_location_name))
+REM <- A%>% filter(grepl("Robertson",ID),grepl("23-2|23-3|23-4|23-5|23-6",recovery_location_name)) %>%
+            bind_rows(REM,.)
+REM <- A%>% filter(grepl("Robertson",ID),grepl("23-7|23-8|23-9|23-10|23-11",recovery_location_name)) %>%
+             bind_rows(REM,.)
+
+# Additional sites with different area codes.
+ROBERTSON.FW <- A %>% filter(grepl("Robertson",ID),recovery_location_code %in% c("2MS28M23A",
+                                                 "2MS27M23B",
+                                                 "2MS27H23BBAMFIEL",
+                                                 "2MS27M23BBAMFIEL",
+                                                 "2MS27H23B",
+                                                 "2MS27H23BUCLUELE",
+                                                 "2MS27M23BCP BEAL",
+                                                 "2MS27H23BTWTHREE")) %>%
+                bind_rows(REM,.)
+
+# Keep all of the recoveries for non-Robertson.
+marine.all <- marine.all %>% filter(!tmp.ID %in% ROBERTSON.FW$tmp.ID )
+
+# CBC_spring (Kitimat_spr) Re fisheries in front of the river mouth
+A <- marine.all %>% filter(rec.area.code=="CBC",fishery>=10,rec.month >=4, rec.month<=7)
+B <- A %>% filter(grepl("6-1",recovery_location_name),
+                  !grepl("6-16",recovery_location_name),
+                  !grepl("6-10",recovery_location_name)) %>% 
+      group_by(ID,recovery_location_code) %>% summarise(SUM=sum(est.numb)) %>% arrange(desc(SUM))
+
+
+#Remove these Kitimat recoveries and move them to FW.
+REM <- A %>% filter(ID =="Kitimat_spr",
+                    grepl("6-1",recovery_location_name), # This is dominated by Kitimat river.
+                   !grepl("6-16",recovery_location_name),
+                   !grepl("6-10",recovery_location_name))
+REM  <- A%>% filter(grepl("6-2",recovery_location_name),
+                    !grepl("6-20",recovery_location_name),
+                    !grepl("6-21",recovery_location_name),
+                    !grepl("6-22",recovery_location_name),
+                    !grepl("6-23",recovery_location_name),
+                    !grepl("6-24",recovery_location_name),
+                    !grepl("6-25",recovery_location_name),
+                    !grepl("6-26",recovery_location_name),
+                    !grepl("6-27",recovery_location_name),
+                    !grepl("6-28",recovery_location_name)) %>%
+        bind_rows(REM,.)
+            
+KITIMAT.FW <- REM
+
+# Keep all of the recoveries for non-Kitimat
+marine.all <- marine.all %>% filter(!tmp.ID %in% KITIMAT.FW$tmp.ID )
+
+####################################################
+# CBC_sum (Antarko_spr) #### NOT ADJUSTED.
+A <- marine.all %>% filter(rec.area.code=="CBC",grepl("Snoo",ID)) %>% arrange(desc(est.numb))
+
+B <- A %>% filter(grepl("6-4",recovery_location_name)) %>% 
+  group_by(ID,recovery_location_code) %>% summarise(SUM=sum(est.numb)) %>% arrange(desc(SUM))
+
+####################################################
+# FRAS_TH_spr, FRAS_TH_sum, FRAS_U_spr, SGEO_sum, SGEO_spr
+A <- marine.all %>% filter(rec.area.code == "SGEO",fishery>30) %>% arrange(desc(est.numb))
+#A <- marine.all %>% filter(rec.area.code=="SGEO",grepl("SGEO",ocean.region),fishery>30) %>% arrange(desc(est.numb))
+
+B <- A %>% filter(grepl("28",recovery_location_name)) %>% 
+  group_by(ID,ocean.region,fishery,recovery_location_code,recovery_location_name) %>% 
+  summarise(SUM=sum(est.numb)) %>% arrange(desc(SUM)) %>% as.data.frame()
+
+# Move fishery 20 to FW recoveries in this area (FRASER)
+REM <- marine.all %>% filter(rec.area.code == "SGEO",fishery==20,grepl("FRAS",ocean.region)) %>% 
+            arrange(desc(est.numb))
+
+
+# Deal with SGEO_fall (Quinsam)
+A <- marine.all %>% filter(rec.area.code == "SGEO", grepl("13-",recovery_location_name)) %>% 
+          group_by(ID,fishery,recovery_location_code,recovery_location_name) %>%
+          summarise(SUM = sum(est.numb)) %>% arrange(desc(SUM))
+
+#gillnet
+REM <- marine.all %>% filter(rec.area.code == "SGEO", 
+                             rec.month %in% c(7:10),
+                             recovery_location_code %in% c("2MS11P013       092"),
+                             fishery==23,
+                             grepl("Quinsam_fall",ID)) %>%
+                      bind_rows(REM,.)
+
+# REC 13-2, 13-3, 13-5,13-6,13-7
+THESE <- c("2MS61P013TYEE PO 03","2MS22P013TYEE PO 03","2MS61P013BROW BY 06","2MS22P013WLLO PT 02",
+           "2MS22P013DUNC BY 03","2MS61P013DISC PI 03","2MS22P013CP MUDG 02","2MS61P013CP MUDG 02",
+           "2MS22P013QUAD IS 03","2MS22P013FREN PO 03","2MS22P013CAMP RV 05","2MS22P013DISC PI 03",
+           "2MS61P013LOG DUM 05","2MS22P013INDI RE 05","2MS22P013SEYM NA 06","2MS22P013COPP BF 03",
+           "2MS22P013CAMP RV 05","2MS22P013ARGO WF 03","2MS22P013BROW BY 06","2MS22P013PAIN LO 05",
+           "2MS61P013APRI PT 05","2MS22P013DEPW BY 07","2MS22P013MIDD PT 03","2MS61P013CAMP RV 05",
+           "2MS61P013ANCH IN 03","2MS22P013RACE PT 03","2MS61P013DEPW BY 07","2MS22P013ANCH IN 03",
+           "2MS22P013FORE PO 03","2MS22P013DISC PS 06","2MS22P013QUAT CV 05","2MS22P013FORE PO 03",
+           "2MS61P013QUAD IS 03","2MS22P013RACE PT 03","2MS22P013DISC PS 06","2MS22P013BIG RK  02",
+           "2MS22P013WEST WF 03","2MS61P013COPP BF 03","2MS61P013SHEL PT 02","2MS22P013QUINSAM 04",
+           "2MS22P013TYEE SP 03","2MS61P013SEYM NA 06","2MS61P013WLLO PT 02","2MS61P013FERR DK 05",
+           "2MS61P013SEPA HD 07","2MS22P013RIPP RK 06","2MS22P013EARLYS  02","2MS61P013SHEL PT 02",
+           "2MS22P013LOG DUM 05","2MS22P013ORAN PT 03","2MS22P013STOR BE 03","2MS22P013MAUD IS 06",
+           "2MS61P013LOGG BY 06","2MS22P013WHIS PT 03","2MS22P013MENZ BY 03","2MS22P013LOG DUM 05",
+           "2MS22P013APRI PT 05","2MS61P013SHEL PT 02","2MS22P013EARLYS  02","2MS22P013RIPP RK 06",
+           "2MS61P013SEPA HD 07","2MS22P013COPP CL 03","2MS22P013BREAKWA 05")                             
+#terminal rec fishing
+REM <- marine.all %>% filter(rec.area.code == "SGEO", 
+                             rec.month %in% c(7:10),
+                             recovery_location_code %in% THESE,
+                             ocean.region %in% c("SGEO_N_fall")) %>%
+                        bind_rows(REM,.)
+
+#### Puntledge summer
+# Terminal rec fishery only.
+A <- marine.all %>% filter(rec.area.code == "SGEO", grepl("14-",recovery_location_name)) %>% 
+  group_by(ID,fishery,recovery_location_code,recovery_location_name) %>%
+  summarise(SUM = sum(est.numb)) %>% arrange(desc(SUM))
+
+#rec fisheries in front of the river.
+REM <- marine.all %>% filter(rec.area.code == "SGEO", 
+                             rec.month %in% c(7:10),
+                             fishery == 40,
+                             grepl("14-14|14-11|14-15|14-10|14-9|14-8|14-7",recovery_location_name)) %>%
+                             filter(grepl("Puntledge",ID)) %>%
+                      bind_rows(REM,.)
+
+# A %>% filter(!tmp.ID %in% REM$tmp.ID) %>% 
+#   filter(!recovery_location_code %in% THESE) %>%
+#   group_by(ID,fishery,recovery_location_code,recovery_location_name) %>%
+#   summarise(SUM = sum(est.numb)) %>% arrange(desc(SUM)) %>% as.data.frame()
+
+#A <- marine.all %>% filter(rec.area.code=="SGEO",grepl("SGEO",ocean.region),fishery>30) %>% arrange(desc(est.numb))
+
+
+SGEO.FW <- REM
+# Keep all of the recoveries for non-Kitimat
+marine.all <- marine.all %>% filter(!tmp.ID %in% SGEO.FW$tmp.ID )
+
+####################################################
+# PUSO_N & PUSO_S
+A <- marine.all %>% filter(rec.area.code%in%c("PUSO.IN"),fishery<30,fishery>19) %>% arrange(desc(est.numb))
+#A <- marine.all %>% filter(rec.area.code=="SGEO",grepl("SGEO",ocean.region),fishery>30) %>% arrange(desc(est.numb))
+
+# All of th gillnet catches are in the fall for PUSO.OUT... not relevant for spring-summer stocks.
+# SKAGIT RIVER RECOVERIES with gillnets.
+REM <- A %>% filter(grepl("3M10208X1",recovery_location_code))
+
+# TULAIP BAY with gillnets.
+REM <- A %>% filter(grepl("3M10308  D",recovery_location_code)) %>%
+  bind_rows(REM,.)
+
+# South Sound gillnet.
+REM    <- A %>% filter(grepl("3M10513",recovery_location_code),
+                    grepl("PUSO_S",ocean.region),rec.month<=9) %>%
+            bind_rows(REM,.)
+
+# The above get rid of all of the terminal fisheries during reasonable spawning times.
+
+# REC FISHERIES.
+A <- marine.all %>% filter(rec.area.code%in%c("PUSO.IN"),fishery>30, rec.month<=8) %>% arrange(desc(est.numb))
+
+# WHITE RIVER STOCKS. # DON"T INCLUDE.
+B<- A %>% filter(grepl("3M11411  872563",recovery_location_code),
+                       grepl("PUSO_S",ocean.region),rec.month<=7)
+
+
+B <- A %>% #filter(grepl("3M11411  872563",recovery_location_code)) %>%
+                  #rec.month<=8) %>%
+      group_by(ID,ocean.region,rec.month,recovery_location_code,recovery_location_name) %>% 
+      summarise(SUM=sum(est.numb)) %>% arrange(desc(SUM))
+
+PUSO.FW <- REM
+# Keep all of the recoveries for non-Kitimat
+marine.all <- marine.all %>% filter(!tmp.ID %in% PUSO.FW$tmp.ID )
+
+############################################
+###### WASHINGTON COAST.
+############################################
+A <- marine.all %>% filter(rec.area.code%in%c("WAC")) %>% arrange(desc(est.numb))
+# Only fish from the Quillayute.
+# gillnet first... there are none in the ocean.
+#A %>% filter(fishery>=20,fishery<30) %>% as.data.frame() %>% distinct(recovery_location_code,recovery_location_name)
+
+# Check rec fishing. None are called out as terminal
+#A %>% filter(fishery>=30) %>% as.data.frame() %>% distinct(recovery_location_code,recovery_location_name)
+
+# Check troll fishing. None are called out as terminal
+#A %>% filter(fishery<20) %>% as.data.frame() %>% distinct(recovery_location_code,recovery_location_name)
+
+############################################
+###### COLUMBIA
+############################################
+
+A <- marine.all %>% filter(rec.area.code%in%c("COL")) %>% arrange(desc(est.numb))
+A %>% filter( fishery>=40) %>% distinct(fishery,recovery_location_code,recovery_location_name) # only troll, rec, trawl.
+# any weird terminal fisheries? 
+# put buoy 10 fisheries into FW.
+
+# WA Buoy 10 fishery.
+REM <- marine.all %>% filter(rec.area.code == "COL", 
+                             #rec.month %in% c(7:10),
+                             fishery %in% c(40,41,42),
+                             grepl("1A (BUOY10 - BRIDGE)|1A PLUS 1B|1B (BRIDGE - BEAVER)|1B PLUS 1A",recovery_location_name))
+
+COL.FW <- REM
+
+marine.all <- marine.all %>% filter(!tmp.ID %in% COL.FW$tmp.ID )
+############################################
+###### OREGON COAST.
+############################################
+#NOR
+A <- marine.all %>% filter(rec.area.code%in%c("NOR")) %>% arrange(desc(est.numb))
+
+#Which fisheries? 
+A %>% distinct(fishery) # only troll, rec, trawl.
+# any weird terminal fisheries? (# none evident.)
+A %>% filter(fishery==10) %>% distinct(recovery_location_code,recovery_location_name)
+A %>% filter(fishery==40) %>% distinct(recovery_location_code,recovery_location_name)
+
+#SOR
+A <- marine.all %>% filter(rec.area.code%in%c("SOR")) %>% arrange(desc(est.numb))
+
+#Which fisheries? 
+A %>% distinct(fishery) # only troll, rec, trawl.
+# any weird terminal fisheries? (# none evident.)
+A %>% filter(fishery==10) %>% distinct(recovery_location_code,recovery_location_name)
+A %>% filter(fishery==40) %>% distinct(recovery_location_code,recovery_location_name)
+
+############################################
+###### CAL COAST.
+############################################
+# NCA
+A <- marine.all %>% filter(rec.area.code%in%c("NCA")) %>% arrange(desc(est.numb))
+
+#Which fisheries? 
+A %>% distinct(fishery) # only troll, rec, trawl.
+# any weird terminal fisheries? (# none evident.)
+A %>% filter(fishery==10) %>% distinct(recovery_location_code,recovery_location_name)
+A %>% filter(fishery>=40) %>% distinct(recovery_location_code,recovery_location_name)
+
+# SFB
+A <- marine.all %>% filter(rec.area.code%in%c("SFB")) %>% arrange(desc(est.numb))
+
+#Which fisheries? 
+A %>% distinct(fishery) # only troll, rec, trawl.
+# any weird terminal fisheries? (# none evident.)
+A %>% filter(fishery==10) %>% distinct(recovery_location_code,recovery_location_name)
+A %>% filter(fishery>=40) %>% distinct(recovery_location_code,recovery_location_name)
+
+
+#####
+MOVE.TO.FW <- rbind(ROBERTSON.FW,KITIMAT.FW) %>%
+                rbind(.,SGEO.FW) %>%
+                rbind(.,PUSO.FW) %>%
+                rbind(.,SSEAK.FW) %>%
+                rbind(.,NSEAK.FW) %>%
+                rbind(.,COL.FW)
+
+
+marine.all <- marine.all %>% dplyr::select(-tmp.ID)
+
+} # end if statement for GROUP.
 
 
 #Check to make sure the sums are equivalent after merge.
@@ -958,6 +1426,36 @@ fresh.all	<- recover.fresh %>%
               summarise(count= length(tag_code), est.numb = sum(estimated_number,na.rm=T)) %>%
               arrange(tag_code,rec.year,fishery) %>%
               full_join(tag.dat,.)
+
+#### ADD IN TERMINAL RECOVERIES FOR ROBERTSON CK, KITIMAT.FW, OTHERS to recover.fresjh
+
+trim.MOVE.TO.FW <- MOVE.TO.FW %>% 
+                      mutate(sample.typ=1,auxiliary=0) %>%
+                      dplyr::select(ID,
+                                    river,
+                                    ocean.region,
+                                    run,
+                                    stock_location_code,
+                                    hatchery_location_code,
+                                    tag_code,
+                                    cwt.released,
+                                    cwt.all.released,
+                                    brood_year,
+                                    release.year,
+                                    first.release.month,
+                                    last.release.month,
+                                    release_stage,          
+                                    study_type,tag_reused,
+                                    comments,fishery,
+                                    rec.year,rec.month,
+                                    rec.area.code,
+                                    sample.type,
+                                    auxiliary,
+                                    count,
+                                    est.numb )
+
+fresh.all <- fresh.all %>% bind_rows(.,
+                                     trim.MOVE.TO.FW)
   
 ################
 ##### ADD IN AUXILIARY DATA FROM TRINITY AND KLAMATH RIVERS

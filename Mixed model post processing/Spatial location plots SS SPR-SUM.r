@@ -286,8 +286,8 @@ grob <- grobTree(textGrob(paste0(spawn_loc_plot$ocean.region[i],", Fall"), x=0.0
     scale_y_continuous(expand = expansion(mult=c(0.0001,0.1)))+
     #annotation_custom(grob) +
     theme_bw()+
-    theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.5)) +
-    facet_wrap(~season,scales="free_y")
+    theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.5))
+    #facet_wrap(~season,scales="free_y")
   
 }
 
@@ -305,10 +305,10 @@ dev.off()
 
     
 ALP = 0.4
-origin_off_summary <- origin_off_summary %>% filter( season==3)
-origin_off_summary$ocean.reg <- factor(origin_off_summary$ocean.reg,levels=origin_off_summary$ocean.reg)
+origin_off_summary2 <- origin_off_summary #%>% filter( season==3)
+origin_off_summary2$ocean.reg <- factor(origin_off_summary2$ocean.reg,levels=origin_off_summary2$ocean.reg)
   
-OFF.PLOT2 <- ggplot(origin_off_summary) +
+OFF.PLOT2 <- ggplot(origin_off_summary2) +
   geom_point(aes(y=Mean,x=ocean.reg),alpha=1) +
   geom_errorbar(aes(ymax=q.0.95,ymin=q.0.05,x=ocean.reg),alpha=ALP) +
   #scale_x_continuous(breaks=AT,labels=LABS) +

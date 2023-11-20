@@ -32,12 +32,99 @@ if(MONTH.STRUCTURE == "SPRING") {
       # e.g. recoveries occur before releases
   ocean.recover$dat <- ocean.recover$dat %>% filter(ocean.age >0, ocean.age <=max(OCEAN.MODEL.AGE$ocean.age))
   
+  # MODIFY NET FISHERIES BY THIER REGION AND FISHERY CODE to use this data better
+  
+  net.dat <- ocean.recover$dat %>% filter(fishery>=20,fishery<40)
+  
+  fw.net <- NULL
+  rec.net <- NULL
+      # Go through the fisheries in order
+          # 20 (ocean gillnet)
+      # TREAT ALL SEAK FISH CAGUHT IN SEAK AS TERMINAL (FW recoveries)
+        A <- net.dat %>% filter(fishery ==20)
+        B <- A %>% filter(grepl("SEAK",ocean.region),rec.area.code %in% c("NSEAK","SSEAK"),rec.month<=9)
+        fw.net <- rbind(fw.net,B)
+      # TREAT ALL CBC  & NBC FISH CAUGHT in SEAK AS TERMINAL (FW recoveries)
+        B <- A %>% filter(grepl("BC",ocean.region),rec.area.code %in% c("NSEAK","SSEAK"),rec.month<=9)
+        fw.net <- rbind(fw.net,B)
+        # TREAT ALL SGEO and PUSO FISH CAUGHT in SGEO AS TERMINAL (FW recoveries)
+        B <- A %>% filter(grepl("SWVI|SGEO|PUSO|FRAS",ocean.region),rec.area.code %in% c("SGEO"),rec.month<=9)
+        fw.net <- rbind(fw.net,B)
+        # TREAT ALL FISH CAUGHT in NW and NE GOA REC FLEET
+        B <- A %>% filter(rec.area.code %in% c("NWGOA","NWGOA"))
+        rec.net <- rbind(rec.net,B)
+        
+        # 22 (Mixed net)
+        # TREAT ALL SEAK FISH CAGUHT IN SEAK AS TERMINAL (FW recoveries)
+        A <- net.dat %>% filter(fishery ==22)
+        B <- A %>% filter(grepl("SEAK|NBC",ocean.region),rec.area.code %in% c("NSEAK","SSEAK"),rec.month<=9)
+        fw.net <- rbind(fw.net,B)
+       
+        # 23 (Mixed net & seince)
+        # TREAT ALL CAN FISH CAUGHT IN CBC AS TERMINAL (FW recoveries)
+        A <- net.dat %>% filter(fishery ==23)
+        B <- A %>% filter(grepl("SGEO|FRAS|BC|SWVI",ocean.region),rec.area.code %in% c("CBC"),rec.month<=9)
+        fw.net <- rbind(fw.net,B)
+        # TREAT ALL CAN & SSEAK FISH CAUGHT IN CBC AS TERMINAL (FW recoveries)
+        B <- A %>% filter(grepl("SGEO|FRAS|BC|SWVI|SSEAK",ocean.region),rec.area.code %in% c("NBC"),rec.month<=9)
+        fw.net <- rbind(fw.net,B)
+        # TREAT ALL SWVI FISH CAUGHT IN NWVI AS TERMINAL (FW recoveries)
+        B <- A %>% filter(grepl("VI|CBC",ocean.region),rec.area.code %in% c("NWVI"))
+        fw.net <- rbind(fw.net,B)
+        # TREAT Specific runs FISH CAUGHT IN SGEO AS TERMINAL (FW recoveries)
+        B <- A %>% filter(grepl("SGEO|FRAS|PUSO|SWVI|WAC|CBC",ocean.region),rec.area.code %in% c("SGEO"))
+        fw.net <- rbind(fw.net,B)
+        # TREAT Specific runs FISH CAUGHT IN PUSO AS TERMINAL (FW recoveries)
+        B <- A %>% filter(grepl("SGEO|FRAS|PUSO|SWVI|WAC",ocean.region),rec.area.code %in% c("PUSO","PUSO_out"))
+        fw.net <- rbind(fw.net,B)
+        # TREAT Specific runs FISH CAUGHT IN PUSO AS TERMINAL (FW recoveries)
+        B <- A %>% filter(grepl("LCOL|WILL|URB|MCOL|PUSO|OR",ocean.region),rec.area.code %in% c("WAC"))
+        fw.net <- rbind(fw.net,B)
+        
+        # 26 (Terminal Seine)
+        # TREAT ALL SEAK FISH CAUGHT IN SEAK AS TERMINAL (FW recoveries)
+        A <- net.dat %>% filter(fishery ==26)
+        B <- A %>% filter(grepl("SEAK",ocean.region),rec.area.code %in% c("NSEAK","SSEAK"),rec.month<=9)
+        fw.net <- rbind(fw.net,B)
+       
+        # 28 (Other Net Seine)
+        # TREAT ALL FISH CAUGHT IN Central and W Alaska AS Rec recoveries.
+        A <- net.dat %>% filter(fishery ==28)
+        B <- A %>% filter(rec.area.code %in% c("NEGOA","NWGOA","EAPEN"))
+        rec.net <- rbind(rec.net,B)
+        
+        # 30 (Annette Island catch
+        # TREAT ALL SEAK FISH CAUGHT at Annette Is. AS TERMINAL (FW recoveries)
+        A <- net.dat %>% filter(fishery ==30)
+        B <- A %>% filter(grepl("SEAK",ocean.region),rec.area.code %in% c("NSEAK","SSEAK"),rec.month<=9)
+        fw.net <- rbind(fw.net,B)
+        
+        # 31 of 32 (Ab. terminal fisheries)
+        # TREAT ALL SEAK FISH CAUGHT at Annette Is. AS TERMINAL (FW recoveries)
+        A <- net.dat %>% filter(fishery %in% c(31,32))
+        B <- A %>% filter(grepl("SEAK|NBC",ocean.region),rec.area.code %in% c("NSEAK","SSEAK"),rec.month<=9)
+        fw.net <- rbind(fw.net,B)
+        # TREAT ALL SWVI FISH CAUGHT at SWVI AS TERMINAL (FW recoveries)
+        B <- A %>% filter(grepl("SWVI",ocean.region),rec.area.code %in% c("SWVI"),rec.month<=9)
+        fw.net <- rbind(fw.net,B)
+        
+        
+    # remove all net data from the ocean.recover$dat
+        A <- ocean.recover$dat %>% filter(fishery<20)
+        ocean.recover$dat <- rbind(A,ocean.recover$dat %>% filter(fishery>=40))
+        # add back in the net fisheries treated as recreational fleets with a new,  fishery code (49=other)
+        ocean.recover$dat <- rbind(ocean.recover$dat, rec.net %>% mutate(fishery=49))
+        
   # Lump Gear Types into main gear types.
   ocean.recover$dat$fishery.type<- ""
   for(i in 1:N.GEAR){
     THESE <- which(is.na(gear.func(GEAR[i],ocean.recover$dat$fishery))==F)
     ocean.recover$dat$fishery.type[THESE] <- GEAR[i]
   }  
+  
+  # FIX one problem from SWVI:
+  ocean.recover$dat <- ocean.recover$dat %>% mutate(rec.area.code = ifelse(rec.area.code=="CAN","SWVI",rec.area.code))
+  
   
   #### REPEAT WITH TRAWL FISHERIES (Hake)
   ocean.recover.trawl$dat$ocean.age <- (ocean.recover.trawl$dat$rec.year - ocean.recover.trawl$dat$brood.year - 2 ) * 12 + as.numeric(ocean.recover.trawl$dat$rec.month) - MONTH.START +1

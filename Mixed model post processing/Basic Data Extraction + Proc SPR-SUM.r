@@ -68,7 +68,7 @@ age.month  <- sort(unique(dat.all.fin$age.month))
 temperature_season_idx <- Output$temperature_season_idx
 temp_dat_season_bin_idx = dat.all.fin$temp_dat_season_idx
 #temp_dat_season_pos_idx = dat.pos.fin$temp_dat_season_idx
-E_alpha         <- PRIORS$E_alpha
+
 N_years_release <- Output$N_years_release
 N_years_recover <- Output$N_years_recover
 years.recover   <- Output$YEARS.RECOVER
@@ -84,6 +84,12 @@ spawn_time_fraction <- Output$spawn_time_fraction
 
 shaker_mort = Output$shaker_mort
 origin_vec  <- Output$origin_vec
+
+#  Make spawning proportions helper files
+E_alpha         <- PRIORS$E_alpha
+E_prop_1 <- Output$E_prop_1 # this is the proportion spawning for fingerings (column are ages, rows are release stocks)
+E_prop_2 <- Output$E_prop_2 # this is the proportion spawning for yearlings (column are ages, rows are release stocks)
+
 
 # ocean_temp_avg = Output$ocean_temp_avg
 # ocean_temp_dev = Output$ocean_temp_dev
@@ -140,13 +146,18 @@ origin_loc_dat <- melt(origin_loc) %>% as.data.frame()
 colnames(origin_loc_dat) <- c("iterations","origin","season","loc","prop")
 
 # fraction offshore.
-origin_off <- origin_loc_dat %>% group_by(iterations,origin,season) %>% summarise(prop_off = 1-sum(prop))
+origin_off_dat <- samp$origin_off
+origin_off_dat <- melt(origin_off_dat) %>% as.data.frame()
+colnames(origin_off_dat) <- c("iterations","origin","prop_off")
 
-origin_off_summary <- origin_off %>% ungroup() %>% group_by(origin,season) %>%
+origin_off_summary <- origin_off_dat %>% ungroup() %>% group_by(origin) %>%
                         summarise(Mean=mean(prop_off),SD=sd(prop_off),
                                   q.0.05 = quantile(prop_off,probs=0.05),
                                   q.0.95 = quantile(prop_off,probs=0.95)) %>% 
                        left_join(.,ORIGIN.GROUPS,by=c("origin"="origin.idx"))
+
+origin_off_mean = origin_off_summary %>% dplyr::select(Mean) %>% as.matrix()
+
 
 # origin_off <- origin_loc_dat %>% group_by(origin,season) %>% summarise(OFF = 1-sum(prop)) 
 # 
@@ -161,7 +172,8 @@ origin_off_summary <- origin_off %>% ungroup() %>% group_by(origin,season) %>%
 # origin_mat_sd    <- apply(samp$origin_mat,c(2,3,4),sd)
 #origin_sea_slope <- apply(samp$origin_sea_slope,c(2,3,4),mean)
 
-theta_space <- apply(samp$theta_space,2,mean)
+#theta_space <- apply(samp$theta_space,2,mean)
+theta_space <- mean(samp$theta_space)
 #phi_space   <- mean(samp$phi_space)
 phi_space <- phi_space_fix
 
@@ -271,9 +283,9 @@ colnames(D) <- colnames(AWG_dat)[grep("mod",colnames(AWG_dat))]
 colnames(D_sd) <- colnames(AWG_dat)[grep("mod",colnames(AWG_dat))]
 
 D <- as.data.frame(D)
-D$awg_idx <- 1:nrow(D)
+D$ID_numb <- 1:nrow(D)
 D_sd <- as.data.frame(D_sd)
-D_sd$awg_idx <- 1:nrow(D_sd)
+D_sd$ID_numb <- 1:nrow(D_sd)
 
 AWG_dat_long <- pivot_longer(AWG_dat,cols=grep("mod",colnames(AWG_dat)),
                              names_to = "mod.year",values_to="obs_count")
@@ -282,32 +294,8 @@ D_long  <- pivot_longer(D,cols=grep("mod",colnames(D)),
 D_long_sd  <- pivot_longer(D_sd,cols=grep("mod",colnames(D_sd)),
                         names_to = "mod.year",values_to="pred_sd_count")                             
 
-# merge in only the AWG stocks
 AWG_dat_long <- left_join(AWG_dat_long,D_long) %>% left_join(.,D_long_sd) %>%
-                     left_join(.,REL)
-
-ggplot(AWG_dat_long) +
-    geom_point(aes(x=obs_count,y=pred_mean_count,color=ocean.region),alpha=0.3) +
-    facet_wrap(~mod.year,scales="free") +
-    geom_abline(intercept=0,slope=1,linetype="dashed") +
-    scale_x_continuous(trans="sqrt") +
-    scale_y_continuous(trans="sqrt") +
-    facet_grid(mod.year ~ocean.region,scales="free")
-  
-
-prop_PIT <- data.frame(Mean=apply(samp$prop_PIT,2,mean),
-                       SD = apply(samp$prop_PIT,2,sd)) %>%  
-            mutate(pit_idx = 1:nrow(.))
-PIT.dat.fin <- left_join(PIT.dat.fin,prop_PIT)
-
-ggplot(PIT.dat.fin) + 
-    geom_point(aes(x=SARwJacks/100,y=Mean,color=ocean.region)) +
-    geom_abline(intercept=0,slope=1,linetype="dashed") +
-    geom_errorbarh(aes(xmin=SARwJacks_LCI/100,xmax=SARwJacks_UCI/100,y=Mean),alpha=0.5) +
-    scale_y_continuous(trans="sqrt") +
-    scale_x_continuous(trans="sqrt") +
-    facet_wrap(~ocean.region)
-
+  left_join(.,REL)
 
 #########################
 F_rec     <- apply(samp$F_rec,c(2),mean)
@@ -367,6 +355,13 @@ loc_idx             = dat.all$location
 loc_spawn_bin_idx   = dat.all$loc.spawn.idx
 juv_bin_idx         = dat.all$juv.bin.idx
 
+
+## Spawn helper file
+spawn_helper <- COV %>% dplyr::select(ocean.region, origin.idx, juv.idx) %>%
+  bind_cols(.,max.mod.year=apply(spawn_time_array,1,max)) %>%
+  distinct(ocean.region,origin.idx,juv.idx,max.mod.year) %>% 
+  arrange(origin.idx,juv.idx)
+
 # mod_time_pos_idx      = dat.pos.fin$time
 # rel_pos_idx           = dat.pos.fin$rel
 # origin_pos_idx        = dat.pos.fin$origin.idx
@@ -397,7 +392,7 @@ if(TRAWL.US=="TRUE"){
   F_HAKE_ASHOP <- data.frame(F_hake_ashop_array)
   F_HAKE_SHORESIDE <- data.frame(F_hake_shoreside_array)
 }
-if(TRAWL.US=="TRUE"){
+if(TRAWL.AK=="TRUE"){
   F_POLLOCK_GOA <- data.frame(F_pollock_GOA_array)
   F_ROCKFISH_AK <- data.frame(F_rockfish_AK_array)
 }

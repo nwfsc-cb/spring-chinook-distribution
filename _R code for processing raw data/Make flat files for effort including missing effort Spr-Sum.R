@@ -8,6 +8,13 @@ QQ <- catch.dat %>% filter(rec.year.mod <= max(YEARS.RECOVER), rec.year.mod >= m
                            brood.year <=max(YEARS.BROOD), brood.year >= min(YEARS.BROOD)) %>%
                           left_join(.,XX %>% distinct(lab,model.year,model.age) %>% arrange(model.age, model.year))
 
+# trim fish to include only releases in REL
+val <- REL %>% distinct(ID,brood_year,release_year,n.year)
+val <- val %>% mutate(filt=paste(ID,brood_year,release_year,sep="_"))
+QQ  <- QQ %>% mutate(filt=paste(ID,brood.year,rel.year,sep="_"))
+
+QQ <- QQ %>% filter(filt %in% val$filt)
+
 RR <- QQ %>% distinct(fishery.type, rec.year = rec.year.mod, lab,rec.area.code)%>% as.data.frame()
 RR$indicator <- 1
 
@@ -191,6 +198,10 @@ K_rockfish_AK_shoreside_flat <- K_rockfish_AK_shoreside_flat[first.row:last.row,
 ##########
 N_season_total <- nrow(K_troll_flat)
 
+
+
+
+
 # This is a way to break the ashop catchability into two parts - one with the foreign fleets, one with domestic.
 ashop_year_break <- min(grep("1991",rownames(K_hake_ashop_flat)))
 ##########
@@ -257,7 +268,7 @@ colnames(A_list_rec_trim) <- c("year.month","loc.numb")
 f_rec_param_idx <- A_list_rec_trim
 N_f_rec_idx_param  = nrow(f_rec_param_idx)
 
-### Enumerate which entries in the K_rec_can_flat > 0 and where K_rec_can_irec_flat >0
+### Enumerate which entries in the K_rec_can_flat > 0 and where K_rec_can_irec_flat > 0
 f_rec_overlap_effort_idx  <- NULL
 K_temp1 <- K_rec_can_flat ; K_temp1[K_temp1>0] <- 1
 K_temp2 <- K_rec_can_irec_flat; K_temp2[K_temp2>0] <- 1 

@@ -1,5 +1,4 @@
 ###
-
 # Calculate the point predictions for each observations
   # binomial
 
@@ -36,7 +35,6 @@ base_params <- c(#"tau_process",
        print(rstan::traceplot(mod,pars=c("lp__",base_params),inc_warmup=F))
    dev.off()
     
-  
  # plot the distribution of final vs. initial population sizes in the ocean    
   # pdf(paste(base.dir,"/Salmon-Climate/Output plots/",NAME, " log_N_ratio.pdf",sep=""),height = 6, width=8.5)
   # 
@@ -234,9 +232,11 @@ for(i in 1:N_obs_all){
     
     # Calculate abundance
     if(mod_time_idx[i] == (start_month_idx[rel_idx[i]]+1)){ 
-      log_N_temp_2 =  log_N0[rel_idx[i]] - rel_year_all[rel_idx[i]] ;
+      #log_N_temp_2 =  log_N0[rel_idx[i]] - rel_year_all[rel_idx[i]] ;
+      log_N_temp_2 =  log_N0[rel_idx[i]] - rel_year_all[rel_idx[i]] + log(1 - origin_off_mean[origin_bin_idx[i],1]) ;
     }else{
-      log_N_temp_2 = log(exp(log_N_all[rel_idx[i],mod_time_N_all_idx[i]]) + exp(log_N_off[rel_idx[i],mod_time_N_all_idx[i]])) ;
+      #log_N_temp_2 = log(exp(log_N_all[rel_idx[i],mod_time_N_all_idx[i]]) + exp(log_N_off[rel_idx[i],mod_time_N_all_idx[i]])) ;
+      log_N_temp_2 = log_N_all[rel_idx[i],mod_time_N_all_idx[i]] ;
     }
     
     
@@ -372,7 +372,7 @@ dat.pos$log.like.gamma <- gamma_log_like(dat.pos$catch,dat.pos$alpha_pos,dat.pos
   ############################################################################################################
   
 # Plot binomial predictions by Gear, age, location
-pdf(paste(base.dir,"/spring-chinook-distribution/Output plots/", "Obs-Pred Binomial " ,NAME,".pdf",sep=""),height = 5, width=9)
+pdf(paste(base.dir,"/spring-chinook-distribution/Output plots/", "Obs-Pred Binomial " ,NAME,".pdf",sep=""),height = 5, width=7)
   INT <- 0.05
   pred.obs.plot(data=dat.all,prob=dat.all$prob,smoother.int=INT)
   title("ALL")

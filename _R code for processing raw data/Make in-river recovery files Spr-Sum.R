@@ -10,6 +10,15 @@ library(ggplot2)
 ###############################################################################################################
 ###############################################################################################################
 
+# Add in fish from terminal net fisheries before starting anything.
+
+fw.net.cons <- fw.net %>% mutate(auxiliary=0) %>% 
+                    group_by(ID,brood.year,rel.year,rel.month,ocean.region,rec.month,rec.year,auxiliary) %>% 
+                    summarise(Est.numb= sum(est.numb),Count=length(est.numb)) %>%
+                    rename(est.numb = Est.numb,count=Count)
+
+fresh.recover$dat.consolidated <- rbind(fresh.recover$dat.consolidated,fw.net.cons)
+
 # Trim the data based on brood, release and recovery years.
 fresh.recover$dat.consolidated <- fresh.recover$dat.consolidated %>% 
                                         filter(brood.year %in% YEARS.BROOD,
@@ -72,6 +81,11 @@ ggplot(sfb.dat %>% filter(ocean.region=="SFB_wint")) +
   geom_point(aes(x=rec.month,y=rec.year,size=N))+
   facet_wrap(~ID)+
   scale_x_continuous(breaks=1:12)
+
+ggplot(sfb.dat %>% filter(ocean.region=="SFB_spr")) +
+  geom_point(aes(x=rec.month,y=rec.year,size=N))+
+  facet_wrap(~ID)+
+  scale_x_continuous(breaks=1:12)
     
  # this says that anything for the spring runs belong to runs of the previous years.
 dat <- dat %>% mutate(rec.year= ifelse(ocean.region == "SFB_spr" & rec.month==1,rec.year-1,rec.year))
@@ -100,7 +114,7 @@ ggplot(nor.dat) +
   geom_point(aes(x=rec.month,y=rec.year,size=log(N)))+
   facet_wrap(~ID)+
   scale_x_continuous(breaks=1:12)
-# There is only one year with january recoveries for NOR.  I think there are not wrap arounds.
+# There is only one year with january recoveries for NOR.  I think there are not wrap arounds, but messed up dates in the database.
 # Make no changes for these.
 
 lcol.dat <- dat %>% filter(grepl("LCOL",ocean.region)) %>% 
@@ -379,34 +393,39 @@ dat.sum$mod.year <- dat.sum$age - 1 #  is the new escape.dat
 ##### 
 N.mod.year <- 6 
 
-dat.E <- dat.sum %>% group_by(ID,brood.year,rel.year) %>% 
+dat.E <- dat.sum %>% 
             # Drop fish that are spawning in the same year the model starts.
             # drop the small number of fish that are older than BY+7
             filter(mod.year >=1,mod.year<=N.mod.year) %>%
             # Could get rid of fish returning in the same year they are released here. 
-            mutate(tot.est.numb = sum(est.numb.sum )) %>%
+            
             dplyr::select(ID,brood.year,rel.year,rec.year,
                           ocean.region,age,est.numb.sum,
-                          mod.year,tot.est.numb) %>%
-            ungroup() %>%
-            mutate(prop.age = est.numb.sum / tot.est.numb) 
+                          mod.year) %>%
+            ungroup() 
+            
 
 # make an array padded with zeros
 A <-left_join(expand.grid(ID_numb=1:N.REL,mod.year=1:N.mod.year),
           REL %>% dplyr::select(ID,ID_numb,
                                 brood.year=brood_year,
-                                rel.year=release_year))
+                                rel.year=release_year,
+                                n.year,n.month))
 
 # merge into dat.E
 dat.E <- full_join(dat.E ,A) %>% 
-          # Get rid of NA ID_numb in dat.
-          filter(!is.na(ID_numb)) %>%
-          mutate(est.numb.sum=ifelse(is.na(est.numb.sum),0,est.numb.sum)) %>%
-          group_by(ID,brood.year,rel.year) %>%
-          mutate(tot.est.numb=sum(est.numb.sum)) %>%
-          ungroup() %>%
-          mutate(prop.age=est.numb.sum / tot.est.numb) %>%
-          arrange(ID_numb,mod.year)
+  # Get rid of NA ID_numb in dat.
+  filter(!is.na(ID_numb)) %>%
+  mutate(est.numb.sum=ifelse(is.na(est.numb.sum),0,est.numb.sum)) %>%
+   
+  # This get rid of fish that are yearlings who turn around and immediately spawn, 
+  # but never go out to sea
+  mutate(est.numb.sum=ifelse(n.year==2  & mod.year ==1,0,est.numb.sum)) %>%
+  group_by(ID,brood.year,rel.year) %>%
+  mutate(tot.est.numb = sum(est.numb.sum )) %>%
+  mutate(prop.age = est.numb.sum / tot.est.numb)  %>%
+  arrange(ID_numb,mod.year)
+
 
 ESCAPE <- dat.E
 

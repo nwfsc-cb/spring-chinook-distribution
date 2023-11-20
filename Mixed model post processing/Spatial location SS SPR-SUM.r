@@ -107,7 +107,7 @@ for(i in 1:N_season){
 
 # print offshore
 for(i in 1:N_season){
-  temp <- origin_off_summary %>% filter(season==i) %>% dplyr::select(Mean)
+  temp <- origin_off_summary %>% ungroup() %>% dplyr::select(Mean)
   par(mar=c(3,1,1,1))
   image(z=t(temp$Mean),y=1:nrow(temp),x=1,axes=F,ylab="",xlab="",
       col=col.br(32),zlim=z.lim)
@@ -198,7 +198,7 @@ for(i in 1:N_season){
   mtext("Spring",side=3,adj=0,cex=0.7)
   
   # Offshore
-  temp <- origin_off_summary %>% filter(season==2) %>% dplyr::select(Mean)
+  temp <- origin_off_summary %>%  dplyr::select(Mean)
   temp <- temp %>% mutate(Mean=ifelse(Mean>z.lim[2],z.lim[2],Mean))
   par(mar=c(3.25,0,1,2.5))
   image(z=t(temp$Mean),y=1:nrow(temp),x=1,axes=F,ylab="",xlab="",
@@ -251,7 +251,7 @@ for(i in 1:N_season){
     mtext("Summer",side=3,adj=0,cex=0.7)
     
     # Offshore
-      temp <- origin_off_summary %>% filter(season==2) %>% dplyr::select(Mean)
+      temp <- origin_off_summary %>% dplyr::select(Mean)
       temp <- temp %>% mutate(Mean=ifelse(Mean>z.lim[2],z.lim[2],Mean))
       par(mar=c(3.25,0,1,2.5))
       image(z=t(temp$Mean),y=1:nrow(temp),x=1,axes=F,ylab="",xlab="",
@@ -299,7 +299,7 @@ for(i in 1:N_season){
   mtext("Fall",side=3,adj=0,cex=0.7)
   
   # Offshore
-  temp <- origin_off_summary %>% filter(season==2) %>% dplyr::select(Mean)
+  temp <- origin_off_summary %>%  dplyr::select(Mean)
   temp <- temp %>% mutate(Mean=ifelse(Mean>z.lim[2],z.lim[2],Mean))
   par(mar=c(3.25,0,1,2.5))
   image(z=t(temp$Mean),y=1:nrow(temp),x=1,axes=F,ylab="",xlab="",
@@ -348,7 +348,7 @@ for(i in 1:N_season){
   mtext("Winter",side=3,adj=0,cex=0.7)
   
   # Offshore
-  temp <- origin_off_summary %>% filter(season==2) %>% dplyr::select(Mean)
+  temp <- origin_off_summary %>% dplyr::select(Mean)
   temp <- temp %>% mutate(Mean=ifelse(Mean>z.lim[2],z.lim[2],Mean))
   par(mar=c(3.25,0,1,2.5))
   image(z=t(temp$Mean),y=1:nrow(temp),x=1,axes=F,ylab="",xlab="",

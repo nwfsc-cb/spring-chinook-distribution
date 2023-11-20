@@ -11,7 +11,7 @@ library(MASS)
 library(extrafont)
 library(gtable)
 
-set.seed(12)
+set.seed(11)
 #test
 rm(list=ls())
 gc()
@@ -22,14 +22,14 @@ if(getwd()!=paste0(base.dir,"/spring-chinook-distribution")){
   setwd(paste0(base.dir,"/spring-chinook-distribution"))
 }#mn
   
-NAME <- "AA1-pois;TROLL_4_param,hake!=pollock,WAPEN=EAPEN,cv=hake,pollock,vuln=hake,pollock;4-season(single offshore,wint=avg),year+fing,ZEROS"
-MOD.NAME  <- 'chinook-spring-GAMMA_quadratic_LOCVAR2_PIT_AWG.stan'
+NAME <- "TEST2-POIS;TROLL_4_param,effor-season,CV-CONSTRAINED,hake!=pollock,WAPEN=EAPEN(all),cv=hake,pollock,vuln=hake,pollock;4-season(single offshore,wint=avg),year+fing,ZEROS"
+MOD.NAME  <- 'chinook-spring-GAMMA_LOCVAR2_PIT_AWG_SEAS_ALPHA_F_const_v2.stan'
 
 SAMP.FILE <- paste0("../Output Files/",NAME,".csv")
 
 ### This is the definitions file for running the spatial statistical model for salmon.
 RUN.TYPE  <- "spring-summer" # options: "fall" or "spring-summer"
-GROUP     <- "FRAM_2023_07" ## Define the data file to access options include "CA+COL" "CA+COL+PUSO", others.
+GROUP     <- "FRAM_2023_08" ## Define the data file to access options include "CA+COL" "CA+COL+PUSO", others.
 SHORT     <- "NO" # This is an indicator variable which is now mostly irrelevant.
 loc_18    <- "_two_OR_PUSO_AK"  # Options: "TRUE", "TWO_OR", "NCA_SOR_PUSO" "TWO_OR_SPRING"
 
@@ -118,9 +118,9 @@ N.GEAR <- length(GEAR)
 gear.func <- function(X,Y){
   if(X == "Troll"){FISHERY <- c(10,11,12,16,18)}
   if(X == "Treaty Troll"){FISHERY <- c(15)}
-  if(X == "Gillnet & Seine & Other"){ FISHERY <- c(20, 22, 23, 25, 26, 28,29,30, 31,61, 62,64,72,91,99) }
-  if(X == "Sport"){FISHERY <- c(40, 41, 42, 43, 45)}
-  if(X == "Terminal"){FISHERY <- c(48)}
+  if(X == "Gillnet & Seine & Other"){ FISHERY <- c(20, 22, 23, 25, 26, 28,29,30, 31,32,61, 62,64,72,91,99) }
+  if(X == "Sport"){FISHERY <- c(40, 41, 42, 43, 45,49)}
+  if(X == "Terminal"){FISHERY <- c(48,54)}
   if(X == "Trawl"){FISHERY <- c(80,800,802,803,805,81,812,82,85)}
   THESE <- match(Y,FISHERY)
   return(THESE)
@@ -181,7 +181,6 @@ source("./_R code for processing raw data/Make AK rockfish effort files Spr-Sum.
 # rock.shoreside.sample.fraction 
 # effort.rock.CP 
 # rock.CP.sample.fraction 
-
 
 ###################################################################################################
 ### Create Release Groups Matrix for all releases in a given year set and define first month modeled.
@@ -310,14 +309,10 @@ K_rockfish_AK_CP <- K.rockfish.CP
 ###################################################################################################
 # Make helpers file for later use
 # This file add a model age to all of the CWT recoveries and, for the trawl fleets, matches up the sampling fractions for each observation.
+# This also splits net fisheries up by terminal / non-terminal / ignore categories.
 source("./_R code for processing raw data/Make intermediate recovery files Spr-Sum.R",local=T)
- 
-###################################################################################################
-### Create lookup table for fishing morality parameters. [ define year-month-locations for which there were no catches in a particular gear.type ]
-###################################################################################################
-# Add in trawl fleets to gear list here.
-source("./_R code for processing raw data/Make flat files for effort including missing effort Spr-Sum.R",local=T)
 
+ 
 ###################################################################################################
 #### HERES IS WHERE WE DEFINE THE POPULATIONS OR  REGIONS OF INTEREST
 ###################################################################################################
@@ -342,18 +337,37 @@ N.REL <- max(REL$ID_numb) # THIS IS THE TOTAL NUMBER OF RELEASES WE ARE EXAMININ
 
 # This is a kluge to add more release locations that enter the ocean in the Columbia ocean region.  
 # Could do something similar for other regions,if desired
-#REL$loc.numb  <- LOCATIONS$location.number[match(REL$ocean.region,LOCATIONS$location.name)]
+#REL$loc.numb  <- LOCATIONS$location.number[match(REL$ocean.reion,LOCATIONS$location.name)]
 
 REL <- left_join(REL, ORIGIN.LAB %>% dplyr::select(origin.code,loc.numb), by=c("ocean.region"="origin.code")) 
 REL$start_year <- match(REL$brood_year,YEARS.BROOD)
 
-#### This script trims the included releases to only those that have reasonable numbers of ocean recoveries.
+##### This script trims the included releases to only those that have reasonable numbers of ocean recoveries.
 source("./_R code for processing raw data/Trim releases based on recoveries Spr-Sum.r",local=T)
-#########
+#####
 
   REL$ID_numb <- 1:nrow(REL) # This is the identifier for the unique release number.  This will be carried through the remainder of the analysis
-  N.REL <- max(REL$ID_numb) # THIS IS THE TOTAL NUMBER OF RELEASES WE ARE EXAMINING.
+  N.REL <- max(REL$ID_numb)  # THIS IS THE TOTAL NUMBER OF RELEASES WE ARE EXAMINING.
 
+###################################################################################################
+### Create lookup table for fishing morality parameters. [ define year-month-locations for which there were no catches in a particular gear.type ]
+###################################################################################################
+# Add in trawl fleets to gear list here.
+source("./_R code for processing raw data/Make flat files for effort including missing effort Spr-Sum.R",local=T)
+
+  # Make indicator vectors for the four seasons.
+  
+  spring_vec <- data.frame(spring_vec = rep(0,N_season_total)) %>% 
+                      mutate(spring_vec = ifelse(grepl("spr",rownames(K_troll_flat)),1,spring_vec))
+  summer_vec <- data.frame(summer_vec = rep(0,N_season_total)) %>% 
+      mutate(summer_vec = ifelse(grepl("sum",rownames(K_troll_flat)),1,summer_vec))
+  fall_vec <- data.frame(fall_vec = rep(0,N_season_total)) %>% 
+    mutate(fall_vec = ifelse(grepl("fal",rownames(K_troll_flat)),1,fall_vec))
+  winter_vec <- data.frame(winter_vec = rep(0,N_season_total)) %>% 
+    mutate(winter_vec = ifelse(grepl("win",rownames(K_troll_flat)),1,winter_vec))
+  
+  
+  
 ###################################################################################################
 ### Create Ocean Recovery Arrays and In-River Recovery Arrays (there is some missing data in the Escapement array )
 ###################################################################################################
@@ -517,7 +531,7 @@ if(MONTH.STRUCTURE == "SPRING"){
   # For fall. time_fraction = 0.33 is September 1 migration
   # For spring run, time_fraction = 0 is March 1, time_fraction = 0.33 is April 1, 0.667 is May 1 
   # For summer run, time_fraction = 0 is June 1, time_fraction = 0.5 is July 1
-  REL <- REL %>% ungroup() %>% left_join(., ORIGIN.LAB %>% dplyr::select(ocean.region=origin.code,spawn_time_fraction) )
+  REL <- REL %>% ungroup() %>% left_join(., ORIGIN.LAB %>% dplyr::select(ocean.region=origin.code,spawn_time_fraction,vuln_group=vulnerability_group) )
 }
 
 if(MONTH.STRUCTURE == "FRAM"){
@@ -677,7 +691,6 @@ rownames(vuln.rec.mat) = paste0(vuln.rec.mat$Year,".",vuln.rec.mat$Season)
 vuln.treaty.mat <- vuln.treaty.mat[1:(nrow(vuln.treaty.mat)-2),]
 rownames(vuln.treaty.mat) = paste0(vuln.treaty.mat$Year,".",vuln.treaty.mat$Season)
 
-
 # vuln.troll.mat <- vuln.troll.mat[2:nrow(vuln.troll.mat),]
 # vuln.treaty.mat <- vuln.treaty.mat[2:nrow(vuln.treaty.mat),]
 # vuln.rec.mat <- vuln.rec.mat[2:nrow(vuln.rec.mat),]
@@ -698,7 +711,7 @@ LOCATIONS.plot <- LOCATIONS %>%
 
 ######## PLOT EFFORT AND CPUE FILES
 source("./_R code for processing raw data/Make heatmap functions.R",local=T)
-# source("./_R code for processing raw data/Plot effort, CPUE heatmaps Spr-Sum.R",local=T)
+source("./_R code for processing raw data/Plot effort, CPUE heatmaps Spr-Sum.R",local=T)
 ############# MAKE A PDF of the various hatchery and release attributes.
 #write REL to file:
 saveRDS(REL,file=paste0(base.dir,"/spring-chinook-distribution/Processed Data/REL matrix ",RUN.TYPE," ",GROUP,".rds"))
@@ -749,7 +762,6 @@ FRESH = list(
 save(file=paste0(base.dir,"/spring-chinook-distribution/Processed Data/Effort ",RUN.TYPE," ",GROUP,".RData"),EFFORT)
 save(file=paste0(base.dir,"/spring-chinook-distribution/Processed Data/Catch ",RUN.TYPE," ",GROUP,".RData"),CATCH )
 save(file=paste0(base.dir,"/spring-chinook-distribution/Processed Data/Fresh ",RUN.TYPE," ",GROUP,".RData"),FRESH)
-
 
 #setwd(paste(base.dir,"/spring-chinook-distribution/Output plots/__Markdown",sep=""))
 rmarkdown::render(paste0(base.dir,"/spring-chinook-distribution/Output plots/__Markdown/release-summaries.rmd"),

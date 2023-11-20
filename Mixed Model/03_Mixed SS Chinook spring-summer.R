@@ -1,13 +1,13 @@
-# DEFINE STATISTICAL MODEL OF INTEREST
-print(SAMP.FILE)
-
 MODEL    = "Joint"
 
-Warm        = 500
-Iter        = 2000
-N_CHAIN     = 1
+Warm        = 200
+Iter        = 200
+N_CHAIN     = 3
 Treedepth   = 10
 Adapt_delta = 0.7
+
+# DEFINE STATISTICAL MODEL OF INTEREST
+print(SAMP.FILE)
 
 ##########################################################################################
 ##########################################################################################
@@ -695,11 +695,12 @@ N_log_N_all  <- N_time_mod - 1 # This is the number of latent states for abundan
 # This is the length of time to model for different run types.  
 # Model ends in spring so N_time_mod for spring (21),
 # 20 for winter
+# 19 for fall
 # 18 for summer.
 N_time_mod_rel <-  rep(N_time_mod ,N.REL)
 N_time_mod_rel[grep("sum",REL$ocean.region)]  <- 21
 N_time_mod_rel[grep("wint",REL$ocean.region)] <- 20 
-
+N_time_mod_rel[grep("fall",REL$ocean.region)] <- 19
 
 # ONLY KEEP RECOVERIES WITH EFFORT (or identified missing fishing effort) all gear types.
 # KEEP ALL OF DATA FOR REC FISH because of missing data for effort in rec fisheries.
@@ -711,15 +712,19 @@ dat.all   <- rbind(dat.all,dat.hake.shoreside)
 dat.all   <- rbind(dat.all,dat.pollock.GOA)
 dat.all   <- rbind(dat.all,dat.rockfish.AK)
 
-# Get rid of observations in time == 21 for winter
+# Get rid of observations in time == 21 for winter run fish and time == 20,21
 dat.all.raw <- dat.all
 
 dat.all.raw <- dat.all.raw %>% mutate(boogie = paste0(ocean.reg,"__",time)) %>%
   filter(!grepl("wint__21",boogie)) %>%
+  filter(!grepl("fall__20",boogie)) %>%
+  filter(!grepl("fall__21",boogie)) %>%
+  mutate(catch = ifelse(ocean.reg =="SFB_wint" & catch>0 & loc == "loc.15",0,catch)) %>% # get rid of one in NBC 
+  # mutate(catch = ifelse(ocean.reg =="SFB_wint" & catch>0 & loc == "loc.13",0,catch)) %>% # get rid of one in NWVI
+  # mutate(catch = ifelse(ocean.reg =="SFB_wint" & catch>0 & loc == "loc.11",0,catch)) %>% # get rid of one in SGEO
   dplyr::select(-boogie)
+
 ############################################ 
-
-
 
 if(MODEL == "Joint"){ 
   dat.bin <- dat.all.raw
@@ -811,12 +816,19 @@ if(MONTH.STRUCTURE=="SPRING"){
   AGE$spawn_time_sum[AGE$time==18] <- 5
   AGE$spawn_time_sum[AGE$time==21] <- 6
   
+  AGE$spawn_time_fall <- 0
+  AGE$spawn_time_fall[AGE$time==3]  <- 1
+  AGE$spawn_time_fall[AGE$time==7]  <- 2
+  AGE$spawn_time_fall[AGE$time==11]  <- 3
+  AGE$spawn_time_fall[AGE$time==15] <- 4
+  AGE$spawn_time_fall[AGE$time==19] <- 5
+  
   AGE$spawn_time_wint <- 0
-  AGE$spawn_time_wint[AGE$time==4]  <- 1
-  AGE$spawn_time_wint[AGE$time==8]  <- 2
-  AGE$spawn_time_wint[AGE$time==12]  <- 3
-  AGE$spawn_time_wint[AGE$time==16] <- 4
-  AGE$spawn_time_wint[AGE$time==20] <- 5
+  AGE$spawn_time_wint[AGE$time==4]  <- 2
+  AGE$spawn_time_wint[AGE$time==8]  <- 3
+  AGE$spawn_time_wint[AGE$time==12]  <- 4
+  AGE$spawn_time_wint[AGE$time==16] <- 5
+  AGE$spawn_time_wint[AGE$time==20] <- 6
   }
 
 # Make spawn_time_array [N_rel x N_time_mod]
@@ -825,8 +837,13 @@ spawn_time_array <- matrix(0,N_time_mod,N.REL)
   spawn_time_array[,grep("spr",REL$ID)] <- AGE$spawn_time_spr   
   spawn_time_array[,grep("sum",REL$ID)] <- AGE$spawn_time_sum
   spawn_time_array[,grep("wint",REL$ID)] <- AGE$spawn_time_wint
+  spawn_time_array[,grep("fall",REL$ID)] <- AGE$spawn_time_fall
 
 spawn_time_array <- t(spawn_time_array)
+
+# Add an index for if this is a winter stock or not.
+COV <- COV %>% mutate(winter_idx = ifelse(grepl("wint",REL$ocean.region)==TRUE,1,0))
+
 
 # Create cumulative adult mortality values to be read into the program
 # M2 is in terms of monthly mortality
@@ -958,6 +975,7 @@ if(MONTH.STRUCTURE=="SPRING"){
                   mutate(start_month_idx = ifelse(n.month <= 2,1,start_month_idx)) %>%
                   mutate(start_month_idx = ifelse(n.month <= -2.5,2,start_month_idx))
 }
+
 # IF there are any instances where the start_month_idx > 0, 
 # get rid of those observations in dat.all for times before their release.
 absent <- COV %>% distinct(start_month_idx) %>% filter(start_month_idx >0) %>% pull(start_month_idx)
@@ -1091,25 +1109,36 @@ n_year_sum <- REL %>% group_by(ocean.region,loc.numb,n.year) %>% count(n.year) %
   # Get rid of fingerlings: SNAK_low_spr. NSEAK_Taku_spr, SSEAK_Stikine_spr, FRAS_TH_spr
 
 COV <- COV %>%
-        left_join(.,REL %>% dplyr::select(ID_numb,n.year) %>% rename(juv.idx = n.year)) %>%
-        mutate(juv.idx =ifelse(juv.idx==0,1,juv.idx))
+  left_join(.,REL %>% dplyr::select(ID_numb,n.year) %>% rename(juv.idx = n.year)) %>%
+  mutate(juv.idx =ifelse(juv.idx==0,1,juv.idx))
 N_juv <- max(REL$n.year)
 
 ##### Make data for each release group for use with actual numbers of recoveries.
 # Make index for the multiple kinds of FW data.
 
 # Pull out the data from AWG and make an appropriate index 
-COV <-  REL %>% filter(grepl("awg",ID) | # PULL THE AWG data used for the CTC
-                       grepl("NOR_spr",ocean.region) | # add NOR_spr
-                       grepl("COR_spr",ocean.region) | # add NOR_spr
-                       grepl("LCOL_spr",ocean.region) # add LCOL_spr
-                       ) %>% 
-        mutate(awg_idx = 1:nrow(.)) %>%
-        dplyr::select(ID_numb,awg_idx) %>% left_join(COV,.) %>% 
+awg_temp <-  REL %>% filter(grepl("awg",ID) | # PULL THE AWG data used for the CTC
+                         grepl("NOR_spr",ocean.region) | # add NOR_spr
+                         grepl("COR_spr",ocean.region) | # add COR_spr
+                         grepl("LCOL_spr",ocean.region) | # add LCOL_spr
+                         grepl("WAC_spr",ocean.region) | # add WAC_spr
+                         grepl("WAC_sum",ocean.region)   # add WAC_sum
+                         ) %>% 
+          bind_rows(.,REL %>% filter(ocean.region=="NBC_spr", brood_year>=1980))
+          # get rid of releases with == 0 in-river detections
+       
+          
+filt <- ESCAPE %>% filter(tot.est.numb ==0) %>% distinct(ID_numb)
+    
+awg_temp <- awg_temp %>% filter(!ID_numb %in% filt$ID_numb) %>%    
+                mutate(awg_idx = 1:nrow(.))
+  
+COV <-  left_join(COV, awg_temp %>%  dplyr::select(ID_numb,awg_idx)) %>% 
         mutate(awg_idx = ifelse(is.na(awg_idx),0,awg_idx))
 
+rm(filt,awg_temp)
 
-AWG_dat <- dat.E %>% 
+AWG_dat <- ESCAPE %>% 
   dplyr::select(mod.year,est.numb.sum,ID_numb) %>% 
   mutate(lab=paste0("mod.year.",mod.year)) %>%
   pivot_wider(.,id_cols = "ID_numb",names_from = "lab",values_from="est.numb.sum") %>%
@@ -1234,6 +1263,7 @@ if(MONTH.STRUCTURE=="SPRING"){
   # Make 4 levels - CA, OR & WA, BC, AK
   if(loc_18 == "TWO_OR" | loc_18 == "NCA_SOR_PUSO") { 
     troll_idx <- c(rep(1,4),rep(2,6),rep(3,5),rep(4,2))
+    #troll_idx <- c(rep(1,10),rep(2,11))
     N_troll_idx <- length(unique(troll_idx)) #cbind(LOCATIONS,troll_idx)
     
     #rec_us_idx <- c(rep(1,4),rep(2,13))
@@ -1249,7 +1279,8 @@ if(MONTH.STRUCTURE=="SPRING"){
   # Make 4 levels - CA, OR & WA, BC, AK
   if(loc_18 == "_two_OR_PUSO_AK") { 
     troll_idx <- c(rep(1,4),rep(2,6),rep(3,5),rep(4,6))
-    #troll_idx <- c(rep(1,10),rep(2,11))
+    #troll_idx <- c(rep(1,10),rep(2,5),rep(3,6))
+    #troll_idx <- c(rep(1,15),rep(2,6))
     N_troll_idx <- length(unique(troll_idx)) #cbind(LOCATIONS,troll_idx)
     
     #rec_us_idx <- c(rep(1,4),rep(2,13))
@@ -1261,7 +1292,24 @@ if(MONTH.STRUCTURE=="SPRING"){
     #sigma_cv_idx <- c(rep(1,4),rep(2,6),rep(3,5),rep(4,6))
     #N_sigma_cv_idx <- length(unique(sigma_cv_idx));
   }
-  
+
+#############################################################################################
+## Define some stocks of fish of fish to be not-offshore
+#############################################################################################
+#These are defined as having all not offshore
+OFF_south <- c("SFB_spr","SFB_wint","NCA_spr","SOR_spr")
+#Fall stocks are defined as having all not offshore. 
+ORIGIN.GROUPS <- ORIGIN.GROUPS %>% mutate(offshore_idx = 0) %>% 
+                      mutate(offshore_idx = ifelse(ocean.reg %in% OFF_south,1,0)) #%>%
+                      #mutate(offshore_idx = ifelse(grepl("_fall",ocean.reg),1,offshore_idx)) 
+
+#############################################################################################
+## Add in an index for vulnerability group to both COV and dat.all
+#############################################################################################
+
+COV <- COV %>% left_join(., REL %>% dplyr::select(ID_numb,vuln_group)) %>% rename(vuln_group_idx = vuln_group)
+
+dat.all <- dat.all %>% left_join(.,COV %>% dplyr::select(ID_numb,vuln_group_idx),join_by(rel==ID_numb))
   
 #############################################################################################
 ## Define Shaker mortality (fraction of mortality suffered by fish present in a fishery area and contacted but released)
@@ -1285,6 +1333,9 @@ shaker_mort <- 0.1
 M2_vec <- exp(MU_m[1] + MU_m[2] * age_month_cal) ;
 cum_M2_fixed <- cumsum(M2_vec)
 
+
+
+N_vuln_grp <- length(unique(REL$vuln_group))
 N_effort     <- length(unique(dat.all$effort.idx))
 N_vuln_month <- length(unique(dat.all$age.vuln.idx))
 N_yr_reg     <- length(unique(dat.all$year.reg.idx))
@@ -1312,7 +1363,7 @@ beta_vuln_prior         = c(3,3) # gamma values for vulnerability slope with age
 #beta_vuln_hake_prior    = c(3,3) # gamma values for vulnerability slope with age for hake trawl.
 # beta_vuln_int_prior     = c(0,0.5) #lognorma mean and sd for vulnerability INT with age
 # sigma_prior             = c(1,2) # observation variance for positive model prior (gamma params)
-sigma_cv_prior         = c(10,20) # observation CV  true catch (gamma params)
+sigma_cv_prior         = c(25,250) # observation CV  true catch (gamma params)
 #sigma_slope_prior     = c(-0.1,0.2) # observation variance for positive model prior (normal params)
 log_F_prior             = c(log(0.01),1) #  normal mean of log F
 F_rec_sigma_prior       = c(2,2)  # gamma params for F_rec
@@ -1323,19 +1374,20 @@ gamma_slope_prior       = c(0,0.25)  # lognormal prior for slope of maturity cur
 # tau_process_prior       = c(1,10)  # gamma prior on process error sd
 # tau_process_prod_prior  = c(2,2)   # gamma prior on  M * Tau process error.
 # tau_q_dev_prior         = c(10,40) # gamma prior for deviations on log-q standard deviations.
-log_q_troll_prior       = c(-11,2) # prior for troll catchability.
-log_q_treaty_prior      = c(-8,1) # prior for troll catchability.
-log_q_rec_prior         = c(-13,2) # prior for rec catchability.
-log_q_hake_prior        = c(-15,2) # prior for hake catchability.
-log_q_pollock_prior     = c(-15,2) # prior for pollock catchability.
-log_q_rockfish_AK_prior = c(-15,2) # prior for rockfish_AK catchability.
-log_q_slope_prior       = c(12,8) # gamma dist for slope parameter (restricted to be positive)
-q_int_prior             = c(-5,2) # prior on intercept for log_q_slope
+log_q_troll_prior       = c(-11,3) # prior for troll catchability.
+log_q_treaty_prior      = c(-8,2) # prior for troll catchability.
+log_q_rec_prior         = c(-13,3) # prior for rec catchability.
+log_q_hake_prior        = c(-15,3) # prior for hake catchability.
+log_q_pollock_prior     = c(-15,3) # prior for pollock catchability.
+log_q_rockfish_AK_prior = c(-15,3) # prior for rockfish_AK catchability.
+log_q_slope_prior       = c(2,10) # gamma dist for slope parameter (restricted to be positive)
+q_int_prior             = c(-5,3) # prior on intercept for log_q_slope
 phi_space_prior         = c(3,1) # gamma prior on spatial sd for smoothing
 theta_space_prior       = c(3,1) # gamma prior on spatial decay parameter (gaussian correlation)
 spawn_smooth_prior      = c(12,2) # gamma prior on spawn smooth
 nb_phi_prior            = c(5,0.02) # gamma prior on spawn smooth
-
+alpha_K_prior           = c(1,1) # Beta prior on effort scaling. constrained to (0,1)
+season_offset_prior    = c(0,2) #normal prior for log_q offsets for season
 
 ##### W_STAR PARAMETERIZATION
 ### ALL BASED ON knots at present.
@@ -1401,7 +1453,9 @@ PRIORS <- list(E_alpha_1=E_alpha_1[,grepl("mod.year",colnames(E_alpha_1))],
                phi_space_prior = phi_space_prior,
                theta_space_prior = theta_space_prior,
                spawn_smooth_prior = spawn_smooth_prior,
-               nb_phi_prior = nb_phi_prior
+               nb_phi_prior = nb_phi_prior,
+               alpha_K_prior = alpha_K_prior,
+              season_offset_prior
 )
 
 phi_space_fix = 1
@@ -1426,7 +1480,7 @@ stan_data = list(
     "PIT_K"   = PIT.dat.fin$best.K,
     
     # this is number of observered data for model years (columns)
-    "AWG_dat" = round(AWG_dat[,grepl("mod.year",colnames(AWG_dat))],0), 
+    "AWG_dat" = round(AWG_dat[,grepl("mod.year",colnames(AWG_dat))],0) %>% as.matrix(), 
     "AWG_idx" = AWG_dat$ID_numb,
     "nb_phi_fix" = nb_phi_fix,
     #"inv_frac_samp_pos"       = dat.pos.fin$frac_samp_mod^(-1),
@@ -1471,6 +1525,7 @@ stan_data = list(
     "N_month"         = N_month,
     "age_year"        = 1:N_year,
     "N_season_total"  = N_season_total,
+    "N_vuln_grp"  = N_vuln_grp,
     "N_PIT"           = N_PIT,
     "N_AWG"           = N_AWG,
     
@@ -1489,6 +1544,12 @@ stan_data = list(
     "ashop_year_break" = ashop_year_break, # season (in terms of model seasons) in which the q changes for the ashop fleet. C
                                             # Could elaborate to make multiple breaks as desired.
     
+    # indicator vectors of offsets for seasons for log q
+    "spring_vec" = spring_vec$spring_vec, 
+    "summer_vec" = summer_vec$summer_vec,
+    "fall_vec"   = fall_vec$fall_vec,
+    "winter_vec" = winter_vec$winter_vec,
+    
     # Indexes troll areas
     "N_troll_idx" = N_troll_idx,
     "troll_idx" = troll_idx,
@@ -1498,9 +1559,9 @@ stan_data = list(
     # "sigma_cv_idx" = sigma_cv_idx,
     
     # Size limits for three fishery types for use with Vulnerability schedules
-    "vuln_troll_mat" = vuln_troll_mat,
-    "vuln_treaty_mat"= vuln_treaty_mat,
-    "vuln_rec_mat"   = vuln_rec_mat,
+    "vuln_troll_mat" = vuln_troll_mat %>% as.matrix(),
+    "vuln_treaty_mat"= vuln_treaty_mat %>% as.matrix(),
+    "vuln_rec_mat"   = vuln_rec_mat %>% as.matrix(),
     
     # helper vector for catchability.
     "q_year_vec"     = q_year_vec,
@@ -1532,9 +1593,11 @@ stan_data = list(
     #"origin_vec" = origin_vec,
     
     # Spawner Data... mean proportion for each release
-    "E_prop_1"         = E_prop_1,
-    "E_prop_2"         = E_prop_2,
+    "E_prop_1"       = E_prop_1,
+    "E_prop_2"       = E_prop_2,
     "diri_constant"  = diri_constant, # Assumed precision for the dirichlet distribution
+      # index for winter-run.  Specifically for entering the river that before the model starts.
+    "winter_idx" = COV$winter_idx,
     
     # Helper files for mapping fishing effort     
     "constant_origin"= 1e-4,
@@ -1590,14 +1653,14 @@ stan_data = list(
     
     # Fixed Mortality
     "cum_M2_fixed"     = cum_M2_fixed,
-    "shaker_mort"      = shaker_mort,
+    "shaker_mort"      = shaker_mort, 
     
     #Fixed vulnerability intercept
     "vuln_fixed"      = vuln_fixed,
     
     # Indexes States Space
        #"rel_cov_idx"       = COV$ID,
-     "loc_spawn_idx"     = COV$loc.spawn.idx,
+     #"loc_spawn_idx"     = COV$loc.spawn.idx,
      "age_year_idx"      = AGE$year,
      "year_region_idx"   = COV$year.reg.idx,
      "age_month_idx"     = AGE$age,
@@ -1613,6 +1676,10 @@ stan_data = list(
      "origin_year_idx"   =  origin_year_idx,
      "start_month_idx"   = COV$start_month_idx, # index for whether release happens after model start time.
      "juv_idx"           = COV$juv.idx,
+     "vuln_grp_ss_idx"    = COV$vuln_group_idx,
+      
+      "offshore_idx"   = ORIGIN.GROUPS$offshore_idx,
+    
     
     # Indexes associated with observations
     "mod_time_idx"        = dat.all$time,
@@ -1622,10 +1689,10 @@ stan_data = list(
     "season_bin_idx"      = dat.all$season.idx,
     "gear_bin_idx"        = dat.all$gear.idx,
     "loc_idx"             = dat.all$location,
-    "loc_spawn_bin_idx"   = dat.all$loc.spawn.idx,
+    #"loc_spawn_bin_idx"   = dat.all$loc.spawn.idx,
     "temp_dat_season_bin_idx" = dat.all$temp_dat_season_idx,
     "juv_bin_idx"             = dat.all$juv.bin.idx,
-
+    "vuln_grp_obs_idx"   = dat.all$vuln_group_idx,
     # "mod_time_pos_idx"      = dat.pos.fin$time,
     # "rel_pos_idx"           = dat.pos.fin$rel,
     # "origin_pos_idx"        = dat.pos.fin$origin.idx,
@@ -1637,7 +1704,7 @@ stan_data = list(
     # "temp_dat_season_pos_idx" = dat.pos.fin$temp_dat_season_idx,
 
     #Priors
-    "E_alpha"              = PRIORS$E_alpha_1,
+    #"E_alpha"              = PRIORS$E_alpha_1,
     "log_rel_year_mu_prior"= log_rel_year_mu_prior, 
     "log_rel_year_sigma_prior" = log_rel_year_sigma_prior,
     "MU_M2"                = MU_M2_prior,
@@ -1650,8 +1717,8 @@ stan_data = list(
     #"sigma_pos_prior"      = sigma_pos_prior,
     "sigma_cv_prior"      = sigma_cv_prior,
     #"sigma_slope_prior"    = sigma_slope_prior,
-    "log_F_prior"          = log_F_prior,
-    "F_rec_sigma_prior"    = F_rec_sigma_prior,
+    "log_F_mean_prior"     = log_F_prior,
+    "F_sigma_prior"        = F_rec_sigma_prior,
     # "origin_sea_int_prior_mean"  = origin_sea_int_prior_mean,
     # "origin_sea_int_prior_sd"    = origin_sea_int_prior_sd,
 
@@ -1669,7 +1736,6 @@ stan_data = list(
     # "tau_process_prod_prior"    = tau_process_prod_prior,
     # "tau_q_dev_prior"      = tau_q_dev_prior,
     "log_q_troll_prior"    = log_q_troll_prior,
-    "log_q_troll_prior"    = log_q_troll_prior,
     "log_q_treaty_prior"    = log_q_treaty_prior,
     "log_q_rec_prior"      = log_q_rec_prior,
     "log_q_hake_prior"     = log_q_hake_prior,
@@ -1680,17 +1746,18 @@ stan_data = list(
     "phi_space_prior"      = phi_space_prior,
     "phi_space_fix"        = phi_space_fix,
     "theta_space_prior"    = theta_space_prior,
-    "spawn_smooth_prior"   = spawn_smooth_prior
-    #"nb_phi_prior"         = nb_phi_prior
+    "spawn_smooth_prior"   = spawn_smooth_prior,
+    "alpha_K_prior"        = alpha_K_prior,
+    "season_offset_prior"  = season_offset_prior
 )
 
 # parameters to monitor
 stan_pars = c(
   # "log_q_troll_mu",
-  "log_q_troll_pos","log_q_troll_start","log_q_troll_slope",
-  "log_q_treaty_pos","log_q_treaty_start","log_q_treaty_slope",
-  "log_q_rec_pos","log_q_rec_start","log_q_rec_slope",
-  "log_q_rec_can_pos","log_q_rec_can_start","log_q_rec_can_slope",
+  "log_q_troll_pos","log_q_troll_start",#"log_q_troll_slope",
+  "log_q_treaty_pos","log_q_treaty_start",#"log_q_treaty_slope",
+  "log_q_rec_pos","log_q_rec_start",#"log_q_rec_slope",
+  "log_q_rec_can_pos","log_q_rec_can_start",#"log_q_rec_can_slope",
   "log_q_rec_can_irec_pos",  "log_q_rec_can_irec_start",
   "log_q_hake_ashop_start", "log_q_hake_ashop_pos",
   "log_q_hake_shoreside_start",
@@ -1700,12 +1767,43 @@ stan_pars = c(
   "log_q_rockfish_AK_start",
   "log_q_rockfish_AK_pos",
   #"log_q_troll_area","troll_area_sd",
-  "q_int",
+  #"q_int",
   # "observe_frac",
     #"log_q_rec_PUSO_pos",
   #"tau_process",
   #"tau_process_prod",
   "epsilon",
+
+  "spring_troll_offset" ,
+  "fall_troll_offset" ,
+  "winter_troll_offset" ,
+  
+  "spring_rec_us_offset" ,
+  "fall_rec_us_offset" ,
+  "winter_rec_us_offset" ,
+  
+  "spring_rec_can_offset" ,
+  "fall_rec_can_offset" ,
+  "winter_rec_can_offset" ,
+  
+  "spring_treaty_offset" ,
+  "fall_treaty_offset" ,
+  "winter_treaty_offset" ,
+  
+  "alpha_K_troll",
+  "alpha_K_rec",
+  "alpha_K_rec_can",
+  "alpha_K_rec_can_irec",
+  "alpha_K_treaty",
+  
+  "q_rand_troll_raw",
+  "q_rand_rec_us_raw",
+  "q_rand_rec_can_raw",
+  "q_rand_treaty_raw",
+  
+  "q_sd_troll",
+  "q_sd_rec",
+  
   #"logit_offset_int",
   #"logit_offset_slope",
   #"log_M2",
@@ -1734,7 +1832,6 @@ stan_pars = c(
   #"alpha_pay",
   #"beta_pay",
   "gamma_pay",
-  
   #"vuln_mat",
   "rel_year_all",
   "log_rel_year_mu", 
@@ -1753,12 +1850,11 @@ stan_pars = c(
   "F_rec",
   "F_troll",
   #"F_hake_ashop",
-  "log_F_rec_mean",
-  #"F_sigma",
-  "log_F_troll_mean",
+  "log_F_mean",
+  # "log_F_troll_mean",
   #"F_sigma", 
-   "F_rec_sigma",
-   "F_troll_sigma",
+   "F_sigma",
+   # "F_troll_sigma",
   "F_troll_array",
   "F_treaty_array",
   "F_rec_array",
@@ -1789,33 +1885,33 @@ stan_pars = c(
 ### Initial Values
   stan_init_f1 <- function(n.chain,N_loc_spawn,MU_m,Sigma_m,N_rel,N_loc,N_f_rec_idx_param,N_knot_sf,N_knot_ws,
                            #W_star_sf,W_star_ws,W_star_salish,
-                           N_troll_idx, N_rec_us_idx, N_sigma_cv_idx,N_origin,N_season,N_year,N_juv){ 
+                           N_troll_idx, N_rec_us_idx, N_sigma_cv_idx,N_origin,N_season,N_year,N_juv,N_season_total,N_vuln_grp){ 
         A <- list()
   for(i in 1:n.chain){
     A[[i]] <- list(
       # log_q_troll_mu = rnorm(1,-10,0.1),
       log_q_troll_start  = rnorm(N_troll_idx,-10,0.5),
-      log_q_troll_slope  = rnorm(1,1,0.2),
+      #log_q_troll_slope  = rnorm(N_troll_idx,0.5,0.2),
       log_q_treaty_start  = rnorm(1,-10,0.5),
-      log_q_treaty_slope  = rnorm(1,1,0.1),
+      #log_q_treaty_slope  = rnorm(1,0.5,0.1),
       log_q_rec_start    = rnorm(N_rec_us_idx,-14,0.5),
-      log_q_rec_slope    = rnorm(1,1,0.1),
+      #log_q_rec_slope    = rnorm(1,0.5,0.1),
       log_q_rec_can_start    = rnorm(1,-14,0.5),
-      log_q_rec_can_slope    = rnorm(1,1,0.1),
+      #log_q_rec_can_slope    = rnorm(1,0.5,0.1),
       log_q_rec_can_irec_start    = rnorm(1,-14,0.5),
       log_q_hake_ashop_start    = rnorm(1,-14,0.5),
       log_q_hake_shoreside_start    = rnorm(1,-14,0.5),
       log_q_pollock_GOA_start    = rnorm(1,-14,0.5),
       log_q_rockfish_AK_start    = rnorm(1,-14,0.5),
-      q_int = rnorm(1,-3,0.5),
+      #q_int = rnorm(1,-3,0.5),
       #log_q_rec_half    = rnorm(1,-20,1),
       #log_q_treaty_pos = rnorm(1,-6,0.5),
       #log_q_rec_can_half    = rnorm(1,-20,1),
       #log_q_rec_PUSO_pos    = rnorm(1,-12,0.5),
       #sigma_pos = rgamma(1,3,2),
-      sigma_cv = runif(2,0.3,0.5),
-      sigma_cv_hake = runif(1,0.8,1.2),
-      sigma_cv_pollock = runif(1,0.8,1.2),
+      sigma_cv = runif(2,0.1,0.1),
+      sigma_cv_hake = runif(1,0.1,0.2),
+      sigma_cv_pollock = runif(1,0.1,0.2),
       #sigma_slope = runif(1,-0.01,0),
       #sigma_slope_samp = runif(1,-0.01,0),
       spawn_smooth = runif(1,3,5),
@@ -1825,7 +1921,14 @@ stan_pars = c(
       # sigma_pos_vec = runif(N_obs_pos,0.5,2),
       #vuln_int = rnorm(1,3,0.3),
       #beta_vuln_int = runif(2,0.1,0.5),
-      beta_vuln = runif(2,0.5,1.0),
+      q_rand_troll = matrix(runif(N_troll_idx * N_season_total,-0.01,0.01)),
+      q_rand_rec_us = matrix(runif(N_rec_us_idx * N_season_total,-0.01,0.01)),
+      q_rand_rec_can = runif(N_season_total,-0.01,0.01),
+      q_rand_treaty = runif(N_season_total,-0.01,0.01),
+                                                                        
+                            
+                                  
+      beta_vuln = matrix(runif(2*N_vuln_grp,0.5,1.0),2,N_vuln_grp),
       beta_vuln_hake = c(runif(1,0.1,0.2),runif(1,-0.05,0)),
       beta_vuln_pollock = c(runif(1,0.1,0.2),runif(1,-0.2,-0.1)),
       #log_M2 = mvrnorm(1,MU_m,Sigma_m),
@@ -1862,7 +1965,92 @@ stan_pars = c(
       )
   }  
   return(A)
-}
+  }
+  
+  stan_init_opt <- function(n.chain,N_loc_spawn,MU_m,Sigma_m,N_rel,N_loc,N_f_rec_idx_param,N_knot_sf,N_knot_ws,
+                           #W_star_sf,W_star_ws,W_star_salish,
+                           N_troll_idx, N_rec_us_idx, N_sigma_cv_idx,N_origin,N_season,N_year,N_juv,N_season_total,N_vuln_grp){ 
+    
+    for(i in 1:n.chain){
+      A <- list(
+        # log_q_troll_mu = rnorm(1,-10,0.1),
+        log_q_troll_start  = rnorm(N_troll_idx,-10,0.5),
+        #log_q_troll_slope  = rnorm(N_troll_idx,0.5,0.2),
+        log_q_treaty_start  = rnorm(1,-10,0.5),
+        #log_q_treaty_slope  = rnorm(1,0.5,0.1),
+        log_q_rec_start    = rnorm(N_rec_us_idx,-14,0.5),
+        #log_q_rec_slope    = rnorm(1,0.5,0.1),
+        log_q_rec_can_start    = rnorm(1,-14,0.5),
+        #log_q_rec_can_slope    = rnorm(1,0.5,0.1),
+        log_q_rec_can_irec_start    = rnorm(1,-14,0.5),
+        log_q_hake_ashop_start    = rnorm(1,-14,0.5),
+        log_q_hake_shoreside_start    = rnorm(1,-14,0.5),
+        log_q_pollock_GOA_start    = rnorm(1,-14,0.5),
+        log_q_rockfish_AK_start    = rnorm(1,-14,0.5),
+        #q_int = rnorm(1,-3,0.5),
+        #log_q_rec_half    = rnorm(1,-20,1),
+        #log_q_treaty_pos = rnorm(1,-6,0.5),
+        #log_q_rec_can_half    = rnorm(1,-20,1),
+        #log_q_rec_PUSO_pos    = rnorm(1,-12,0.5),
+        #sigma_pos = rgamma(1,3,2),
+        sigma_cv = runif(2,0.1,0.1),
+        sigma_cv_hake = runif(1,0.1,0.2),
+        sigma_cv_pollock = runif(1,0.1,0.2),
+        #sigma_slope = runif(1,-0.01,0),
+        #sigma_slope_samp = runif(1,-0.01,0),
+        spawn_smooth = runif(1,3,5),
+        # theta_space = c(2.05, 	3.10),
+        # phi_space = runif(1,2,3),
+        # # sigma_pos = runif(2,0.5,2),
+        # sigma_pos_vec = runif(N_obs_pos,0.5,2),
+        #vuln_int = rnorm(1,3,0.3),
+        #beta_vuln_int = runif(2,0.1,0.5),
+        q_rand_troll = matrix(runif(N_troll_idx * N_season_total,-0.01,0.01)),
+        q_rand_rec_us = matrix(runif(N_rec_us_idx * N_season_total,-0.01,0.01)),
+        q_rand_rec_can = runif(N_season_total,-0.01,0.01),
+        q_rand_treaty = runif(N_season_total,-0.01,0.01),
+        
+        
+        
+        beta_vuln = matrix(runif(2*N_vuln_grp,0.5,1.0),2,N_vuln_grp),
+        beta_vuln_hake = c(runif(1,0.1,0.2),runif(1,-0.05,0)),
+        beta_vuln_pollock = c(runif(1,0.1,0.2),runif(1,-0.2,-0.1)),
+        #log_M2 = mvrnorm(1,MU_m,Sigma_m),
+        #beta_age_month = rnorm(1,-0.15,0.01),
+        #beta_age_year = rnorm(N_loc_spawn,-0.3,0.1),
+        log_rel_year_mu = rnorm(1,1.3,0.1),
+        log_rel_year_sigma = runif(1,0.2,0.5),
+        # rel_year_all = runif(N_rel,1,2),
+        log_F_rec_mean = rnorm(1,-4,0.5),
+        log_F_troll_mean = rnorm(1,-4,0.5),
+        #logit_offset_slope = rnorm(1 ,1,0.1),
+        F_troll = runif(N_f_troll_idx_param,0.001,0.04),
+        F_rec = runif(N_f_rec_idx_param,0.001,0.04),
+        #gamma_pay = matrix(runif(N_origin*N_juv,-1,-0.5),N_origin,N_juv),
+        
+        #alpha_pay = rnorm(N_loc_spawn,-5,0.5),
+        # log_beta_pay = matrix(rnorm(N_origin*2,0,0.5),N_origin,2),
+        # alpha_pay_mean = rnorm(1,-5,0.5),
+        # alpha_pay_sd = runif(1,0.1,2),
+        # beta_pay_mean = rnorm(1,2,0.5),
+        # beta_pay_sd = runif(1,0.1,2),
+        # alpha_pay = rnorm(N_loc_spawn,-5,0.5),
+        # beta_pay = rnorm(N_loc_spawn,2,0.5),
+        #phi_space = rgamma(2,300,100),
+        w_star_sf = array(runif(N_origin*2*N_knot_sf,1,1.1),dim=c(2,N_origin,N_knot_sf)),
+        w_star_ws = array(runif(N_origin*2*N_knot_ws,1,1.1),dim=c(2,N_origin,N_knot_ws)),
+        w_star_salish = array(runif(N_origin*N_season*3,1,1.1),dim=c(N_season,N_origin,3)),
+        w_star_offshore = matrix(runif(N_origin*2,1,1.1),N_origin)
+        #w_logit_offshore = runif(N_origin,-3,-2)
+        
+        # w_star_sf = W_star_sf,
+        # w_star_ws = W_star_ws,
+        # w_star_salish = W_star_salish
+      )
+    }  
+    return(A)
+  }
+  
                 # matrix<lower=0,upper=1>[N_LOC,N_LOC] Z_move[N_LOC_INIT,N_month];
                 # matrix<lower=0,upper=1>[N_LOC,N_LOC] Z_spawn[N_LOC_INIT,model_year_int_max];
 # Some options
@@ -1930,11 +2118,39 @@ SEASON <- TRUE
 #         ,hessian=TRUE)
 #                      #init_alpha=0.01)
 
+print("############################")
+print("############################")
+print(NAME)
+print(MOD.NAME)
+print("############################")
+print("############################")
 
-###############################################################################
-###############################################################################
-###############################################################################
-###############################################################################
+# setwd(paste0(base.dir,"/spring-chinook-distribution/Mixed Model"))
+# M <- stan_model(MOD.NAME)
+# opt.mod2 <- optimizing(M,
+#            data = stan_data,
+#            verbose = TRUE,
+#            #pars = stan_pars,
+# #           sample_file = SAMP.FILE,
+#            # init = stan_init_opt(n.chain=1,N_loc_spawn=N_loc_spawn,
+#            #                     MU_m =MU_m,Sigma_m=Sigma_m,
+#            #                     N_rel=N.REL,N_loc=N.LOC,
+#            #                     N_f_rec_idx_param=N_f_rec_idx_param,
+#            #                     N_knot_sf=N_knot_sf, N_knot_ws=N_knot_ws,
+#            #                     #W_star_sf = W_star_sf, W_star_ws = W_star_ws, W_star_salish =W_star_salish,
+#            #                     N_troll_idx=N_troll_idx,N_rec_us_idx=N_rec_us_idx,
+#            #                     N_origin=N_origin,N_sigma_cv_idx=N_sigma_cv_idx,
+#            #                     N_season=N_season,N_year=N_year,N_juv=N_juv,N_season_total=N_season_total),
+#             init = a,
+#             init_alpha=0.00001,
+#             iter=10000)
+           # init_r = 1)
+# # optim(file=MOD.NAME,
+#       data = stan_data,
+#       )
+
+
+
 setwd(paste0(base.dir,"/spring-chinook-distribution/Mixed Model"))
 stanMod = stan(file = MOD.NAME,
                data = stan_data, 
@@ -1942,7 +2158,7 @@ stanMod = stan(file = MOD.NAME,
                warmup = Warm, iter = Warm + Iter, 
                control = list(max_treedepth=Treedepth,
                               adapt_delta=Adapt_delta,
-                              #adapt_init_buffer=75,
+                              adapt_init_buffer=75,
                               stepsize = 0.01,
                               metric="diag_e"),
                pars = stan_pars,
@@ -1956,9 +2172,10 @@ stanMod = stan(file = MOD.NAME,
                                    #W_star_sf = W_star_sf, W_star_ws = W_star_ws, W_star_salish =W_star_salish,
                                    N_troll_idx=N_troll_idx,N_rec_us_idx=N_rec_us_idx, 
                                    N_origin=N_origin,N_sigma_cv_idx=N_sigma_cv_idx,
-                                   N_season=N_season,N_year=N_year,N_juv=N_juv),
+                                   N_season=N_season,N_year=N_year,N_juv=N_juv,N_season_total=N_season_total,
+                                   N_vuln_grp=N_vuln_grp),
                init_r = 1
-                                   ) 
+) 
 
 pars <- rstan::extract(stanMod, permuted = T)
 #get_adaptation_info(stanMod)
@@ -2003,13 +2220,13 @@ origin_mat_summary <- as.data.frame(summary(stanMod,pars=c("origin_mat"))$summar
 
 
 # If you want to save the posterior as start values for later.
- #  W_star_sf <- pars$w_star_sf[1,,,]
- #  W_star_ws <- pars$w_star_ws[1,,,]
- #  W_star_salish <- pars$w_star_salish[1,,,]
- # 
- # save(W_star_salish,file="W_star_salish_start_vals.RData")
- # save(W_star_ws,file="W_star_ws_start_vals.RData")
- # save(W_star_sf,file="W_star_sf_start_vals.RData")
+#  W_star_sf <- pars$w_star_sf[1,,,]
+#  W_star_ws <- pars$w_star_ws[1,,,]
+#  W_star_salish <- pars$w_star_salish[1,,,]
+# 
+# save(W_star_salish,file="W_star_salish_start_vals.RData")
+# save(W_star_ws,file="W_star_ws_start_vals.RData")
+# save(W_star_sf,file="W_star_sf_start_vals.RData")
 
 # origin_loc   <- apply(pars$origin_loc,c(2,3,4),mean)
 # dim(origin_loc)

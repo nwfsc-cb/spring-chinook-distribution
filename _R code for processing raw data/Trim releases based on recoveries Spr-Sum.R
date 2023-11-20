@@ -5,7 +5,7 @@
 REL <- REL %>% filter(N.released > 4000) %>% as.data.frame()
 
 # This culling occurs because of the lack of in-river recoveries.
-if(GROUP == "FRAM_2022_12" | GROUP == "FRAM_2023_05_TEST" | GROUP == "FRAM_2023_07"){
+if(GROUP == "FRAM_2022_12" | GROUP == "FRAM_2023_05_TEST" | GROUP == "FRAM_2023_07"| GROUP == "FRAM_2023_08"){
   # Also eliminate some Alaskan groups that have virtually no recoveries in the ocean.
   REL <- REL %>% filter(!ocean.region %in% 
                           c("CHIG_spr","KOD_spr","PWS_spr","COOK_spr","COPP_spr","YAK_spr",
@@ -93,8 +93,12 @@ if(GROUP == "FRAM_2022_12" | GROUP == "FRAM_2023_05_TEST" | GROUP == "FRAM_2023_
                "Puntledge_sum",
                "Tenderfoot_sum"))
   
+  REL <- REL %>% filter(# Cull some of non-AWG groups from Canada,
+    !ID %in% c("Quinsam_fall","Robertson_fall"))
+  
+  
   # PUGET SOUND
-  REL <- REL %>% filter(# Cull some of SGEO and FRAS,
+  REL <- REL %>% filter(# Cull some of 
     !ID %in% c("Kendall_Nooksack_spr",
                "Kendall_spr",
                #"Marblemount_Clark_spr_awg",
@@ -102,6 +106,10 @@ if(GROUP == "FRAM_2022_12" | GROUP == "FRAM_2023_05_TEST" | GROUP == "FRAM_2023_
                "Bernie_G_Sky_sum",
                "Bernie_G_Wallace_sum",
                "Harvey_sum"))
+  
+  REL <- REL %>% mutate(filt = paste0(ID,brood_year)) %>%
+            filter(!filt %in% "Minter_spr_awg1978") %>%
+            dplyr::select(-filt)
   
   # WAC
   
@@ -111,6 +119,16 @@ if(GROUP == "FRAM_2022_12" | GROUP == "FRAM_2023_05_TEST" | GROUP == "FRAM_2023_
     REL <- REL %>% filter(# Cull some of SNAKE 
       !ID %in% c("Snake_low_spr",
                "Salmon_ID_spr"))
+
+      # retain only yearlings from the SNAK_up_sum
+    SNK <- REL %>% filter(grepl("SNAK",ocean.region)) %>%
+                   mutate(filt = paste0(ocean.region,n.year)) %>%
+                   filter(!filt == "SNAK_up_sum1") %>%
+                   dplyr::select(-filt)
+    
+    REL <- REL %>% filter(!grepl("SNAK",ocean.region)) %>%
+                   bind_rows(.,SNK)
+    
     # UCOL
     REL <- REL %>% filter(# Cull some of UCOL
       !ID %in% c("Leavenworth_wind_spr",
@@ -123,6 +141,11 @@ if(GROUP == "FRAM_2022_12" | GROUP == "FRAM_2023_05_TEST" | GROUP == "FRAM_2023_
                  "Similkameen_sum",
                  "Turtle_Rock_sum",
                  "Wells_sum"))
+    
+    # drop non-AWG Upriver Bright releases.
+    REL <- REL %>% filter(# Cull some of UCOL
+      !ID %in% c("Priest_fall"))
+    
     # MCOL
     REL <- REL %>% filter(# Cull some of MCOL
       !ID %in% c("Ltl_White_Umatilla_spr",
@@ -146,7 +169,10 @@ if(GROUP == "FRAM_2022_12" | GROUP == "FRAM_2023_05_TEST" | GROUP == "FRAM_2023_
     REL <- REL %>% filter(# Cull some of WILL_spr
       !ID %in% c("OPSR_spr",
                  "Rogue_spr"))
-
+    
+    REL <- REL %>% filter(# Cull some of WILL_spr
+      !ID %in% c("Salmon(OR)_fall"))
+    
     ### Get rid of some outliers in terms of release timing
     
     REL <- REL %>% mutate(lab =paste0(ocean.region,"_",n.year)) %>%
