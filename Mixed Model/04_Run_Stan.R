@@ -12,8 +12,8 @@ load(here("Mixed Model","all_data.Rdata"))
 
 MODEL    = "Joint"
 
-Warm        = 200
-Iter        = 200
+Warm        = 1
+Iter        = 1
 N_CHAIN     = 3
 Treedepth   = 10
 Adapt_delta = 0.7

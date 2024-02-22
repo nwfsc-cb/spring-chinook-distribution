@@ -1,10 +1,10 @@
 MODEL    = "Joint"
 
 Warm        = 200
-Iter        = 200
+Iter        = 100
 N_CHAIN     = 3
 Treedepth   = 10
-Adapt_delta = 0.7
+Adapt_delta = 0.8
 
 # DEFINE STATISTICAL MODEL OF INTEREST
 print(SAMP.FILE)
@@ -1365,8 +1365,8 @@ beta_vuln_prior         = c(3,3) # gamma values for vulnerability slope with age
 # sigma_prior             = c(1,2) # observation variance for positive model prior (gamma params)
 sigma_cv_prior         = c(25,250) # observation CV  true catch (gamma params)
 #sigma_slope_prior     = c(-0.1,0.2) # observation variance for positive model prior (normal params)
-log_F_prior             = c(log(0.01),1) #  normal mean of log F
-F_rec_sigma_prior       = c(2,2)  # gamma params for F_rec
+log_F_prior             = c(log(0.01),0.25) #  normal mean of log F
+F_sigma_prior           = c(1,5)  # gamma params for F_rec
 gamma_int_prior         = c(-5,1) # normal prior for intercept of maturity curve
 gamma_slope_prior       = c(0,0.25)  # lognormal prior for slope of maturity curve
 # logit_offset_int_prior  = c(-1.5,0.2)  # normal prior for logit offset intercept.
@@ -1429,7 +1429,7 @@ PRIORS <- list(E_alpha_1=E_alpha_1[,grepl("mod.year",colnames(E_alpha_1))],
                 sigma_cv_prior = sigma_cv_prior,
  #               sigma_slope_prior = sigma_slope_prior,
                log_F_prior     = log_F_prior,
-               F_rec_sigma_prior = F_rec_sigma_prior,
+               F_sigma_prior = F_sigma_prior,
                w_star_prior_mean_sf = w_star_prior_mean_sf,
                w_star_prior_sd_sf = w_star_prior_sd_sf,
                w_star_prior_mean_ws = w_star_prior_mean_ws,
@@ -1483,15 +1483,8 @@ stan_data = list(
     "AWG_dat" = round(AWG_dat[,grepl("mod.year",colnames(AWG_dat))],0) %>% as.matrix(), 
     "AWG_idx" = AWG_dat$ID_numb,
     "nb_phi_fix" = nb_phi_fix,
-    #"inv_frac_samp_pos"       = dat.pos.fin$frac_samp_mod^(-1),
-    #"pos_idx" = dat.all$pos_idx, # indexes the positive observations.
-    # "log_frac_samp_comp"       = log(1-dat.bin.fin$frac_samp_mod),
-    # "log_frac_samp"   = log(dat.bin.fin$frac_samp_mod),
-    # "log_frac_samp_pos"   = dat.pos.fin$frac_samp_log,
-    # "logit_offset_int" = dat.bin.fin$logit_offset_int,
-    
+
     # Counters and numbers of observation.
-    
     "spawn_time_fraction" = REL$spawn_time_fraction,
     "N_rel"           = N.REL,
     "N_time_mod"      = N_time_mod,
@@ -1543,6 +1536,10 @@ stan_data = list(
     
     "ashop_year_break" = ashop_year_break, # season (in terms of model seasons) in which the q changes for the ashop fleet. C
                                             # Could elaborate to make multiple breaks as desired.
+    
+    
+    "fix_cv" =0.1, ###
+    
     
     # indicator vectors of offsets for seasons for log q
     "spring_vec" = spring_vec$spring_vec, 
@@ -1659,8 +1656,6 @@ stan_data = list(
     "vuln_fixed"      = vuln_fixed,
     
     # Indexes States Space
-       #"rel_cov_idx"       = COV$ID,
-     #"loc_spawn_idx"     = COV$loc.spawn.idx,
      "age_year_idx"      = AGE$year,
      "year_region_idx"   = COV$year.reg.idx,
      "age_month_idx"     = AGE$age,
@@ -1693,15 +1688,6 @@ stan_data = list(
     "temp_dat_season_bin_idx" = dat.all$temp_dat_season_idx,
     "juv_bin_idx"             = dat.all$juv.bin.idx,
     "vuln_grp_obs_idx"   = dat.all$vuln_group_idx,
-    # "mod_time_pos_idx"      = dat.pos.fin$time,
-    # "rel_pos_idx"           = dat.pos.fin$rel,
-    # "origin_pos_idx"        = dat.pos.fin$origin.idx,
-    # "season_pos_idx"        = dat.pos.fin$season.idx,
-    # "gear_pos_idx"          = dat.pos.fin$gear.idx,
-    # "loc_pos_idx"           = dat.pos.fin$location,    
-    # "loc_spawn_pos_idx"    = dat.pos.fin$loc.spawn.idx,
-    # "loc_pos"              = dat.pos.fin$location,
-    # "temp_dat_season_pos_idx" = dat.pos.fin$temp_dat_season_idx,
 
     #Priors
     #"E_alpha"              = PRIORS$E_alpha_1,
@@ -1717,10 +1703,8 @@ stan_data = list(
     #"sigma_pos_prior"      = sigma_pos_prior,
     "sigma_cv_prior"      = sigma_cv_prior,
     #"sigma_slope_prior"    = sigma_slope_prior,
-    "log_F_mean_prior"     = log_F_prior,
-    "F_sigma_prior"        = F_rec_sigma_prior,
-    # "origin_sea_int_prior_mean"  = origin_sea_int_prior_mean,
-    # "origin_sea_int_prior_sd"    = origin_sea_int_prior_sd,
+    "log_F_prior"     = log_F_prior,
+    "F_sigma_prior"        = F_sigma_prior,
 
     "w_star_prior_mean_ws"  = w_star_prior_mean_ws,
     "w_star_prior_sd_ws"    = w_star_prior_sd_ws,
@@ -1731,10 +1715,6 @@ stan_data = list(
     "origin_sea_slope_prior_sd"  = origin_sea_slope_prior_sd,
     "gamma_int_prior"      = gamma_int_prior,
     "gamma_slope_prior"    = gamma_slope_prior,
-    #"logit_offset_int_prior"   = logit_offset_int_prior,
-    # "tau_process_prior"    = tau_process_prior,
-    # "tau_process_prod_prior"    = tau_process_prod_prior,
-    # "tau_q_dev_prior"      = tau_q_dev_prior,
     "log_q_troll_prior"    = log_q_troll_prior,
     "log_q_treaty_prior"    = log_q_treaty_prior,
     "log_q_rec_prior"      = log_q_rec_prior,
@@ -1754,10 +1734,10 @@ stan_data = list(
 # parameters to monitor
 stan_pars = c(
   # "log_q_troll_mu",
-  "log_q_troll_pos","log_q_troll_start",#"log_q_troll_slope",
-  "log_q_treaty_pos","log_q_treaty_start",#"log_q_treaty_slope",
-  "log_q_rec_pos","log_q_rec_start",#"log_q_rec_slope",
-  "log_q_rec_can_pos","log_q_rec_can_start",#"log_q_rec_can_slope",
+  "log_q_troll_pos","log_q_troll_start", "log_q_troll_slope",
+  "log_q_treaty_pos","log_q_treaty_start","log_q_treaty_slope",
+  "log_q_rec_pos","log_q_rec_start","log_q_rec_slope",
+  "log_q_rec_can_pos","log_q_rec_can_start","log_q_rec_can_slope",
   "log_q_rec_can_irec_pos",  "log_q_rec_can_irec_start",
   "log_q_hake_ashop_start", "log_q_hake_ashop_pos",
   "log_q_hake_shoreside_start",
@@ -1767,28 +1747,28 @@ stan_pars = c(
   "log_q_rockfish_AK_start",
   "log_q_rockfish_AK_pos",
   #"log_q_troll_area","troll_area_sd",
-  #"q_int",
+  "q_int",
   # "observe_frac",
     #"log_q_rec_PUSO_pos",
   #"tau_process",
   #"tau_process_prod",
   "epsilon",
 
-  "spring_troll_offset" ,
-  "fall_troll_offset" ,
-  "winter_troll_offset" ,
-  
-  "spring_rec_us_offset" ,
-  "fall_rec_us_offset" ,
-  "winter_rec_us_offset" ,
-  
-  "spring_rec_can_offset" ,
-  "fall_rec_can_offset" ,
-  "winter_rec_can_offset" ,
-  
-  "spring_treaty_offset" ,
-  "fall_treaty_offset" ,
-  "winter_treaty_offset" ,
+  # "spring_troll_offset" ,
+  # "fall_troll_offset" ,
+  # "winter_troll_offset" ,
+  # 
+  # "spring_rec_us_offset" ,
+  # "fall_rec_us_offset" ,
+  # "winter_rec_us_offset" ,
+  # 
+  # "spring_rec_can_offset" ,
+  # "fall_rec_can_offset" ,
+  # "winter_rec_can_offset" ,
+  # 
+  # "spring_treaty_offset" ,
+  # "fall_treaty_offset" ,
+  # "winter_treaty_offset" ,
   
   "alpha_K_troll",
   "alpha_K_rec",
@@ -1796,22 +1776,10 @@ stan_pars = c(
   "alpha_K_rec_can_irec",
   "alpha_K_treaty",
   
-  "q_rand_troll_raw",
-  "q_rand_rec_us_raw",
-  "q_rand_rec_can_raw",
-  "q_rand_treaty_raw",
-  
-  "q_sd_troll",
-  "q_sd_rec",
-  
-  #"logit_offset_int",
-  #"logit_offset_slope",
-  #"log_M2",
-  #"cum_M2",
-  #"sigma_pos",
-  "sigma_cv",
-  "sigma_cv_hake",
-  "sigma_cv_pollock",
+  ####
+  # "sigma_cv",
+  # "sigma_cv_hake",
+  # "sigma_cv_pollock",
   "spawn_smooth",
   #"nb_phi",
   # "log_spawn_smooth_mean",
@@ -1851,10 +1819,11 @@ stan_pars = c(
   "F_troll",
   #"F_hake_ashop",
   "log_F_mean",
-  # "log_F_troll_mean",
-  #"F_sigma", 
    "F_sigma",
-   # "F_troll_sigma",
+  #"log_F_troll_mean",
+  #"log_F_rec_mean",
+  # "F_troll_sigma", 
+  # "F_rec_sigma", 
   "F_troll_array",
   "F_treaty_array",
   "F_rec_array",
@@ -1873,10 +1842,6 @@ stan_pars = c(
   "w_logit_offshore"
  )
 
-
-#"Z_init","Z_move","Z_spawn")#,"M2_mean","M2_sd")
- 
-
 # Use this section if you want to start the distribution values in close to the right spot to speed up convergence.
   # load(paste(base.dir,"/Salmon-Climate/Mixed Model/Start Values/W_star_sf_start_vals.RData",sep=""))
   # load(paste(base.dir,"/Salmon-Climate/Mixed Model/Start Values/W_star_ws_start_vals.RData",sep=""))
@@ -1889,15 +1854,15 @@ stan_pars = c(
         A <- list()
   for(i in 1:n.chain){
     A[[i]] <- list(
-      # log_q_troll_mu = rnorm(1,-10,0.1),
+      log_q_troll_mu = rnorm(1,-10,0.1),
       log_q_troll_start  = rnorm(N_troll_idx,-10,0.5),
-      #log_q_troll_slope  = rnorm(N_troll_idx,0.5,0.2),
+      log_q_troll_slope  = rnorm(N_troll_idx,0.5,0.2),
       log_q_treaty_start  = rnorm(1,-10,0.5),
-      #log_q_treaty_slope  = rnorm(1,0.5,0.1),
+      log_q_treaty_slope  = rnorm(1,0.5,0.1),
       log_q_rec_start    = rnorm(N_rec_us_idx,-14,0.5),
-      #log_q_rec_slope    = rnorm(1,0.5,0.1),
+      log_q_rec_slope    = rnorm(1,0.5,0.1),
       log_q_rec_can_start    = rnorm(1,-14,0.5),
-      #log_q_rec_can_slope    = rnorm(1,0.5,0.1),
+      log_q_rec_can_slope    = rnorm(1,0.5,0.1),
       log_q_rec_can_irec_start    = rnorm(1,-14,0.5),
       log_q_hake_ashop_start    = rnorm(1,-14,0.5),
       log_q_hake_shoreside_start    = rnorm(1,-14,0.5),
@@ -1921,11 +1886,11 @@ stan_pars = c(
       # sigma_pos_vec = runif(N_obs_pos,0.5,2),
       #vuln_int = rnorm(1,3,0.3),
       #beta_vuln_int = runif(2,0.1,0.5),
-      q_rand_troll = matrix(runif(N_troll_idx * N_season_total,-0.01,0.01)),
-      q_rand_rec_us = matrix(runif(N_rec_us_idx * N_season_total,-0.01,0.01)),
-      q_rand_rec_can = runif(N_season_total,-0.01,0.01),
-      q_rand_treaty = runif(N_season_total,-0.01,0.01),
-                                                                        
+      # q_rand_troll = matrix(runif(N_troll_idx * N_season_total,-0.01,0.01)),
+      # q_rand_rec_us = matrix(runif(N_rec_us_idx * N_season_total,-0.01,0.01)),
+      # q_rand_rec_can = runif(N_season_total,-0.01,0.01),
+      # q_rand_treaty = runif(N_season_total,-0.01,0.01),
+      #                                                                   
                             
                                   
       beta_vuln = matrix(runif(2*N_vuln_grp,0.5,1.0),2,N_vuln_grp),
@@ -1937,8 +1902,8 @@ stan_pars = c(
       log_rel_year_mu = rnorm(1,1.3,0.1),
       log_rel_year_sigma = runif(1,0.2,0.5),
      # rel_year_all = runif(N_rel,1,2),
-      log_F_rec_mean = rnorm(1,-4,0.5),
-      log_F_troll_mean = rnorm(1,-4,0.5),
+      log_F_mean = rnorm(1,-4,0.5),
+      #log_F_troll_mean = rnorm(1,-4,0.5),
       #logit_offset_slope = rnorm(1 ,1,0.1),
       F_troll = runif(N_f_troll_idx_param,0.001,0.04),
       F_rec = runif(N_f_rec_idx_param,0.001,0.04),
@@ -1973,15 +1938,15 @@ stan_pars = c(
     
     for(i in 1:n.chain){
       A <- list(
-        # log_q_troll_mu = rnorm(1,-10,0.1),
+         log_q_troll_mu = rnorm(1,-10,0.1),
         log_q_troll_start  = rnorm(N_troll_idx,-10,0.5),
-        #log_q_troll_slope  = rnorm(N_troll_idx,0.5,0.2),
+        log_q_troll_slope  = rnorm(N_troll_idx,0.5,0.2),
         log_q_treaty_start  = rnorm(1,-10,0.5),
-        #log_q_treaty_slope  = rnorm(1,0.5,0.1),
+        log_q_treaty_slope  = rnorm(1,0.5,0.1),
         log_q_rec_start    = rnorm(N_rec_us_idx,-14,0.5),
-        #log_q_rec_slope    = rnorm(1,0.5,0.1),
+        log_q_rec_slope    = rnorm(1,0.5,0.1),
         log_q_rec_can_start    = rnorm(1,-14,0.5),
-        #log_q_rec_can_slope    = rnorm(1,0.5,0.1),
+        log_q_rec_can_slope    = rnorm(1,0.5,0.1),
         log_q_rec_can_irec_start    = rnorm(1,-14,0.5),
         log_q_hake_ashop_start    = rnorm(1,-14,0.5),
         log_q_hake_shoreside_start    = rnorm(1,-14,0.5),
@@ -2005,10 +1970,10 @@ stan_pars = c(
         # sigma_pos_vec = runif(N_obs_pos,0.5,2),
         #vuln_int = rnorm(1,3,0.3),
         #beta_vuln_int = runif(2,0.1,0.5),
-        q_rand_troll = matrix(runif(N_troll_idx * N_season_total,-0.01,0.01)),
-        q_rand_rec_us = matrix(runif(N_rec_us_idx * N_season_total,-0.01,0.01)),
-        q_rand_rec_can = runif(N_season_total,-0.01,0.01),
-        q_rand_treaty = runif(N_season_total,-0.01,0.01),
+        # q_rand_troll = matrix(runif(N_troll_idx * N_season_total,-0.01,0.01)),
+        # q_rand_rec_us = matrix(runif(N_rec_us_idx * N_season_total,-0.01,0.01)),
+        # q_rand_rec_can = runif(N_season_total,-0.01,0.01),
+        # q_rand_treaty = runif(N_season_total,-0.01,0.01),
         
         
         
@@ -2244,6 +2209,7 @@ Output <- list(stanMod=stanMod,stanMod_summary=stanMod_summary,
                diri_constant=diri_constant,
                ashop_year_break=ashop_year_break,
                stan_pars = stan_pars,
+               stan_data=stan_data,
                AGE = AGE,
                COV = COV, age_month_cal=age_month_cal,
                #ocean_temp_dev = ocean.temp.dev, ocean_temp = ocean.temp, ocean_temp_avg =time.avg.deep.trim,

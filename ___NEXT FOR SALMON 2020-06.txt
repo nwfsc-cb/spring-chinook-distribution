@@ -1,0 +1,348 @@
+Long list of things to be added to the Salmon Model
+
+Update circa 04-19-2022
+Fix chinook recovery database. (done)
+Query spring Chinook recoveries, make basic plots of where and when each is recovered.
+Incorporate Alex's edits to fix the spawning calendar.
+Add to recovery database.
+
+
+4-19-2022 Notes
+working out of spring-chinook-distribution GitRepo.
+Adjusted all_chinook.RData to avoid leading zeros problem.
+adjusted releases from 2020_07 to avoid read-in error
+Made CWT control files folder.
+
+05/02/2022 Notes
+Looked through spr-sum releases. Fixed "01" script so all releases and recoveries were properly dealt with. Added dplyr summary scripts to marine recoveries and debugged some release duplications.  Moved on to mapping recovery locations.  Looked through rec.area.codes
+COPPER - only gillnet fisheries (16 fish total).  Will be excluded later.
+CISS - more than COPPER but all net fisheries (fishery 20, 28) months - May-Aug. Will be excluded later.
+PWS - 49 fish total. all summertime gillnet fisheries. Almost entirely in the Wally Norenberg terminal area...
+YAK - lots more recoveries (2448). fisheries = troll (2328 (10) + 45(11)), net(12), rec (60), a handful of test fishery fish (3)
+EAPEN - 38 recoveries all from gillnet
+NWGOA - 268 recoveries.  All from gillnet
+
+5/3/2022
+Looked over the recovery area mapping process.  I kept CISS, PWS, COPPER areas separate for now.  They are all net fisheries and will likely get dropped later. I double checked the mapping to the YAK area for troll fisheries. It looks correct.
+I modified some more aggregate functions and moved them to dplyr.
+THen I rediscovered Genoa's "Process ALASKA pollock effort.R" file (in the spring-chinook-distribution repo)
+
+5/4-5/5/2022.
+Did a deep dive on the CWT and recoveries in the pollock fishery.  Decided to use the CWT files from the observer program in AK because they provide lat-long recoveries and provide a way to isolate which recoveries are from the pollock fleet. There is some complicated matching that occurs between the recovered CWT, observer coverage, and other processes. There are a lot of fish that are included in the pollock fleet because they were collected during a time when the pollock fleet was open and fishing. There remains some questions about whether we should allow recoveries associated with times adjacent to
+
+NEXT. Alaska rockfish fleet. Should be pretty easy.
+
+5/23/2022
+Completed all alaskan fisheries, wrote all to file, moved on to the "02_.." file.
+Updated beginning of 02 file.
+Moved on to recreational fishery data. Updated effort for Puget Sound from pamphlets.
+Examined emergency rules for changes to the opening / closing / chinook retention.  Updated WA PUSO Chinook Retention thru 2020. This includes all changes made by emergency rule between 2003 and 2020.
+Also updated Chinook size limits on rec fisheries (vuln.rec files).
+Updated files are in the Orca_salmon_data folders
+
+5/24/2022-6/17/2022
+Ran into some trouble with the Alaska Troll effort files.  Switched from a poor proxy for effort (approximate boat days) to landings.  Double checked the hand troll to power troll conversion (into power-troll equivalents)  using:
+[CPUE(Hand) / CPUE(Power)] * Hand_Landings.
+Modified the fraction of effort in each month and found some problems in the post 2015 data that was causing negative proportions. Fixed that.  Wrote alaska troll effort to file "effort.data.ak.2022-06.csv" is the file to use in all future analyses.
+
+7/28/22
+Finally back to the spring model after getting the OCNMS surveys up and running.
+Updated CA, OR, WA troll effort through 2018 (CA) or through 2019 (WA, OR).
+Updated and checked code for Treaty Troll fleets
+Updated and checked ASHOP and Shoreside fleets. (only data through 2017...)
+Began new scripts to read in data from the AK Rockfish and Pollock Shoreside.
+
+8/1/2022-8/10/2022
+Worked on many things... Fixed and finished AK effort files (shoreside pollock and rockfish (both CP and shoreside)). Improved and debugged extraction of CWT files for all gear groups.  Fixed recovery area assignments.
+
+8/24/2022
+Did a bunch of work for Sean Matson helping out with hake bycatch.  From him I got updated data for CWT recoveries from ASHOP and Shoreside.  I still only have effort data for ASHOP through 2017 and for Shoreside through 2016 (I think).  But now I have the CWT recoveries at least.
+
+9/21/2022
+Spent the last few days slogging through the 02... code.  Specifically, I made a number of changes to the processing code (e.g. removed / changed references to reshape2 package).
+Requested new, updated data from ASHOP.  Will submit new request to PSMFC soon for shoreside data.
+Found problems with the Puget Sound rec data.  Rechecked all of the data I have in hand (1978-80 and 1995-present).  Need to poke at the 1981-1994 data in the UW library.
+
+
+9/30/2022
+Spent the week finding and fixing errors and conflicts in "02_..."
+Found Alaska fish ticket data on my computer, used it to derive effort (landings) estimates for 1979-84 troll data.  This data differs slightly from the data provided by J. Carlile.  Not really sure why... But it is strongly correlated. I'm going to use it.  This pushes the years of recovery back to 1979.
+Receive the complete dataset from the CTC.  Will look at it next week to determine how best to use it.
+Requested additional data from the shoreside hake fleets. Hope to get ASHOP and shoreside data updates back soon.
+Started to work on the heatmap scripts and am planning make additional updates to them soon.
+
+10/7/2022
+Spent much of the week on other things but did create a progress report for the regional office.  It forced me to look carefully at a lot of the plots of ocean recoveries for different runs.  They are very illuminating. They emphasize the importance of being able to deal with the different catchability for different runs and for being able to look at spawn timing and accessibility to fisheries for different runs.
+Will work on the AWG stocks next (and the in-river data in particular) and think about size-at-age.
+
+
+10/25-31/2022
+Received AWG from the CTC.  Have been extensively processing the data.
+Parsed the various net recoveries to try and come up with a defensible set of choices about who qualifies as in-river.
+In script 01...
+Move fishery code 20 to freshwater (they are all terminal gillnets in AK or CAN)
+
+I compiled all of the FW recoveries, merged in the AWG data and made a bunch of plots of the recoveries by region and
+
+CA - Chat with Will Sat...
+no run reconstructions for spring run in CV (SFB_butte_spr, SFB_feather_spr)
+Winter run work for management is not strictly from RMIS... but actually getting this raw data seems unlikely.
+We know that the Trinity spring has missing data.
+There is good information suggesting these stocks don't go on walk about offshore.  So assuming they all stay in-bounds is ok/
+Conclusion: Scale the river recoveries by their proportional abundance, but do not include their raw FW recoveries in the estimation model.
+
+OR Coast-
+SOR, COR both have not- great patterns on FW recoveries but I do not have any direct information about the quality of FW information. Hope to get some info from the OR folk for the listing criteria later this week.
+
+COL basin.
+This is the first place that auxiliary AWG data comes into play.  It is important for WILL_spr but not for upriver stock.  This includes stocks which are in the CTC model like UCOL_sum as well as others that are not.  There were virtually no auxiliary recoveries from the URB stock as well.
+
+11/30/22 - 12/2
+Talked to Alan Byrne this week about Idaho data and figured out where to get teh PIT data from Columbia river dam tagging.  I think they will flesh out the needed survival information for
+
+Here are the years of PIT survival data.
+
+Up Col PIT data.  outmigrant years: 2000-19: Release to Bonneville
+Combined Hatch_Wild Spring Chinook tagged at Rock Island Dam
+Combined Hatch_Wild Summer Chinook tagged at Rock Island Dam
+Entiat and Methow River Wild Spring Chinook
+Entiat Hatchery Summer Chinook
+Leavenworth Hatchery Spring Chinook
+Upper Columbia River (above Wells Dam) Wild Summer Chinook
+Wenatchee River Wild Spring Chinook
+Winthrop Hatchery Spring Chinook
+
+Mid Col PIT data.  outmigrant years: 2000-19 Release to Bonneville
+Carson Hatchery Spring Chinook
+Cle Elum Hatchery Spring Chinook
+Deschutes River Wild Fall Chinook
+Hanford Reach Wild Fall Chinook
+John Day River Wild Spring Chinook
+Little White Salmon Hatchery Fall Chinook
+Spring Creek Hatchery Fall Chinook (April Release)
+Spring Creek Hatchery Fall Chinook (March Release)
+Spring Creek Hatchery Fall Chinook (May Release)
+Warm Springs Hatchery Spring Chinook
+Yakima River Wild Spring Chinook
+
+Snake River PIT DATA:2000-19.  Lower Granite to Bonneville
+Catherine Creek Hatchery Spring Chinook
+Clearwater Hatchery Spring Chinook
+Clearwater Hatchery Summer Chinook
+Dworshak Hatchery Fall Chinook at Snake River (Surrogates)
+Dworshak Hatchery Spring Chinook
+Grande Ronde River Hatchery Fall Chinook
+Imnaha Hatchery Summer Chinook
+Kooskia Hatchery Spring Chinook
+Lyons Ferry Hatchery Fall Chinook at Big Canyon Creek AP
+Lyons Ferry Hatchery Fall Chinook at Captain John Rapids AP
+Lyons Ferry Hatchery Fall Chinook at Pittsburg Landing AP
+Lyons Ferry Hatchery Fall Chinook at Snake River
+McCall Hatchery Summer Chinook
+Nez Perce Hatchery Fall Chinook at Cedar Flats AP
+Nez Perce Hatchery Fall Chinook at Lukes Gulch AP
+Oxbow Hatchery Fall Chinook below Hells Canyon Dam
+Pahsimeroi Hatchery Summer Chinook
+Rapid River Hatchery Spring Chinook
+Sawtooth Hatchery Spring Chinook
+Umatilla_Irrigon Hatchery Fall Chinook below Hells Canyon Dam
+
+Which leads me to look at the files for freshwater recoveries and make decisions on which groups to include based on FW recoveries.
+
+ALL THE Details are presented in "rel_groups.xlsx" about which runs too keep.
+
+I trimmed the releases based on in-river data, AWG, and PIT data. I ended up moving from about 2900 groups to 1900 groups.  All of the info on culling is in the rel_groups.xlsx and in the Output plots/FW_plots/12-1-22 Cull recoveries plots.
+
+
+DROP based on zero or negligable FW CWT recoveries:
+COPP_spr (Copper river AK)
+COOK_spr (Cook Inlet AK)
+NSEAK_W_spr (Medvejie, Hidden Falls SITKA)
+FRAS_L_spr
+FRAS_L_sum
+FRAS_U_sum
+HAIDA_sum
+
+
+DROP some
+NSEAK_spr (KEEP all hatch with CWT from the AWG database)
+NSEAK_Taku_spr (KEEP all hatch with CWT from the AWG database)
+SSEAK_Stikine_spr (KEEP all hatch with CWT from the AWG database)
+SSEAK_S_spr (KEEP all hatch with CWT from the AWG database)
+SSEAK_N_spr (KEEP all hatch with CWT from the AWG database)
+NBC_sum (KEEP Kitsumkalum_sum_awg)
+CBC_sum (KEEP all hatch with CWT from the AWG database)
+SGEO_S_sum (KEEP all hatch with CWT from the AWG database)
+FRAS_TH_sum (KEEP all hatch with CWT from the AWG database)
+FRAS_TH_spr (KEEP all hatch with CWT from the AWG database)
+FRAS_U_spr (KEEP all hatch with CWT from the AWG database)
+
+Uncertain:
+NBC_spr (keep Bulkley_spr, Kitimat_spr.  Drop others)
+
+
+
+NEXT
+ASHOP data additions
+PIT data read in and prep for use
+Write likelihoods for FW data
+  CWT recoveries.
+  PIT data
+  Indicators for which kind of data shows up where.
+
+Selectivity
+  - by run (spring vs. summer vs. winter)?
+  - by number of months before model start?
+
+#########
+12/2/2022
+In-River Data scenarios:
+  Age-structure Proportions only (all fish are in fishery areas; SOR and south).
+  Age-structure Proportions + cumulative SAR data (Columbia Basin)
+    - Part of time series is age-structure proportions only, remainder is both.
+  Actual tag recoveries (RMIS + AWG; all WAC and north). Do not use age-structure proportions.
+
+  Open question about what to do with COR, NOR... which have uncertain in-river data.
+
+12/5/2022
+Mapped PIT tag data onto existing Columbia survival data.
+Had to make some choices about which stocks mapped onto which PIT groups.
+In general, I used release site to Bonneville survival whenever possible. I only used hatchery releases (as all CWT are hatchery).
+I don't know what to do about release = BY+1 vs. BY+2... so I decided that if there were releases in by+1 they were migration year BY+2.  I used the available hatchery data from the geographically most proximate source.  In some cases there were limited data for some PIT data for some stocks.... so I used the longer time series whereever  possible.  The code for processing PIT data is at the end of the "01..." script and the mapping of PIT data to particular stocks is in "02..." under the subscript "Make PIT survival files Spr-Sum.R". Out of 1950 or so CWT groups. I was able to match about 240-ish to PIT recoveries.
+
+
+1/1/2023
+New year.  Over the past month I have shored up the 02 script and think it is good to go.  I am down to ~1850 release groups.  I have created and compiled the catch data for all seven of the fleets (troll, treaty, rec, hake ashop, hake shoreside, pollock GOA, rockfish AK).
+
+1/6/2023
+Worked on data and objects for in-river recoveries.
+Added index and data for AWG data. This data will be used instead of the Dirichlet data.
+Defined, added index and data for PIT data. This will be used in combination with the Dirichlet data.
+Discovered that one the AWG and PIT data were added there were a series of runs that had neither AWG, nor PIT data, and I wasn't comfortable making an assumption that all of the fish were not in the "offshore" spatial box.
+
+The runs assumed to have zero for the offshore were everything south of SOR (SOR_spr, NCA_spr,SFB_spr and SFB_wint)
+
+Runs without AWG or PIT data: COR, NOR, LCOL, WAC, NBC.
+  Solutions: Look at recovery data, presume NOR, LCOL data from RMIS are ok.  Use RMIS data for NOR, LCOL.
+  COR, WAC, NBC clearly do not have good recovery information.  Resolve this by asserting that nearby stocks that have ok recoveries share the same value for the offshore box.  Offshore fraction for COR == NOR.  Offshore WAC= LCOL, Offshore NBC_spr = offshore NBC_sum.  This was determined by looking at the spatial and temporal patterns in raw recoveries of
+
+
+Checked for data in all combinations. Made some choices about combining data.
+emailed about Updated data from Shoreside hake
+Made work around for fish that start are released after the model starts.
+
+
+1/8/2023
+I entered the ASHOP effort data. Found a mistake (I think) in Genoa's code (sigh).  Realized that I don't have the necessary sampling information for all of ASHOP and requested it from Vanessa Tuttle.  Hopefully that will get resolved soon.
+Incorporated the new effort data from shoreside hake as well and fixed a few resulting bug. Requested all of the CWT recoveries from Shoreside (2017-21).
+
+5/24/23.
+OK.  After a long diversion doing Oregon Chinook ESA stuff, I have returned to all things Chinook spring distribution.
+I have implemented the offshore area by instituting a new latent variable.  After a bunch of de-bugging, I now have it written.
+All stocks SOR and south are not allowed to participate in the offshore area.
+I have played a bunch with sharing catchability with pollock and hake and rockfish.  I think there are a bunch of tricky things with having only pollock in the central / western GOA.
+
+I have played a bunch with the nb in-river abundances.  Especially defining the overdisperson in terms of an asymptotic CV.
+
+8/1/2023
+Ok.  There have been tens of model runs in the interim, but I am getting close to a final version.
+
+Things I have implemented include: 
+	In-river recoveries.
+		allowed stocks to have different maturity proportions by fingerlings vs. yearlings.
+		removed the logistic constraint on spawning migrations (each age x release type (fingerling vs. yearling) x stock has it's own proportion spawning).
+		added in-river observations for WAC_spr, WAC_sum, NBC_spr.
+		removed in-river recoveries for releases that have == 0 total recoveries across all years.
+	Removed one Minter_spr release that was never observed in the ocean and never observed in the rivers.
+	Removed 2 SNAK_up_sum with fingerling releases... too hard to estimate params with only two
+	Yearling releases.
+		For fish released in n.year==2, the fish were assumed not be in the ocean in spring of brood.year+2.  This also means that fish cannot return to spawn in model.year == 1.
+		So for these n.year==2 fish, we forced the fish to have 0 in-river recoveries. 
+		This make sense because these fish never entered the ocean, never were susceptible to fisheries and have no information about ocean distribution.
+	Ocean Distribution
+		I have fish hiding in WAPEN a fair amount for some stocks.. I can't tell how much this is a big deal
+		There ais a lack of effort in WAPEN during the summer, so fixing EAPEN == WAPEN for that season makes sense.
+		I have played a bunch with WAPEN==EAPEN for all seasons too.
+
+		Fixed offshore box to be a single constant value across years.
+		Fixed the southern stocks (SOR and south) for have a single value for all regions NBC and north. 
+		
+		On 8/4/23 moved to a single theta_space parameter because the number knots is equivalent in all seasons now (also enforced a 0.5 minimum for theta_space)
+
+	Catchability
+		There is sensitivity to the troll fleets.  When I have tried to maintain the 4 troll areas, I get some tradeoffs among parameters: namely higher matchability in WA/OR & BC coincides with larger offshore components for stocks from those areas.
+			Specifically, this leads to high catch abilities in WA and BC. Relative to CA and AK... that doesn't make sense
+		I have found that a two area troll model (WA and south, BC and north) seems to fit.
+		Still try the 4 troll model occasionally.
+	Fix WINTER spawning runs by making them enter river exactly on the first day of March, BY+2
+
+Other observations
+	
+		
+		
+
+		
+		
+
+
+
+
+
+
+########################################
+
+Fisheries and Effort:
+New AK troll effot data
+BC hake data
+Alaska Pollock
+Alaska Rockfish
+AK troll- separate inside vs. outside troll
+What to do about net fisheries.
+
+Recoveries:
+Split out Alaska areas
+APEN
+KODIAK
+CISS
+PWS
+PWS - inside
+YAK
+
+Catchability:
+Allow for distinct, run-type Catchability
+
+Spatial boxes:
+Add Yakutat and GOA areas.
+
+Vulnerability
+Splines and/or Quadratic for rec and troll.
+
+Genetic information
+GSI sources
+Defining discrete origins in the Model
+
+Maturity
+Force all remaining fish to enter the river at age 6 (would likely get rid of need for old age penalty.)---- DONE.
+Let Maturity vary from year to year.
+Add spring life-history option for spawn timing
+
+Environment
+PDO & NPGO as covariates.
+
+OTHER:
+TRY OUT ESTIMATING ADULT M with the different mortality schedule.
+
+
+
+
+
+SHORT TERM TO DO FOR PAPER
+DIC
+UPDATE ALL PLOTS IN MAIN TEXT, S5
+ABSTRACT
+RE-READ S1, S3.
+
+S5:
+WIDE FORM DISTRIBUTION USING ALL OF REGIONS
+INCLUDE DISTRIBUTION ESTIMATES FOR PUSO AND SUCH?
+DIFFERENT HARVEST FRACTIONS FOR SUPPLEMENTAL FIGURES FIG.5

@@ -11,7 +11,7 @@ library(MASS)
 library(extrafont)
 library(gtable)
 
-set.seed(11)
+set.seed(15)
 #test
 rm(list=ls())
 gc()
@@ -22,8 +22,8 @@ if(getwd()!=paste0(base.dir,"/spring-chinook-distribution")){
   setwd(paste0(base.dir,"/spring-chinook-distribution"))
 }#mn
   
-NAME <- "TEST2-POIS;TROLL_4_param,effor-season,CV-CONSTRAINED,hake!=pollock,WAPEN=EAPEN(all),cv=hake,pollock,vuln=hake,pollock;4-season(single offshore,wint=avg),year+fing,ZEROS"
-MOD.NAME  <- 'chinook-spring-GAMMA_LOCVAR2_PIT_AWG_SEAS_ALPHA_F_const_v2.stan'
+NAME <- "FIX_CV no ep - q_slope;TROLL_4_param,effort-season,hake!=pollock,WAPEN=EAPEN(all),vuln=hake,pollock;4-season(single offshore,wint=avg),year+fing,ZEROS"
+MOD.NAME  <- 'chinook-spring-GAMMA_quadratic_LOCVAR2_PIT_AWG_24-02-no-epsilon-off.stan'
 
 SAMP.FILE <- paste0("../Output Files/",NAME,".csv")
 

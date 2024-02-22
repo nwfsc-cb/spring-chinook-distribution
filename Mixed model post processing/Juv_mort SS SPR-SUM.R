@@ -23,8 +23,8 @@ x.lim= c(0,max(rel_year_all))
 # par(new=T)
 # plot(ZZZ~XXX,col=2,axes=F,xlim=x.lim,type="l")
 
-log_F_rec_mean <- mean(samp$log_F_rec_mean)
-F_rec_sigma   <- mean(samp$F_rec_sigma)
+# log_F_rec_mean <- mean(samp$log_F_rec_mean)
+# F_rec_sigma   <- mean(samp$F_rec_sigma)
 hist(exp(-rel_year_all),main="All Sites",xlab="First year survivorship (exp(-M))",breaks=BREAKS)
 #par(new=T)
 #plot(YYY~XXX,col=2,axes=F,xlim=x.lim,type="l",lwd=2,xlab="",ylab="")
@@ -47,10 +47,10 @@ for(i in 1:nrow(spawn_loc)){
   hist(exp(-rel_year_all[REL$ocean.region==spawn_loc$ocean.region[i]]),main=spawn_loc$ocean.region[i],
        xlab="First year survivorship (S)",breaks=BREAKS.S,xlim=c(0,exp(-min(rel_year_all))))
   plot(x= REL$brood_year[REL$ocean.region==spawn_loc$ocean.region[i]],y=exp(-rel_year_all[REL$ocean.region==spawn_loc$ocean.region[i]]),  
-          ylab="First year survivorship (S)",xlab="Brood year",ylim=y.lim),xlim=c(min(REL$brood_year),max(REL$brood_year)))
+          ylab="First year survivorship (S)",xlab="Brood year",ylim=y.lim,xlim=c(min(REL$brood_year),max(REL$brood_year)))
 
   plot(exp(-rel_year_all[REL$ocean.region==spawn_loc$ocean.region[i]])~REL$n.month[REL$ocean.region==spawn_loc$ocean.region[i]],
-       ylab="Median survivorship",xlab="Juvenile period (months)", ylim=y.lim),xlim=c(min(REL$n.month),max(REL$n.month)))
+       ylab="Median survivorship",xlab="Juvenile period (months)", ylim=y.lim,xlim=c(min(REL$n.month),max(REL$n.month)))
   }
 
 dev.off()

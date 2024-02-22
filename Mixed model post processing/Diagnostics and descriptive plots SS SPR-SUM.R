@@ -20,7 +20,7 @@ markdown.dir <- "/Users/ole.shelton/GitHub/spring-chinook-distribution/Writing/M
   
 setwd(results.dir)
 
-load("FRAM_2023_08 F1-NB=400;FIX-OFF-TROLL_4_param,hake!=pollock,WAPEN=EAPEN(all),cv=hake,pollock,vuln=hake,pollock;4-season(single offshore,wint=avg),year+fing,ZEROS.RData")
+load("FRAM_2023_08 FIX_CV - q_slope;TROLL_4_param,effort-season,hake!=pollock,WAPEN=EAPEN(all),vuln=hake,pollock;4-season(single offshore,wint=avg),year+fing,ZEROS.RData")
 
 # load("CA+COL CLIMATE Troll_Rec_Treaty_SS+PROC_E100_M2EST_vulnfix_07-26-2017.RData")
 

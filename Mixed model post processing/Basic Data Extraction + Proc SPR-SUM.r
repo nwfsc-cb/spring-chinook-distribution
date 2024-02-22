@@ -198,6 +198,7 @@ spawn_smooth    <- mean(samp$spawn_smooth)
 q_int <- mean(samp$q_int)
 
 
+
 if(length(dim(samp$log_q_troll_start))>1){
   log_q_troll_start <- apply(samp$log_q_troll_start,2,mean)  
 }else{
@@ -246,15 +247,16 @@ log_q_rec_can_irec_start <- mean(samp$log_q_rec_can_irec_start)
   }
 
     # Observation variability parameters. (CV = exp(sigma_int))
-     
-  if(is.na(dim(samp$sigma_cv)[2])==T){
-    sigma_cv <- mean(samp$sigma_cv)
-  }else{
-    sigma_cv <- apply(samp$sigma_cv,2,mean)
-  }
-
-    sigma_cv_hake <- mean(samp$sigma_cv_hake)
-    sigma_cv_pollock <- mean(samp$sigma_cv_pollock)
+  fix_cv <- 0.1
+  
+  # if(is.na(dim(samp$sigma_cv)[2])==T){
+  #   sigma_cv <- mean(samp$sigma_cv)
+  # }else{
+  #   sigma_cv <- apply(samp$sigma_cv,2,mean)
+  # }
+  # 
+  #   sigma_cv_hake <- mean(samp$sigma_cv_hake)
+  #   sigma_cv_pollock <- mean(samp$sigma_cv_pollock)
   
   #sigma_pos_slope <- mean(samp$sigma_pos_slope)
   #sigma_pos_slope_samp <- samp$sigma_pos_slope_samp
@@ -299,11 +301,11 @@ AWG_dat_long <- left_join(AWG_dat_long,D_long) %>% left_join(.,D_long_sd) %>%
 
 #########################
 F_rec     <- apply(samp$F_rec,c(2),mean)
-log_F_rec_mean <- mean(samp$log_F_rec_mean)
-log_F_troll_mean <- mean(samp$log_F_troll_mean)
+# log_F_rec_mean <- mean(samp$log_F_rec_mean)
+# log_F_troll_mean <- mean(samp$log_F_troll_mean)
 #F_sigma   <- mean(samp$F_sigma)
-F_rec_sigma   <- mean(samp$F_rec_sigma)
-F_troll_sigma   <- mean(samp$F_troll_sigma)
+# F_rec_sigma   <- mean(samp$F_rec_sigma)
+# F_troll_sigma   <- mean(samp$F_troll_sigma)
 
 # States and beginning / end ratio
 log_N_all <- apply(samp$log_N_all,c(2,3),mean)

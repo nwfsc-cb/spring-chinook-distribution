@@ -304,7 +304,7 @@ data { /////////////////////////////////////////////////////////////////////////
   array[2] real sigma_cv_prior;
   //real sigma_slope_prior[2];
   array[2] real log_F_prior;
-  real F_rec_sigma_prior[2];
+  real F_sigma_prior[2];
   array[N_origin] vector[N_knot_sf] w_star_prior_mean_sf;
   array[N_origin] vector[N_knot_sf] w_star_prior_sd_sf;
   array[N_origin] vector[N_knot_ws] w_star_prior_mean_ws;
@@ -331,6 +331,7 @@ data { /////////////////////////////////////////////////////////////////////////
   array[2] real q_int_prior ;
   array[2] real spawn_smooth_prior;
   // real nb_phi_prior[2];
+  real<lower=0> fix_cv ;
 }
 
 transformed data { ////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -392,6 +393,11 @@ transformed data { /////////////////////////////////////////////////////////////
       vuln_treaty_array[i]   = block(vuln_treaty_mat,(1+(i-1)*N_month),1,N_time_mod,N_loc) ;
       vuln_rec_array[i]      = block(vuln_rec_mat,(1+(i-1)*N_month),1,N_time_mod,N_loc) ;
      }
+     
+     
+     
+  //real fix_cv;
+     
 }
 parameters { ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Catchability params
@@ -415,10 +421,18 @@ parameters { ///////////////////////////////////////////////////////////////////
     real log_q_pollock_GOA_start ;
     real log_q_rockfish_AK_start ;
 
+    array[N_troll_idx] real<lower=0,upper=1> alpha_K_troll ;
+    array[N_rec_us_idx] real<lower=0,upper=1> alpha_K_rec ;
+    real<lower=0,upper=1> alpha_K_treaty ;
+    real<lower=0,upper=1> alpha_K_rec_can ;
+    real<lower=0,upper=1> alpha_K_rec_can_irec ;
+
     // Observation CV parameters
-    array[2] real<lower=0> sigma_cv ;
-    real<lower=0> sigma_cv_hake ;
-    real<lower=0> sigma_cv_pollock ;
+    // array[2] real<lower=0> sigma_cv ;
+    // real<lower=0> sigma_cv_hake ;
+    // real<lower=0> sigma_cv_pollock ;
+     
+    
     
     real log_rel_year_mu ;
     real<lower=0> log_rel_year_sigma ;
@@ -540,6 +554,10 @@ transformed parameters { ///////////////////////////////////////////////////////
       row_vector[N_loc] log_q_troll_start_rv ;
       row_vector[N_loc] log_q_troll_slope_rv ;
       row_vector[N_loc] log_q_rec_us_start_rv ;
+      
+      row_vector[N_loc] alpha_K_troll_rv ;
+      row_vector[N_loc] alpha_K_rec_rv ;
+
      // row_vector[N_loc] log_q_rec_us_slope_rv ;
       matrix[N_season_total,N_loc] log_q_troll_pos ;
       matrix[N_season_total,N_loc] log_q_treaty_pos ;
@@ -592,6 +610,15 @@ transformed parameters { ///////////////////////////////////////////////////////
  
   // Vulnerability to fisheries
       //matrix[N_vuln,N_vuln_month] vuln_mat ;
+
+   // Effort data.
+    matrix<lower=0>[N_season_total, N_loc] K_troll_mod ;
+   // matrix<lower=0>[N_season_total, N_loc] K_treaty_mod ;
+    matrix<lower=0>[N_season_total, N_loc] K_rec_mod ;
+    matrix<lower=0>[N_season_total, N_loc] K_rec_can_mod ;
+    matrix<lower=0>[N_season_total, N_loc] K_rec_can_irec_mod ;
+    matrix<lower=0>[N_season_total, N_loc] K_rec_PUSO_mod ;
+
   
   // Fishing helper files
       array[N_years_release] matrix[N_time_mod,N_loc] F_troll_fin;      // Fishing mortality array (troll) [release year, model month, location]
@@ -775,14 +802,9 @@ transformed parameters { ///////////////////////////////////////////////////////
     }
     
   // Prob_age_year logit transform
-    // for(i in 1:N_origin){
-    //   beta_pay[i] = exp(log_beta_pay[i]) ;
-    // }
-  
       for(i in 1:N_origin){
         for(j in 1:N_juv){
           // prob_age_year[i,j] =   vec_one ./ (1 + exp(-(alpha_pay[i,j] + age_year * beta_pay[i,j]))) ; //maturity for fingerlings and yearlings
-          
           prob_age_year[i,j] =   vec_one ./ (1 + exp(-(gamma_pay[i,j]))) ; //maturity for fingerlings and yearlings, with logit form
         }
           prob_age_year[i,1,N_year] = 1 ; // maturity for fingerlings
@@ -795,7 +817,6 @@ transformed parameters { ///////////////////////////////////////////////////////
 
     // M2 vector and cum_M2 calculation
       //log_M2 = MU_M2 + L_M2_Sigma * log_M2_raw ;
-       
       //M2_vec = exp(log_M2[1] + log_M2[2] * age_month_cal) ;
       //cum_M2 = cumulative_sum(M2_vec) ;
       cum_M2  = cum_M2_fixed ;
@@ -812,66 +833,83 @@ transformed parameters { ///////////////////////////////////////////////////////
       // F_treaty = exp(log_F_troll_mean + log_F_treaty_raw * F_troll_sigma) ;
       // F_hake_ashop = exp(log_F_rec_mean + log_F_hake_ashop_raw * F_rec_sigma) ;
       // HERE?
-  
+
   // rel_year_all Matt trick
-      rel_year_all = exp(log_rel_year_mu + log_rel_year_raw * log_rel_year_sigma) ; 
+      rel_year_all = exp(log_rel_year_mu + log_rel_year_raw * log_rel_year_sigma) ;
 
   // epsilon Matt trick
       for( i in 1:N_rel){
-        epsilon[i] =  epsilon_raw[i] .* (cum_M2_temp) ; 
+        epsilon[i] =  epsilon_raw[i] .* (cum_M2_temp) ;
       }
 
-
-  // Make logistic function for q for the various fleets.
-  
+     // Make logistic function for q for the various fleets.
     for(i in 1:N_loc){
+      alpha_K_troll_rv[i] = alpha_K_troll[troll_idx[i]] ;
+      alpha_K_rec_rv[i] = alpha_K_rec[rec_us_idx[i]] ;
+    }
+    
+   for(i in 1:N_loc){
       log_q_troll_start_rv[i] = log_q_troll_start[troll_idx[i]] ;
       log_q_troll_slope_rv[i] = log_q_troll_slope ;
       log_q_rec_us_start_rv[i] = log_q_rec_start[rec_us_idx[i]]  ;
       //log_q_rec_us_slope_rv[i] = log_q_rec_slope[rec_us_idx[i]] ;
     }
-    
-    // print("log_q_start", log_q_troll_start_rv);
-    // print("log_q_slope", log_q_troll_slope_rv);
-  
-    for(i in 1:N_season_total ){
-       log_q_troll_pos[i]   = log_q_troll_start_rv - 
+
+     for(i in 1:N_season_total){
+       log_q_troll_pos[i,]   = log_q_troll_start_rv - 
                                             (log_q_troll_start_rv ./ (1 +exp(- log_q_troll_slope_rv * (q_year_vec[i] - q_int))) - log_q_troll_start_rv ) ; 
-       // log_q_troll_pos[i]   = rep_row_vector(log_q_troll_start_rv - 
-       //                                      (log_q_troll_start_rv / (1 +exp(- log_q_troll_slope * (q_year_vec[i] - q_int))) - log_q_troll_start_rv ),N_loc); 
-       log_q_treaty_pos[i]   = rep_row_vector((log_q_treaty_start ) - 
+       log_q_treaty_pos[i,]   = rep_row_vector((log_q_treaty_start ) - 
                                             ((log_q_treaty_start ) / (1 +exp(- log_q_treaty_slope * (q_year_vec[i] - q_int))) - (log_q_treaty_start ) ),N_loc); 
-       log_q_rec_pos[i]   = log_q_rec_us_start_rv  - 
+       log_q_rec_pos[i,]   = log_q_rec_us_start_rv  - 
                                             (log_q_rec_us_start_rv / (1 +exp(- log_q_rec_slope * (q_year_vec[i] - q_int))) - log_q_rec_us_start_rv ) ; 
-        // log_q_rec_pos[i]   = rep_row_vector(log_q_rec_start  - 
-        //                                     (log_q_rec_start / (1 +exp(- log_q_rec_slope * (q_year_vec[i] - q_int))) - log_q_rec_start ),N_loc);                     
-       log_q_rec_can_pos[i]   = rep_row_vector((log_q_rec_can_start ) - 
+       log_q_rec_can_pos[i,]   = rep_row_vector((log_q_rec_can_start ) - 
                                             ((log_q_rec_can_start )/ (1 +exp(- log_q_rec_can_slope * (q_year_vec[i] - q_int))) - (log_q_rec_can_start ) ),N_loc);
-       log_q_rec_can_irec_pos[i] = rep_row_vector(log_q_rec_can_irec_start ,N_loc); 
-       
-       log_q_hake_ashop_pos[i] = rep_row_vector(log_q_hake_ashop_start ,N_loc); 
-       
-       log_q_hake_shoreside_pos[i] = rep_row_vector(log_q_hake_shoreside_start ,N_loc); 
-       
-       log_q_pollock_GOA_pos[i] = rep_row_vector(log_q_pollock_GOA_start,N_loc); // NOTE THAT POLLOCK == ASHOP HAKE HERE!!!
-       
-       log_q_rockfish_AK_pos[i] = rep_row_vector(log_q_rockfish_AK_start ,N_loc); 
-    } 
-    
+
+            // log_q_troll_pos[,i] = rep_vector(log_q_troll_start[troll_idx[i]]  ,N_season_total);
+            // log_q_rec_pos[,i] = rep_vector(log_q_rec_start[rec_us_idx[i]]   ,N_season_total);
+            // log_q_rec_can_pos[,i]  = rep_vector(log_q_rec_can_start  ,N_season_total);
+            log_q_rec_can_irec_pos[i]  = rep_row_vector(log_q_rec_can_irec_start  ,N_loc);
+            // log_q_treaty_pos[,i]  = rep_vector(log_q_treaty_start ,N_season_total);
+            log_q_hake_ashop_pos[i] = rep_row_vector(log_q_hake_ashop_start ,N_loc);
+            log_q_hake_shoreside_pos[i] = rep_row_vector(log_q_hake_shoreside_start ,N_loc);
+            log_q_pollock_GOA_pos[i] = rep_row_vector(log_q_pollock_GOA_start,N_loc);
+            log_q_rockfish_AK_pos[i] = rep_row_vector(log_q_rockfish_AK_start ,N_loc);
+      }
+      
+      // print("A",log_q_troll_pos[1]);
+      // print("B",log_q_treaty_pos[1]);
+      // print("C",log_q_rec_pos[1]);
+      // print("D",log_q_rec_can_pos[1]);
+      // print("A1",log_q_troll_pos[N_loc]);
+      // print("B1",log_q_treaty_pos[N_loc]);
+      // print("C1",log_q_rec_pos[N_loc]);
+      // print("D1",log_q_rec_can_pos[N_loc]);
+      
+
+        // Find a power to scale the effort data.
+    for(i in 1:N_loc){
+      K_troll_mod[,i]       = K_troll[,i]^alpha_K_troll_rv[i] ;
+      
+      K_rec_mod[,i]          = K_rec[,i]^alpha_K_rec_rv[i] ;
+      K_rec_PUSO_mod[,i]     = K_rec_PUSO[,i]^alpha_K_rec_rv[i] ;
+      K_rec_can_mod[,i]      = K_rec_can[,i]^alpha_K_rec_can ;
+      K_rec_can_irec_mod[,i] = K_rec_can_irec[,i]^alpha_K_rec_can_irec ;
+    }
+
     // This is a section for dealing with the fact that there are two estimates of effort for certain times and locations in Canada.
-        F_rec_can_array =   exp(log_q_rec_can_pos) .* K_rec_can +
-                            exp(log_q_rec_can_irec_pos) .* K_rec_can_irec;
+        F_rec_can_array =   exp(log_q_rec_can_pos) .* K_rec_can_mod +
+                            exp(log_q_rec_can_irec_pos) .* K_rec_can_irec_mod;
         for(i in 1:N_f_rec_overlap_effort_idx_param){
           F_rec_can_array[f_rec_overlap_effort_idx[i,1],f_rec_overlap_effort_idx[i,2]] =
                         0.5 * (F_rec_can_array[f_rec_overlap_effort_idx[i,1],f_rec_overlap_effort_idx[i,2]]);
         }    
     
     // Create flat matrices for the various fisheries.
-          F_troll_array = exp(log_q_troll_pos) .* K_troll  + constant ;
-          F_treaty_array = exp(log_q_treaty_pos) .* K_treaty + constant ;
-          F_rec_array   = exp(log_q_rec_pos)  .* K_rec   +
+          F_troll_array = exp(log_q_troll_pos) .* K_troll_mod  + constant ;
+          F_treaty_array = exp(log_q_treaty_pos) .* (K_treaty.^alpha_K_treaty) + constant ;
+          F_rec_array   = exp(log_q_rec_pos)  .* K_rec_mod   +
                           F_rec_can_array +
-                          exp(log_q_rec_pos) .* K_rec_PUSO +
+                          exp(log_q_rec_pos) .* K_rec_PUSO_mod +
                             constant;
           F_hake_ashop_array =exp(log_q_hake_ashop_pos) .* K_hake_ashop + constant ;
           F_hake_shoreside_array =exp(log_q_hake_shoreside_pos) .* K_hake_shoreside + constant ;
@@ -888,9 +926,6 @@ transformed parameters { ///////////////////////////////////////////////////////
     for(i in 1:N_f_rec_idx_param){
         F_rec_array[f_rec_param_idx[i,1],f_rec_param_idx[i,2]] =   F_rec[i]  ;//
     }
-    // for(i in 1:N_f_hake_ashop_idx_param){
-    //     F_hake_ashop_array[f_hake_ashop_param_idx[i,1],f_hake_ashop_param_idx[i,2]] =   F_hake_ashop[i]  ;//
-    // }
 
     // make arrays on the scale of the release groups turn: (year,month,location) into (release id,model month, location)
   // print(vuln_age) ;
@@ -952,7 +987,6 @@ transformed parameters { ///////////////////////////////////////////////////////
     // D[i,4] = 1e-5 ;
     // D[i,5] = 1e-5 ;
      D[i,N_year] = 1e-5 ; // ensure final year is not nan
-     print(i," D ",D[i]); 
      
     for(j in 1:N_time_mod_rel[i]){
         if(j == (start_month_idx[i]+1)){ // This accounts for cases when the fish were released after the model starts.
@@ -986,8 +1020,7 @@ transformed parameters { ///////////////////////////////////////////////////////
               log_N_off[i,j] = log_N0[i] - rel_year_all[i] +
                                 log(1-prob_age_year[origin_idx[i],juv_idx[i], 1]) +
                                 log(origin_off[origin_idx[i]]) -
-                                cum_M2_temp[j] +
-                                epsilon[i,j] ;
+                                cum_M2_temp[j] + epsilon[i,j] ;
               //print("i ",i,"log_N_off[i,j] = ",log_N_off[i,j]) ;
             }
 
@@ -1014,8 +1047,7 @@ transformed parameters { ///////////////////////////////////////////////////////
                                   epsilon[i,j] ;
               log_N_off[i,j] =    log_N_temp_off +
                                   log(1- exp(log(prob_age_year[origin_idx[i],juv_idx[i], spawn_time_array[i,j]]) - inv(spawn_smooth))) -
-                                  cum_M2_temp[j] * (1-spawn_time_fraction[i]) +
-                                  epsilon[i,j] ;
+                                  cum_M2_temp[j] * (1-spawn_time_fraction[i]) + epsilon[i,j] ;
           }
          }
          if(j> (start_month_idx[i]+1)){
@@ -1030,7 +1062,7 @@ transformed parameters { ///////////////////////////////////////////////////////
                                            cum_M2_temp[j]   -
                                            to_vector(F_tot_fin[start_year[i], j])) + epsilon[i,j];
               log_N_off[i,j] =    log_N_off[i,j-1]  -
-                                   cum_M2_temp[j] + epsilon[i,j];
+                                   cum_M2_temp[j] + epsilon[i,j]; //+ epsilon[i,j];
 
            // if(i==1135){
            //   if(j == (N_time_mod-1) ){
@@ -1198,7 +1230,7 @@ model {/////////////////////////////////////////////////////////////////////////
       }
     }
     
-    w_logit_offshore ~ normal(-3,1); // logit prior for offshore proportions.
+    w_logit_offshore ~ normal(-3,2); // logit prior for offshore proportions.
     
 
   ////////////////////////////////////////
@@ -1233,9 +1265,9 @@ model {/////////////////////////////////////////////////////////////////////////
       beta_vuln_pollock ~  normal(-1,1) ;
       //beta_vuln_rockfish ~  normal(-1,1) ;
 
-      sigma_cv ~  gamma(sigma_cv_prior[1],sigma_cv_prior[2]) ; // remember the sigma_cv is the CV of the true catch)
-      sigma_cv_hake ~ gamma(sigma_cv_prior[1],sigma_cv_prior[2]) ;
-      sigma_cv_pollock ~ gamma(sigma_cv_prior[1],sigma_cv_prior[2]) ;
+      // sigma_cv ~  gamma(sigma_cv_prior[1],sigma_cv_prior[2]) ; // remember the sigma_cv is the CV of the true catch)
+      // sigma_cv_hake ~ gamma(sigma_cv_prior[1],sigma_cv_prior[2]) ;
+      // sigma_cv_pollock ~ gamma(sigma_cv_prior[1],sigma_cv_prior[2]) ;
   // NB overdispersion on AWG data
       // nb_phi ~gamma(nb_phi_prior[1],nb_phi_prior[2]) ;
 
@@ -1245,15 +1277,11 @@ model {/////////////////////////////////////////////////////////////////////////
       log_rel_year_raw ~ normal(0,1) ;
 
   // Fishing mortality hierarchical
-      // F_rec ~ lognormal(log_F_rec_mean,F_rec_sigma) ;
-      // log_F_rec_mean ~ normal(log_F_prior[1],log_F_prior[2]) ;
-      // F_rec_sigma  ~ gamma(F_rec_sigma_prior[1],F_rec_sigma_prior[2]) ;
-
      log_F_rec_mean ~ normal(log_F_prior[1],log_F_prior[2]) ;
      log_F_troll_mean ~ normal(log_F_prior[1],log_F_prior[2]) ;
      
-     F_troll_sigma ~   gamma(F_rec_sigma_prior[1],F_rec_sigma_prior[2]) ;
-     F_rec_sigma ~   gamma(F_rec_sigma_prior[1],F_rec_sigma_prior[2]) ;
+     F_troll_sigma ~   gamma(F_sigma_prior[1],F_sigma_prior[2]) ;
+     F_rec_sigma ~   gamma(F_sigma_prior[1],F_sigma_prior[2]) ;
      log_F_rec_raw ~ normal(0,1) ; // MATT TRICK FOR F_rec params without effort.
      log_F_troll_raw ~ normal(0,1) ; // MATT TRICK FOR F_troll params without effort.
      // log_F_hake_ashop_raw ~ normal(0,1) ; // MATT TRICK FOR F_hake_ashop params without effort.
@@ -1431,11 +1459,17 @@ model {/////////////////////////////////////////////////////////////////////////
           }
         }
 
-      if( gear_bin_idx[i]  == 1 ){ alpha_temp = alpha_calc(sigma_cv[1])  ; } //troll
-      if( gear_bin_idx[i]  == 2 ){ alpha_temp = alpha_calc(sigma_cv[2]) ; }  //rec
-      if( gear_bin_idx[i]  == 3 ){ alpha_temp = alpha_calc(sigma_cv[1]) ; } //treaty
-      if( gear_bin_idx[i]  >= 4 ){ alpha_temp = alpha_calc(sigma_cv_hake) ; } //all trawl bycatch fleets (hake (ashop & shore) and rockfish except pollock)
-      if( gear_bin_idx[i]  == 6 ){ alpha_temp = alpha_calc(sigma_cv_pollock) ; }
+      // if( gear_bin_idx[i]  == 1 ){ alpha_temp = alpha_calc(sigma_cv[1])  ; } //troll
+      // if( gear_bin_idx[i]  == 2 ){ alpha_temp = alpha_calc(sigma_cv[2]) ; }  //rec
+      // if( gear_bin_idx[i]  == 3 ){ alpha_temp = alpha_calc(sigma_cv[1]) ; } //treaty
+      // if( gear_bin_idx[i]  >= 4 ){ alpha_temp = alpha_calc(sigma_cv_hake) ; } //all trawl bycatch fleets (hake (ashop & shore) and rockfish except pollock)
+      // if( gear_bin_idx[i]  == 6 ){ alpha_temp = alpha_calc(sigma_cv_pollock) ; }
+
+      if( gear_bin_idx[i]  == 1 ){ alpha_temp = alpha_calc(fix_cv)  ; } //troll
+      if( gear_bin_idx[i]  == 2 ){ alpha_temp = alpha_calc(fix_cv) ; }  //rec
+      if( gear_bin_idx[i]  == 3 ){ alpha_temp = alpha_calc(fix_cv) ; } //treaty
+      if( gear_bin_idx[i]  >= 4 ){ alpha_temp = alpha_calc(fix_cv) ; } //all trawl bycatch fleets (hake (ashop & shore) and rockfish except pollock)
+      if( gear_bin_idx[i]  == 6 ){ alpha_temp = alpha_calc(fix_cv) ; }
     // if(gear_bin_idx[i]<=3){        alpha_temp = alpha_calc(sigma_cv_temp) ;}
     //  if(gear_bin_idx[i]>=4){        alpha_temp = 1 ;}
     

@@ -17,18 +17,19 @@ base_params <- c(#"tau_process",
                  #"log_q_troll_pos", "log_q_rec_pos","log_q_treaty_pos","log_q_rec_can_pos",#"log_q_rec_PUSO_pos",
                  #"logit_offset_slope",
                  #"sigma_pos",
-                 "sigma_cv",
-                 "sigma_cv_hake",
-                 "sigma_cv_pollock",
+                 # "sigma_cv",
+                 # "sigma_cv_hake",
+                 # "sigma_cv_pollock",
                  #"sigma_pos_slope",
                  # "alpha_pay_mean",
                  # "alpha_pay_sd",
                  # "beta_pay_mean",
                  # "beta_pay_sd",
                  "log_rel_year_mu", "log_rel_year_sigma",
-                 "beta_vuln","beta_vuln_hake","beta_vuln_pollock",
+                 "beta_vuln","beta_vuln_hake","beta_vuln_pollock"
                  #"log_M2",
-                 "log_F_rec_mean","log_F_troll_mean","F_rec_sigma","F_troll_sigma"
+                 #"log_F_mean","F_sigma"
+                 #"log_F_rec_mean","log_F_troll_mean","F_rec_sigma","F_troll_sigma"
 )
 
    pdf(paste(base.dir,"/spring-chinook-distribution/Output plots/",NAME, " traceplots.pdf",sep=""),height = 6, width=8.5)
@@ -284,11 +285,17 @@ for(i in 1:N_obs_all){
     }
   }
 
-    if( gear_bin_idx[i]  == 1 ){ alpha_temp = alpha_calc(sigma_cv[1])  ; } #troll
-    if( gear_bin_idx[i]  == 2 ){ alpha_temp = alpha_calc(sigma_cv[2]) ; }  #rec
-    if( gear_bin_idx[i]  == 3 ){ alpha_temp = alpha_calc(sigma_cv[1]) ; } #treaty
-    if( gear_bin_idx[i]  >= 4 ){ alpha_temp = alpha_calc(sigma_cv_hake) ; } #all trawl bycatch fleets (hake (ashop & shore) and rockfish except pollock)
-    if( gear_bin_idx[i]  == 6 ){ alpha_temp = alpha_calc(sigma_cv_pollock) ; }
+    if( gear_bin_idx[i]  == 1 ){ alpha_temp = alpha_calc(fix_cv)  ; } #troll
+    if( gear_bin_idx[i]  == 2 ){ alpha_temp = alpha_calc(fix_cv) ; }  #rec
+    if( gear_bin_idx[i]  == 3 ){ alpha_temp = alpha_calc(fix_cv) ; } #treaty
+    if( gear_bin_idx[i]  >= 4 ){ alpha_temp = alpha_calc(fix_cv) ; } #all trawl bycatch fleets (hake (ashop & shore) and rockfish except pollock)
+    if( gear_bin_idx[i]  == 6 ){ alpha_temp = alpha_calc(fix_cv) ; }
+    
+    # if( gear_bin_idx[i]  == 1 ){ alpha_temp = alpha_calc(sigma_cv[1])  ; } #troll
+    # if( gear_bin_idx[i]  == 2 ){ alpha_temp = alpha_calc(sigma_cv[2]) ; }  #rec
+    # if( gear_bin_idx[i]  == 3 ){ alpha_temp = alpha_calc(sigma_cv[1]) ; } #treaty
+    # if( gear_bin_idx[i]  >= 4 ){ alpha_temp = alpha_calc(sigma_cv_hake) ; } #all trawl bycatch fleets (hake (ashop & shore) and rockfish except pollock)
+    # if( gear_bin_idx[i]  == 6 ){ alpha_temp = alpha_calc(sigma_cv_pollock) ; }
     # 
     
     #alpha_temp <- alpha_calc(sigma_cv)
